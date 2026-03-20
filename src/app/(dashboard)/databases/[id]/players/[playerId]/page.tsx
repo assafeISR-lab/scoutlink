@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar'
 import Link from 'next/link'
 import EditPlayerButton from './EditPlayerButton'
 import DeletePlayerButton from './DeletePlayerButton'
+import NotesSection from './NotesSection'
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string; playerId: string }> }) {
   const { id: databaseId, playerId } = await params
@@ -109,20 +110,13 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
 
           {/* Notes */}
           <div>
-            <InfoCard title="Scout Notes">
-              {player.notes.length === 0 ? (
-                <p className="text-sm text-white/20">No notes yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {player.notes.map(note => (
-                    <div key={note.id} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                      <p className="text-sm text-white/70">{note.content}</p>
-                      <p className="text-xs text-white/25 mt-2">{note.agent.fullName} · {new Date(note.createdAt).toLocaleDateString()}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </InfoCard>
+            <NotesSection
+              notes={player.notes}
+              currentUserId={user.id}
+              databaseId={databaseId}
+              playerId={playerId}
+              canWrite={isOwner || db.access[0]?.permission === 'contributor'}
+            />
           </div>
         </div>
       </main>
