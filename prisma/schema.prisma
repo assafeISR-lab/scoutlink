@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Agent Profile ───────────────────────────────────────────────────────────
+// Extends Supabase auth user with app-specific data
+model Agent {
+  id        String   @id // matches Supabase auth user id
+  email     String   @unique
+  fullName  String
+  isAdmin   Boolean  @default(false)
+  unitSystem String  @default("metric") // "metric" or "imperial"
+  language  String   @default("en")     // "en" or "he"
+  exportFormat String @default("pdf")   // "pdf", "csv", "both"
+  sourceVisibility Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  ownedDatabases    PlayerDatabase[]       @relation("DatabaseOwner")
+  databaseAccess    DatabaseAccess[]
+  websites          AgentWebsite[]
+  activityLogs      ActivityLog[]
+  playerNotes       PlayerNote[]
+  calendarEvents    CalendarEvent[]
+  addedPlayers      Player[]               @relation("AddedByAgent")
+}
+
+// ─── Player Database ─────────────────────────────────────────────────────────
+model PlayerDatabase {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner     Agent            @relation("DatabaseOwner", fields: [ownerId], references: [id])
+  access    DatabaseAccess[]
+  players   Player[]
+}
+
+// ─── Database Access (permissions) ───────────────────────────────────────────
+model DatabaseAccess {
+  id         String   @id @default(cuid())
+  databaseId String
+  agentId    String
+  permission String   // "read" or "contributor"
+  createdAt  DateTime @default(now())
+
+  database   PlayerDatabase @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  agent      Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([databaseId, agentId])
+}
+
+// ─── Player ───────────────────────────────────────────────────────────────────
+model Player {
+  id           String   @id @default(cuid())
+  databaseId   String
+  addedById    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Standard parameters
+  firstName    String
+  lastName     String
+  middleName   String?
+  dateOfBirth  DateTime?
+  heightCm     Float?
+  weightKg     Float?
+  salaryCurrency Float?
+  clubName     String?
+  position     String?
+  agentName    String?
+  goalsThisYear Int?
+  yearsInProClub Int?
+  nationality  String?
+  playsNational Boolean @default(false)
+  nationalGames Int?
+  totalGoals   Int?
+  totalGames   Int?
+  marketValue  Float?
+
+  // Relations
+  database     PlayerDatabase  @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  addedBy      Agent           @relation("AddedByAgent", fields: [addedById], references: [id])
+  fieldSources FieldSource[]
+  customFields CustomField[]
+  notes        PlayerNote[]
+  timeline     TimelineEvent[]
+  conflicts    DataConflict[]
+}
+
+// ─── Field Source ─────────────────────────────────────────────────────────────
+// Tracks where each piece of data came from
+model FieldSource {
+  id         String   @id @default(cuid())
+  playerId   String
+  fieldName  String   // e.g. "heightCm", "salary"
+  value      String   // stored as string, converted on read
+  sourceName String   // website name or "import" or "manual"
+  sourceUrl  String?
+  scrapedAt  DateTime @default(now())
+  isActive   Boolean  @default(true) // false = deleted/overridden
+
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+// ─── Custom Field ─────────────────────────────────────────────────────────────
+model CustomField {
+  id        String   @id @default(cuid())
+  playerId  String
+  fieldName String
+  value     String
+  createdAt DateTime @default(now())
+
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+// ─── Data Conflict ────────────────────────────────────────────────────────────
+model DataConflict {
+  id          String   @id @default(cuid())
+  playerId    String
+  fieldName   String
+  value1      String
+  source1     String
+  value2      String
+  source2     String
+  resolvedBy  String?  // which source won (auto or manual)
+  overridden  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+// ─── Player Note ──────────────────────────────────────────────────────────────
+model PlayerNote {
+  id        String   @id @default(cuid())
+  playerId  String
+  agentId   String
+  content   String
+  createdAt DateTime @default(now())
+
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+// ─── Timeline Event ───────────────────────────────────────────────────────────
+model TimelineEvent {
+  id        String   @id @default(cuid())
+  playerId  String
+  type      String   // "note", "club_change", "salary_change", "conflict", "deletion", "import"
+  title     String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+// ─── Agent Website ────────────────────────────────────────────────────────────
+model AgentWebsite {
+  id           String   @id @default(cuid())
+  agentId      String
+  url          String
+  name         String
+  requiresLogin Boolean @default(false)
+  username     String?  // encrypted
+  password     String?  // encrypted
+  trustRank    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, url])
+}
+
+// ─── Activity Log ─────────────────────────────────────────────────────────────
+model ActivityLog {
+  id        String   @id @default(cuid())
+  agentId   String
+  action    String   // "search", "import", "add_player", "delete", etc.
+  detail    String?
+  createdAt DateTime @default(now())
+
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+// ─── Calendar Event ───────────────────────────────────────────────────────────
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  agentId     String
+  title       String
+  type        String   // "meeting", "call", "deadline", "reminder"
+  notes       String?
+  startAt     DateTime
+  linkedPlayerId String?
+  createdAt   DateTime @default(now())
+
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}

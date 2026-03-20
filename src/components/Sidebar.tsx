@@ -1,5 +1,8 @@
 'use client'
 
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
 interface SidebarProps {
   userName: string
   userEmail: string
@@ -7,16 +10,16 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { icon: <IconDashboard />, label: 'Dashboard', color: '#00c896', section: 'main' },
-  { icon: <IconSearch />, label: 'Search Players', color: '#6c8fff', section: 'main' },
-  { icon: <IconDatabase />, label: 'My Database', color: '#00c896', section: 'main' },
-  { icon: <IconReports />, label: 'Reports', color: '#ff9f43', section: 'tools' },
-  { icon: <IconCalendar />, label: 'Calendar', color: '#ff6b9d', section: 'tools' },
-  { icon: <IconSettings />, label: 'Settings', color: '#8b8fa8', section: 'tools' },
+  { icon: <IconDashboard />, label: 'Dashboard', color: '#00c896', href: '/dashboard', section: 'main' },
+  { icon: <IconSearch />, label: 'Search Players', color: '#6c8fff', href: '/search', section: 'main' },
+  { icon: <IconDatabase />, label: 'My Database', color: '#00c896', href: '/databases', section: 'main' },
+  { icon: <IconReports />, label: 'Reports', color: '#ff9f43', href: '/reports', section: 'tools' },
+  { icon: <IconCalendar />, label: 'Calendar', color: '#ff6b9d', href: '/calendar', section: 'tools' },
+  { icon: <IconSettings />, label: 'Settings', color: '#8b8fa8', href: '/settings', section: 'tools' },
 ]
 
 export default function Sidebar({ userName, userEmail, userInitial }: SidebarProps) {
-  const activeLabel = 'Dashboard'
+  const pathname = usePathname()
 
   return (
     <aside className="w-64 flex flex-col border-r border-white/5 flex-shrink-0" style={{
@@ -55,11 +58,11 @@ export default function Sidebar({ userName, userEmail, userInitial }: SidebarPro
       <nav className="flex-1 px-4 py-6 flex flex-col gap-1">
         <p className="text-[10px] text-white/20 uppercase tracking-widest px-3 mb-2">Main</p>
         {navItems.filter(i => i.section === 'main').map(item => (
-          <NavItem key={item.label} icon={item.icon} label={item.label} color={item.color} active={item.label === activeLabel} />
+          <NavItem key={item.label} icon={item.icon} label={item.label} color={item.color} href={item.href} active={pathname === item.href} />
         ))}
         <p className="text-[10px] text-white/20 uppercase tracking-widest px-3 mt-4 mb-2">Tools</p>
         {navItems.filter(i => i.section === 'tools').map(item => (
-          <NavItem key={item.label} icon={item.icon} label={item.label} color={item.color} active={item.label === activeLabel} />
+          <NavItem key={item.label} icon={item.icon} label={item.label} color={item.color} href={item.href} active={pathname === item.href} />
         ))}
       </nav>
 
@@ -80,10 +83,11 @@ export default function Sidebar({ userName, userEmail, userInitial }: SidebarPro
   )
 }
 
-function NavItem({ icon, label, active, color }: { icon: React.ReactNode; label: string; active?: boolean; color: string }) {
+function NavItem({ icon, label, active, color, href }: { icon: React.ReactNode; label: string; active?: boolean; color: string; href: string }) {
   return (
-    <div
-      className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200"
+    <Link
+      href={href}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200"
       style={active ? {
         background: `linear-gradient(135deg, ${color}18, ${color}06)`,
       } : {}}
@@ -101,7 +105,7 @@ function NavItem({ icon, label, active, color }: { icon: React.ReactNode; label:
       <span className="w-4 h-4 flex-shrink-0" style={{ color }}>{icon}</span>
       <span className="text-sm font-medium" style={{ color: active ? 'white' : 'rgba(255,255,255,0.5)' }}>{label}</span>
       {active && <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />}
-    </div>
+    </Link>
   )
 }
 

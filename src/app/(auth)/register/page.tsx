@@ -31,6 +31,7 @@ export default function RegisterPage() {
       setError(error.message)
       setLoading(false)
     } else {
+      await fetch('/api/agent/create', { method: 'POST' })
       router.push('/dashboard')
       router.refresh()
     }
