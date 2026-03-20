@@ -173,6 +173,8 @@ model AgentWebsite {
   password     String?  // encrypted
   trustRank    Int      @default(0)
   isActive     Boolean  @default(true)
+  country      String?  // e.g. "England", "Spain"
+  category     String?  // "association", "club", "stats", "news"
   createdAt    DateTime @default(now())
 
   agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)

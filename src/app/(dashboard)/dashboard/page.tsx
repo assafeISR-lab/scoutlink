@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -54,9 +55,9 @@ export default async function DashboardPage() {
             <span style={{ color: '#00c896' }}>⚡</span> Quick Actions
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <QuickAction label="Search a Player" desc="Search the web for player data" />
-            <QuickAction label="Import Database" desc="Import your existing Excel/CSV" />
-            <QuickAction label="Setup Websites" desc="Add your scouting websites" />
+            <QuickAction label="Search a Player" desc="Search the web for player data" href="/search" />
+            <QuickAction label="Import Database" desc="Import your existing Excel/CSV" href="/databases" />
+            <QuickAction label="Setup Websites" desc="Add your scouting websites" href="/settings" />
           </div>
         </div>
       </main>
@@ -80,16 +81,16 @@ function StatCard({ label, value, icon, color }: { label: string; value: string;
   )
 }
 
-function QuickAction({ label, desc }: { label: string; desc: string }) {
+function QuickAction({ label, desc, href }: { label: string; desc: string; href: string }) {
   return (
-    <div className="flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all duration-200 border border-white/5 hover:border-white/10" style={{
+    <Link href={href} className="flex items-start gap-3 p-4 rounded-xl transition-all duration-200 border border-white/5 hover:border-white/10" style={{
       background: 'rgba(255,255,255,0.02)',
     }}>
       <div>
         <p className="text-sm font-semibold" style={{ color: '#00c896' }}>{label}</p>
         <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{desc}</p>
       </div>
-    </div>
+    </Link>
   )
 }
 
