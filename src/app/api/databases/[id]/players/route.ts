@@ -36,5 +36,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   })
 
+  // If imported from an external source, record field provenance
+  if (body.sourceName && body.sourceUrl) {
+    const fieldMap: Record<string, string | null> = {
+      clubName: body.clubName?.trim() || null,
+      position: body.position?.trim() || null,
+      nationality: body.nationality?.trim() || null,
+      dateOfBirth: body.dateOfBirth ?? null,
+      heightCm: body.heightCm != null ? String(body.heightCm) : null,
+      weightKg: body.weightKg != null ? String(body.weightKg) : null,
+    }
+    const sources = Object.entries(fieldMap)
+      .filter(([, v]) => v !== null)
+      .map(([fieldName, value]) => ({
+        playerId: player.id,
+        fieldName,
+        value: value as string,
+        sourceName: body.sourceName,
+        sourceUrl: body.sourceUrl,
+      }))
+    if (sources.length > 0) {
+      await prisma.fieldSource.createMany({ data: sources })
+    }
+  }
+
+  // Log activity
+  const action = body.sourceName ? 'import' : 'add_player'
+  const detail = `${body.firstName} ${body.lastName}${body.sourceName ? ` from ${body.sourceName}` : ''}`
+  await prisma.activityLog.create({ data: { agentId: user.id, action, detail } }).catch(() => {})
+
   return NextResponse.json(player)
 }

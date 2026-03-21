@@ -28,20 +28,21 @@ export default async function DatabasesPage() {
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
         userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
+        userId={user.id}
       />
 
       <main className="flex-1 p-8 overflow-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-1">My Database</h1>
-            <p style={{ color: 'rgba(255,255,255,0.3)' }} className="text-sm">Manage your scouting databases</p>
+            <h1 className="text-3xl font-bold text-white mb-1">My Players Watch List</h1>
+            <p style={{ color: 'rgba(255,255,255,0.3)' }} className="text-sm">Manage your scouting Lists</p>
           </div>
           <CreateDatabaseButton />
         </div>
 
         {/* Owned databases */}
         <section className="mb-8">
-          <h2 className="text-xs uppercase tracking-widest text-white/30 mb-4">My Databases ({ownedDbs.length})</h2>
+          <h2 className="text-xs uppercase tracking-widest text-white/30 mb-4">My Lists ({ownedDbs.length})</h2>
           {ownedDbs.length === 0 ? (
             <EmptyState message="You haven't created any databases yet." />
           ) : (

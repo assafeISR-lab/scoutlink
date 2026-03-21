@@ -10,6 +10,11 @@ const DEFAULT_WEBSITES = [
   { name: 'Wikipedia', url: 'https://www.wikipedia.org', requiresLogin: false },
 ]
 
+// Always ensured for every user — powers the Search Players feature
+const SYSTEM_WEBSITES = [
+  { name: 'TheSportsDB', url: 'https://www.thesportsdb.com', requiresLogin: false, category: 'stats' },
+]
+
 export default async function SettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,6 +29,15 @@ export default async function SettingsPage() {
     })
   }
 
+  // Always ensure system websites exist (upsert so existing users get them too)
+  for (const w of SYSTEM_WEBSITES) {
+    await prisma.agentWebsite.upsert({
+      where: { agentId_url: { agentId: user.id, url: w.url } },
+      update: {},
+      create: { ...w, agentId: user.id },
+    })
+  }
+
   const websites = await prisma.agentWebsite.findMany({
     where: { agentId: user.id },
     orderBy: { createdAt: 'asc' },
@@ -35,6 +49,7 @@ export default async function SettingsPage() {
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
         userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
+        userId={user.id}
       />
 
       <main className="flex-1 p-8 overflow-auto">

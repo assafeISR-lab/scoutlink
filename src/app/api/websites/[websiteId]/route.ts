@@ -12,19 +12,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ we
   if (!site || site.agentId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const updated = await prisma.agentWebsite.update({
-    where: { id: websiteId },
-    data: {
-      name: body.name?.trim() ?? undefined,
-      url: body.url?.trim() ?? undefined,
-      requiresLogin: body.requiresLogin ?? undefined,
-      username: body.username?.trim() || null,
-      password: body.password?.trim() || null,
-      isActive: body.isActive ?? undefined,
-    },
-  })
-
-  return NextResponse.json(updated)
+  try {
+    const updated = await prisma.agentWebsite.update({
+      where: { id: websiteId },
+      data: {
+        name: body.name?.trim() ?? undefined,
+        url: body.url?.trim() ?? undefined,
+        requiresLogin: body.requiresLogin ?? undefined,
+        loginStatus: body.loginStatus ?? undefined,
+        useForSearch: body.useForSearch ?? undefined,
+        username: body.username?.trim() || null,
+        password: body.password?.trim() || null,
+        isActive: body.isActive ?? undefined,
+      },
+    })
+    return NextResponse.json(updated)
+  } catch (err: any) {
+    console.error('[PATCH /api/websites]', err)
+    return NextResponse.json({ error: err?.message ?? 'Unknown error' }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ websiteId: string }> }) {

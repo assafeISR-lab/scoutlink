@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { name, url, requiresLogin, username, password, country, category } = await req.json()
+  const { name, url, requiresLogin, loginStatus, username, password, country, category } = await req.json()
   if (!name?.trim() || !url?.trim()) return NextResponse.json({ error: 'Name and URL are required' }, { status: 400 })
 
   const website = await prisma.agentWebsite.create({
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       url: url.trim(),
       requiresLogin: requiresLogin ?? false,
+      loginStatus: loginStatus ?? 'pending',
       username: username?.trim() || null,
       password: password?.trim() || null,
       country: country?.trim() || null,

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import EditPlayerButton from './EditPlayerButton'
 import DeletePlayerButton from './DeletePlayerButton'
 import NotesSection from './NotesSection'
+import CreatePlayerReportButton from './CreatePlayerReportButton'
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string; playerId: string }> }) {
   const { id: databaseId, playerId } = await params
@@ -16,7 +17,10 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const [player, db] = await Promise.all([
     prisma.player.findUnique({
       where: { id: playerId },
-      include: { notes: { include: { agent: true }, orderBy: { createdAt: 'desc' } } },
+      include: {
+        notes: { include: { agent: true }, orderBy: { createdAt: 'desc' } },
+        fieldSources: { where: { isActive: true } },
+      },
     }),
     prisma.playerDatabase.findUnique({
       where: { id: databaseId },
@@ -38,12 +42,13 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
         userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
+        userId={user.id}
       />
 
       <main className="flex-1 p-8 overflow-auto">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-white/30 mb-6">
-          <Link href="/databases" className="hover:text-white/60 transition-colors">My Database</Link>
+          <Link href="/databases" className="hover:text-white/60 transition-colors">Players Watch List</Link>
           <span>/</span>
           <Link href={`/databases/${databaseId}`} className="hover:text-white/60 transition-colors">{db.name}</Link>
           <span>/</span>
@@ -70,12 +75,41 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
                 {age && <span className="text-sm text-white/40">{age} years old</span>}
               </div>
             </div>
-            {(isOwner || db.access[0]?.permission === 'contributor') && (
-              <div className="flex items-center gap-2">
-                <EditPlayerButton databaseId={databaseId} playerId={playerId} player={player} />
-                <DeletePlayerButton databaseId={databaseId} playerId={playerId} playerName={`${player.firstName} ${player.lastName}`} />
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <CreatePlayerReportButton
+                databaseId={databaseId}
+                databaseName={db.name}
+                player={{
+                  id: player.id,
+                  name: `${player.firstName}${player.middleName ? ` ${player.middleName}` : ''} ${player.lastName}`,
+                  position: player.position,
+                  clubName: player.clubName,
+                  nationality: player.nationality,
+                  age,
+                  heightCm: player.heightCm,
+                  weightKg: player.weightKg,
+                  marketValue: player.marketValue,
+                  agentName: player.agentName,
+                  playsNational: player.playsNational,
+                  goalsThisYear: player.goalsThisYear,
+                  totalGoals: player.totalGoals,
+                  totalGames: player.totalGames,
+                  nationalGames: player.nationalGames,
+                  yearsInProClub: player.yearsInProClub,
+                  notes: player.notes.map(n => ({
+                    content: n.content,
+                    createdAt: n.createdAt.toISOString(),
+                    agentName: n.agent?.fullName ?? null,
+                  })),
+                }}
+              />
+              {(isOwner || db.access[0]?.permission === 'contributor') && (
+                <>
+                  <EditPlayerButton databaseId={databaseId} playerId={playerId} player={player} />
+                  <DeletePlayerButton databaseId={databaseId} playerId={playerId} playerName={`${player.firstName} ${player.lastName}`} />
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -85,12 +119,12 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
             {/* Basic info */}
             <InfoCard title="Player Information">
               <div className="grid grid-cols-2 gap-4">
-                <InfoRow label="Club" value={player.clubName} />
+                <InfoRow label="Club" value={player.clubName} source={player.fieldSources.find(s => s.fieldName === 'clubName')} />
                 <InfoRow label="Agent" value={player.agentName} />
-                <InfoRow label="Date of Birth" value={player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : null} />
-                <InfoRow label="Nationality" value={player.nationality} />
-                <InfoRow label="Height" value={player.heightCm ? `${player.heightCm} cm` : null} />
-                <InfoRow label="Weight" value={player.weightKg ? `${player.weightKg} kg` : null} />
+                <InfoRow label="Date of Birth" value={player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : null} source={player.fieldSources.find(s => s.fieldName === 'dateOfBirth')} />
+                <InfoRow label="Nationality" value={player.nationality} source={player.fieldSources.find(s => s.fieldName === 'nationality')} />
+                <InfoRow label="Height" value={player.heightCm ? `${player.heightCm} cm` : null} source={player.fieldSources.find(s => s.fieldName === 'heightCm')} />
+                <InfoRow label="Weight" value={player.weightKg ? `${player.weightKg} kg` : null} source={player.fieldSources.find(s => s.fieldName === 'weightKg')} />
                 <InfoRow label="Market Value" value={player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(1)}M` : null} />
                 <InfoRow label="Plays National Team" value={player.playsNational ? 'Yes' : 'No'} />
               </div>
@@ -136,11 +170,27 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
   )
 }
 
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
+function InfoRow({ label, value, source }: {
+  label: string
+  value: string | null | undefined
+  source?: { sourceName: string; sourceUrl: string | null } | null
+}) {
   return (
     <div>
       <p className="text-xs text-white/30 mb-0.5">{label}</p>
       <p className="text-sm text-white">{value ?? <span className="text-white/20">—</span>}</p>
+      {source && value && (
+        <p className="text-[10px] text-white/25 mt-0.5">
+          Source:{' '}
+          {source.sourceUrl ? (
+            <a href={source.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-[#00c896] transition-colors underline underline-offset-2">
+              {source.sourceName} ↗
+            </a>
+          ) : (
+            <span className="text-white/40">{source.sourceName}</span>
+          )}
+        </p>
+      )}
     </div>
   )
 }

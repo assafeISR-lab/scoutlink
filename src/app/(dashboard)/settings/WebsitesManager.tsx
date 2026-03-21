@@ -10,9 +10,11 @@ interface Website {
   name: string
   url: string
   requiresLogin: boolean
+  loginStatus: string  // "pending" | "free" | "login_required" | "active"
   username: string | null
   password: string | null
   isActive: boolean
+  useForSearch: boolean
   country: string | null
   category: string | null
 }
@@ -103,31 +105,38 @@ export default function WebsitesManager({ websites }: { websites: Website[] }) {
       {/* Legend */}
       <div className="flex items-center gap-4 px-6 py-2.5 border-b border-white/5">
         <div className="flex items-center gap-1.5">
-          <StatusBadge free />
+          <StatusBadge status="pending" />
+          <span className="text-xs text-white/30">Not checked</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status="free" />
           <span className="text-xs text-white/30">Free</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <StatusBadge free={false} />
+          <StatusBadge status="login_required" />
           <span className="text-xs text-white/30">Login required</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status="active" />
+          <span className="text-xs text-white/30">Logged in</span>
         </div>
       </div>
 
       {/* 3-column layout */}
       <div className="grid grid-cols-3 divide-x divide-white/5">
         {[
-          { key: null, label: 'General', icon: '🌐', color: '#00c896' },
-          { key: 'association', label: 'Associations', icon: '🏛', color: '#6c8fff' },
-          { key: 'club', label: 'Clubs', icon: '⚽', color: '#ff9f43' },
+          { key: null, label: 'General' },
+          { key: 'association', label: 'Associations' },
+          { key: 'club', label: 'Clubs' },
         ].map(col => {
           const sites = filtered.filter(w =>
-            col.key === null ? (!w.category || w.category === 'other') : w.category === col.key
+            col.key === null ? (w.category !== 'association' && w.category !== 'club') : w.category === col.key
           )
           return (
             <div key={col.label} className="flex flex-col min-h-[200px]">
               {/* Column header */}
               <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                <span className="text-sm">{col.icon}</span>
-                <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: col.color }}>{col.label}</span>
+                <span className="text-xs font-semibold uppercase tracking-widest text-white">{col.label}</span>
                 <span className="text-[10px] text-white/20 ml-auto">{sites.length}</span>
               </div>
               {/* Sites */}
@@ -153,16 +162,29 @@ export default function WebsitesManager({ websites }: { websites: Website[] }) {
   )
 }
 
-function StatusBadge({ free }: { free: boolean }) {
-  return free ? (
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'active') return (
+    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(0,200,150,0.15)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)' }}>
+      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+      Active
+    </span>
+  )
+  if (status === 'free') return (
     <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.25)' }}>
       <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
       Free
     </span>
-  ) : (
+  )
+  if (status === 'login_required') return (
     <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
       <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
       Login Required
+    </span>
+  )
+  return (
+    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.12)' }}>
+      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      Pending
     </span>
   )
 }
@@ -170,6 +192,15 @@ function StatusBadge({ free }: { free: boolean }) {
 function WebsiteRow({ site, onUpdate, compact }: { site: Website; onUpdate: () => void; compact?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [localLoginStatus, setLocalLoginStatus] = useState(site.loginStatus)
+  const [localHasCredentials, setLocalHasCredentials] = useState(!!site.username)
+  const [useForSearch, setUseForSearch] = useState(site.useForSearch)
+  const [credentialOpen, setCredentialOpen] = useState(false)
+  const [credForm, setCredForm] = useState({ username: site.username ?? '', password: '' })
+  const [credSaving, setCredSaving] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyError, setVerifyError] = useState('')
 
   async function toggleActive() {
     setLoading(true)
@@ -189,12 +220,126 @@ function WebsiteRow({ site, onUpdate, compact }: { site: Website; onUpdate: () =
     onUpdate()
   }
 
+  async function handleRecheck() {
+    setChecking(true)
+    try {
+      const checkRes = await fetch('/api/websites/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: site.url }),
+      })
+      if (!checkRes.ok) throw new Error(`Check failed: ${checkRes.status}`)
+      const { requiresLogin, loginStatus } = await checkRes.json()
+
+      const patchRes = await fetch(`/api/websites/${site.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requiresLogin, loginStatus }),
+      })
+      if (!patchRes.ok) throw new Error(`Patch failed: ${patchRes.status}`)
+
+      setLocalLoginStatus(loginStatus)
+      onUpdate()
+    } catch (err) {
+      console.error('Recheck failed:', err)
+    }
+    setChecking(false)
+  }
+
+  async function handleToggleSearch() {
+    const next = !useForSearch
+    setUseForSearch(next)
+    await fetch(`/api/websites/${site.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ useForSearch: next }),
+    })
+  }
+
+  async function handleMarkFree() {
+    setLoading(true)
+    const res = await fetch(`/api/websites/${site.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requiresLogin: false, loginStatus: 'free' }),
+    })
+    if (res.ok) {
+      setLocalLoginStatus('free')
+      setLocalHasCredentials(false)
+      onUpdate()
+    }
+    setLoading(false)
+  }
+
+  async function handleVerifyAndSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!credForm.username.trim() || !credForm.password.trim()) {
+      setVerifyError('Please enter both username and password.')
+      return
+    }
+    setVerifying(true)
+    setVerifyError('')
+    try {
+      // Step 1: verify credentials
+      const verifyRes = await fetch('/api/websites/verify-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: site.url, username: credForm.username.trim(), password: credForm.password.trim() }),
+      })
+      const verifyData = await verifyRes.json()
+
+      if (!verifyData.success) {
+        setVerifyError(verifyData.message || 'Incorrect credentials. Please try again.')
+        setVerifying(false)
+        return
+      }
+
+      // Step 2: save credentials + set status to active
+      const patchRes = await fetch(`/api/websites/${site.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: credForm.username.trim(),
+          password: credForm.password.trim(),
+          loginStatus: 'active',
+          requiresLogin: true,
+        }),
+      })
+      if (patchRes.ok) {
+        setLocalHasCredentials(true)
+        setLocalLoginStatus('active')
+        setCredentialOpen(false)
+        setVerifyError('')
+        onUpdate()
+      }
+    } catch (err) {
+      setVerifyError('Connection error. Please try again.')
+    }
+    setVerifying(false)
+  }
+
   if (editing) {
     return <EditWebsiteRow site={site} onDone={() => { setEditing(false); onUpdate() }} />
   }
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 group transition-all ${!site.isActive ? 'opacity-40' : ''}`}>
+    <div className={`transition-all ${!site.isActive ? 'opacity-40' : ''}`}>
+    <div className="flex items-center gap-3 px-4 py-3 group">
+      {/* Search checkbox */}
+      <button
+        onClick={handleToggleSearch}
+        title={useForSearch ? 'Included in search — click to exclude' : 'Excluded from search — click to include'}
+        className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
+        style={useForSearch
+          ? { background: '#00c896', border: '1px solid #00c896' }
+          : { background: 'transparent', border: '1px solid rgba(255,255,255,0.15)' }
+        }
+      >
+        {useForSearch && (
+          <svg className="w-2.5 h-2.5 text-black" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        )}
+      </button>
+
       {/* Favicon */}
       <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
         <img
@@ -209,7 +354,13 @@ function WebsiteRow({ site, onUpdate, compact }: { site: Website; onUpdate: () =
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
           <p className="text-xs font-medium text-white truncate">{site.name}</p>
-          <StatusBadge free={!site.requiresLogin} />
+          <StatusBadge status={localLoginStatus} />
+          {localLoginStatus === 'login_required' && localHasCredentials && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium" style={{ background: 'rgba(108,143,255,0.1)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.2)' }}>
+              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+              Credentials saved
+            </span>
+          )}
           {!site.isActive && <span className="text-[10px] text-white/20 uppercase tracking-wide">Disabled</span>}
         </div>
         {site.country ? (
@@ -227,8 +378,56 @@ function WebsiteRow({ site, onUpdate, compact }: { site: Website; onUpdate: () =
         )}
       </div>
 
+      {/* Re-check button — always visible when pending, hover-only otherwise */}
+      {localLoginStatus === 'pending' && (
+        <button onClick={handleRecheck} disabled={checking} title="Re-check login status" className="w-6 h-6 flex items-center justify-center rounded transition-colors flex-shrink-0" style={{ background: 'rgba(255,159,67,0.12)', color: '#ff9f43', border: '1px solid rgba(255,159,67,0.3)' }}>
+          <svg className={`w-3 h-3 ${checking ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        </button>
+      )}
+
+      {/* Set Login + Mark as Free — always visible when login_required and no credentials */}
+      {localLoginStatus === 'login_required' && !localHasCredentials && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={() => setCredentialOpen(o => !o)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all"
+            style={{ background: credentialOpen ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}
+          >
+            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            Set Login
+          </button>
+          <button
+            onClick={handleMarkFree}
+            disabled={loading}
+            title="Mark as free — no login required"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all disabled:opacity-40"
+            style={{ background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.25)' }}
+          >
+            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            Mark as Free
+          </button>
+        </div>
+      )}
+
+      {/* Update credentials button — hover only when credentials exist */}
+      {localLoginStatus === 'login_required' && localHasCredentials && (
+        <button
+          onClick={() => setCredentialOpen(o => !o)}
+          title="Update credentials"
+          className="w-6 h-6 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)' }}
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+        </button>
+      )}
+
       {/* Actions — icon buttons on hover */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        {localLoginStatus !== 'pending' && (
+          <button onClick={handleRecheck} disabled={checking} title="Re-check login status" className="w-6 h-6 flex items-center justify-center rounded transition-colors" style={{ background: 'rgba(255,255,255,0.05)', color: checking ? '#ff9f43' : 'rgba(255,255,255,0.3)' }}>
+            <svg className={`w-3 h-3 ${checking ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          </button>
+        )}
         <button onClick={() => setEditing(true)} title="Edit" className="w-6 h-6 flex items-center justify-center rounded text-white/30 hover:text-white/70 transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
         </button>
@@ -239,6 +438,59 @@ function WebsiteRow({ site, onUpdate, compact }: { site: Website; onUpdate: () =
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
         </button>
       </div>
+    </div>
+
+    {/* Inline credential form */}
+    {credentialOpen && (
+      <form onSubmit={handleVerifyAndSave} className="mx-4 mb-3 p-3 rounded-xl border" style={{ background: 'rgba(239,68,68,0.04)', borderColor: 'rgba(239,68,68,0.2)' }}>
+        <p className="text-[10px] text-white/40 mb-2 uppercase tracking-widest">Your login credentials for {site.name}</p>
+        <div className="flex gap-2 mb-2">
+          <div className="flex-1">
+            <label className="block text-[10px] text-white/30 mb-1">Username / Email</label>
+            <input
+              autoFocus
+              type="text"
+              value={credForm.username}
+              onChange={e => { setCredForm(f => ({ ...f, username: e.target.value })); setVerifyError('') }}
+              placeholder="your@email.com"
+              className="w-full px-2.5 py-1.5 rounded-lg text-xs text-white placeholder-white/20 focus:outline-none"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+              onFocus={e => e.currentTarget.style.borderColor = '#f87171'}
+              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-[10px] text-white/30 mb-1">Password</label>
+            <input
+              type="password"
+              value={credForm.password}
+              onChange={e => { setCredForm(f => ({ ...f, password: e.target.value })); setVerifyError('') }}
+              placeholder="password"
+              className="w-full px-2.5 py-1.5 rounded-lg text-xs text-white placeholder-white/20 focus:outline-none"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+              onFocus={e => e.currentTarget.style.borderColor = '#f87171'}
+              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+            />
+          </div>
+        </div>
+        {verifyError && (
+          <p className="text-xs mb-2 flex items-center gap-1.5" style={{ color: '#f87171' }}>
+            <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            {verifyError}
+          </p>
+        )}
+        <div className="flex gap-2 justify-end">
+          <button type="button" onClick={() => { setCredentialOpen(false); setVerifyError('') }} className="px-3 py-1 rounded-lg text-xs text-white/30 hover:text-white/60">Cancel</button>
+          <button type="submit" disabled={verifying || !credForm.username.trim() || !credForm.password.trim()} className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold disabled:opacity-40 transition-all" style={{ background: verifying ? 'rgba(108,143,255,0.15)' : 'rgba(0,200,150,0.15)', color: verifying ? '#6c8fff' : '#00c896', border: `1px solid ${verifying ? 'rgba(108,143,255,0.3)' : 'rgba(0,200,150,0.3)'}` }}>
+            {verifying ? (
+              <><svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>Checking...</>
+            ) : (
+              <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Check</>
+            )}
+          </button>
+        </div>
+      </form>
+    )}
     </div>
   )
 }
@@ -289,15 +541,53 @@ function EditWebsiteRow({ site, onDone }: { site: Website; onDone: () => void })
 function AddWebsiteModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
   const [form, setForm] = useState({ name: '', url: '', requiresLogin: false, username: '', password: '' })
   const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [checkResult, setCheckResult] = useState<{ requiresLogin: boolean; loginStatus: string; reason: string } | null>(null)
   const [error, setError] = useState('')
+
+  async function handleCheck() {
+    if (!form.url.trim()) { setError('Enter a URL first'); return }
+    setChecking(true)
+    setCheckResult(null)
+    try {
+      const res = await fetch('/api/websites/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: form.url.trim() }),
+      })
+      if (res.ok) {
+        const result = await res.json()
+        setCheckResult(result)
+        setForm(f => ({ ...f, requiresLogin: result.requiresLogin }))
+      }
+    } catch {}
+    setChecking(false)
+  }
 
   async function handleSave() {
     if (!form.name.trim() || !form.url.trim()) { setError('Name and URL are required'); return }
     setLoading(true)
+
+    // Auto-check if not checked yet
+    let requiresLogin = form.requiresLogin
+    let loginStatus = checkResult?.loginStatus ?? 'pending'
+    if (!checkResult) {
+      const checkRes = await fetch('/api/websites/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: form.url.trim() }),
+      })
+      if (checkRes.ok) {
+        const result = await checkRes.json()
+        requiresLogin = result.requiresLogin
+        loginStatus = result.loginStatus
+      }
+    }
+
     const res = await fetch('/api/websites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, requiresLogin, loginStatus }),
     })
     if (res.ok) { onSave() } else { const d = await res.json(); setError(d.error || 'Error'); setLoading(false) }
   }
@@ -308,11 +598,29 @@ function AddWebsiteModal({ onClose, onSave }: { onClose: () => void; onSave: () 
         <h2 className="text-lg font-semibold text-white mb-5">Add Website</h2>
         <div className="flex flex-col gap-3">
           <Field label="Website Name" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="e.g. WhoScored" />
-          <Field label="URL" value={form.url} onChange={v => setForm(f => ({ ...f, url: v }))} placeholder="https://www.whoscored.com" />
-          <label className="flex items-center gap-2 cursor-pointer mt-1">
-            <input type="checkbox" checked={form.requiresLogin} onChange={e => setForm(f => ({ ...f, requiresLogin: e.target.checked }))} className="accent-[#00c896]" />
-            <span className="text-sm text-white/50">This website requires login</span>
-          </label>
+          <div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Field label="URL" value={form.url} onChange={v => { setForm(f => ({ ...f, url: v })); setCheckResult(null) }} placeholder="https://www.whoscored.com" />
+              </div>
+              <button
+                type="button"
+                onClick={handleCheck}
+                disabled={checking || !form.url.trim()}
+                className="mt-5 px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40 flex-shrink-0"
+                style={{ background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.2)' }}
+              >
+                <svg className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                {checking ? 'Checking...' : 'Check'}
+              </button>
+            </div>
+            {checkResult && (
+              <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: checkResult.requiresLogin ? 'rgba(239,68,68,0.08)' : 'rgba(0,200,150,0.08)' }}>
+                <StatusBadge status={checkResult.loginStatus} />
+                <span className="text-xs" style={{ color: checkResult.requiresLogin ? '#f87171' : '#00c896' }}>{checkResult.reason}</span>
+              </div>
+            )}
+          </div>
           {form.requiresLogin && (
             <>
               <Field label="Username" value={form.username} onChange={v => setForm(f => ({ ...f, username: v }))} />
@@ -323,7 +631,7 @@ function AddWebsiteModal({ onClose, onSave }: { onClose: () => void; onSave: () 
           <div className="flex gap-3 mt-2">
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70" style={{ background: 'rgba(255,255,255,0.05)' }}>Cancel</button>
             <button onClick={handleSave} disabled={loading} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
-              {loading ? 'Adding...' : 'Add Website'}
+              {loading ? 'Checking & Adding...' : 'Add Website'}
             </button>
           </div>
         </div>

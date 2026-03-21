@@ -29,6 +29,7 @@ model Agent {
   playerNotes       PlayerNote[]
   calendarEvents    CalendarEvent[]
   addedPlayers      Player[]               @relation("AddedByAgent")
+  reports           Report[]
 }
 
 // ─── Player Database ─────────────────────────────────────────────────────────
@@ -169,10 +170,12 @@ model AgentWebsite {
   url          String
   name         String
   requiresLogin Boolean @default(false)
+  loginStatus  String  @default("pending")  // "pending", "free", "login_required"
   username     String?  // encrypted
   password     String?  // encrypted
   trustRank    Int      @default(0)
   isActive     Boolean  @default(true)
+  useForSearch Boolean  @default(true)
   country      String?  // e.g. "England", "Spain"
   category     String?  // "association", "club", "stats", "news"
   createdAt    DateTime @default(now())
@@ -180,6 +183,20 @@ model AgentWebsite {
   agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, url])
+}
+
+// ─── Report ───────────────────────────────────────────────────────────────────
+model Report {
+  id           String   @id @default(cuid())
+  agentId      String
+  name         String
+  databaseId   String
+  databaseName String
+  playerCount  Int
+  players      Json     // snapshot of player rows at creation time
+  createdAt    DateTime @default(now())
+
+  agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }
 
 // ─── Activity Log ─────────────────────────────────────────────────────────────
