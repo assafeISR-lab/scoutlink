@@ -151,6 +151,20 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
   const [deletingPlayer, setDeletingPlayer] = useState<Player | null>(null)
   const [showReport, setShowReport] = useState(false)
+  const [customParamKeys, setCustomParamKeys] = useState<string[]>([])
+
+  // Load custom param keys from localStorage (shared with SearchParamsPanel)
+  useEffect(() => {
+    function loadCustomKeys() {
+      try {
+        const raw = localStorage.getItem('scoutlink_search_custom_keys')
+        setCustomParamKeys(raw ? JSON.parse(raw) : [])
+      } catch {}
+    }
+    loadCustomKeys()
+    window.addEventListener('storage', loadCustomKeys)
+    return () => window.removeEventListener('storage', loadCustomKeys)
+  }, [])
 
   useImperativeHandle(ref, () => ({
     openCreateReport: () => setShowReport(true),
@@ -263,24 +277,24 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
       )}
 
       {/* Table */}
-      <div className="rounded-2xl border border-white/5 overflow-visible" style={{ background: 'linear-gradient(135deg, #141720 0%, #111318 100%)', borderRadius: '16px' }}>
-        <div style={{ borderRadius: '16px', overflow: 'hidden' }}>
-          <table className="w-full">
+      <div className="rounded-2xl border border-white/5" style={{ background: 'linear-gradient(135deg, #141720 0%, #111318 100%)', borderRadius: '16px' }}>
+        <div style={{ borderRadius: '16px', overflowX: 'auto' }}>
+          <table style={{ minWidth: `${680 + customParamKeys.length * 130}px`, width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr className="border-b border-white/5">
-                <ColHeader label="Player" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('name', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter}>
+                <ColHeader label="Player" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('name', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={200} sticky="left">
                   <TextFilter label="Search name" value={filters.name} onChange={v => updateFilter({ name: v })} />
                 </ColHeader>
-                <ColHeader label="Position" sortKey="position" filterKey="position" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('position', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter}>
+                <ColHeader label="Position" sortKey="position" filterKey="position" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('position', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={120}>
                   <MultiSelectFilter options={uniquePositions} selected={filters.positions} onChange={v => updateFilter({ positions: v })} emptyText="No positions in database" />
                 </ColHeader>
-                <ColHeader label="Club" sortKey="club" filterKey="club" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('club', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter}>
+                <ColHeader label="Club" sortKey="club" filterKey="club" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('club', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={150}>
                   <TextFilter label="Search club" value={filters.club} onChange={v => updateFilter({ club: v })} />
                 </ColHeader>
-                <ColHeader label="Nationality" sortKey="nationality" filterKey="nationality" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('nationality', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter}>
+                <ColHeader label="Nationality" sortKey="nationality" filterKey="nationality" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('nationality', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={130}>
                   <MultiSelectFilter options={uniqueNationalities} selected={filters.nationalities} onChange={v => updateFilter({ nationalities: v })} emptyText="No nationalities in database" />
                 </ColHeader>
-                <ColHeader label="Age" sortKey="age" filterKey="age" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('age', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter}>
+                <ColHeader label="Age" sortKey="age" filterKey="age" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('age', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={80}>
                   <RangeFilter
                     label="Age range"
                     min={ageRange.min}
@@ -294,7 +308,16 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                     format={v => `${v} yrs`}
                   />
                 </ColHeader>
-                <ColHeader label="Market Value" sortKey="marketValue" filterKey="marketValue" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('marketValue', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter}>
+                <ColHeader label="Date of Birth" sortKey="age" filterKey="age" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={120} noFilter>
+                  <></>
+                </ColHeader>
+                <ColHeader label="Height" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={90} noFilter noSort>
+                  <></>
+                </ColHeader>
+                <ColHeader label="Weight" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={90} noFilter noSort>
+                  <></>
+                </ColHeader>
+                <ColHeader label="Market Value" sortKey="marketValue" filterKey="marketValue" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('marketValue', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={130}>
                   <RangeFilter
                     label="Market value range"
                     min={mvRange.min}
@@ -308,38 +331,88 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                     format={v => v === 0 ? '€0' : `€${(v / 1_000_000).toFixed(1)}M`}
                   />
                 </ColHeader>
-                {canEdit && <th className="px-4 py-3 w-20" />}
+                <ColHeader label="Agent" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={130} noFilter noSort>
+                  <></>
+                </ColHeader>
+                <ColHeader label="Goals / Yr" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={100} noFilter noSort>
+                  <></>
+                </ColHeader>
+                <ColHeader label="Total Goals" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={110} noFilter noSort>
+                  <></>
+                </ColHeader>
+                <ColHeader label="Total Games" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={110} noFilter noSort>
+                  <></>
+                </ColHeader>
+                <ColHeader label="National Games" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={125} noFilter noSort>
+                  <></>
+                </ColHeader>
+                <ColHeader label="Yrs Pro Club" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={110} noFilter noSort>
+                  <></>
+                </ColHeader>
+                <ColHeader label="National Team" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={false} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={120} noFilter noSort>
+                  <></>
+                </ColHeader>
+                {customParamKeys.map(key => (
+                  <th key={key} className="px-4 py-3 text-left" style={{ minWidth: 120 }}>
+                    <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>{key}</span>
+                  </th>
+                ))}
+                {canEdit && <th className="px-4 py-3" style={{ minWidth: 72, position: 'sticky', right: 0, background: '#141720', zIndex: 2 }} />}
               </tr>
             </thead>
             <tbody>
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 7 : 6} className="px-6 py-12 text-center text-sm text-white/20">
+                  <td colSpan={17 + customParamKeys.length + (canEdit ? 1 : 0)} className="px-6 py-12 text-center text-sm text-white/20">
                     {hasFilters ? 'No players match these filters' : 'No players yet'}
                   </td>
                 </tr>
               ) : sorted.map((player, i) => {
                 const age = calcAge(player.dateOfBirth)
+                const rowBg = i % 2 !== 0 ? 'rgba(255,255,255,0.01)' : '#141720'
                 return (
                   <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group"
-                    style={i % 2 !== 0 ? { background: 'rgba(255,255,255,0.01)' } : {}}>
-                    <td className="px-6 py-3">
+                    style={{ background: rowBg }}>
+                    <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
                       <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-black flex-shrink-0" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
                           {player.firstName[0]}{player.lastName[0]}
                         </div>
-                        <p className="text-sm font-medium text-white group-hover:text-[#00c896] transition-colors">{player.firstName} {player.lastName}</p>
+                        <p className="text-sm font-medium text-white group-hover:text-[#00c896] transition-colors whitespace-nowrap">{player.firstName} {player.lastName}</p>
                       </Link>
                     </td>
-                    <td className="px-6 py-3 text-sm text-white/50">{player.position || '—'}</td>
-                    <td className="px-6 py-3 text-sm text-white/50">{player.clubName || '—'}</td>
-                    <td className="px-6 py-3 text-sm text-white/50">{player.nationality || '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">{player.position || '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">{player.clubName || '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">{player.nationality || '—'}</td>
                     <td className="px-6 py-3 text-sm text-white/50">{age ?? '—'}</td>
-                    <td className="px-6 py-3 text-sm text-white/50">
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">
+                      {player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">
+                      {player.heightCm ? `${player.heightCm} cm` : '—'}
+                    </td>
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">
+                      {player.weightKg ? `${player.weightKg} kg` : '—'}
+                    </td>
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">
                       {player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(1)}M` : '—'}
                     </td>
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">{player.agentName || '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50">{player.goalsThisYear ?? '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50">{player.totalGoals ?? '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50">{player.totalGames ?? '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50">{player.nationalGames ?? '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50">{player.yearsInProClub ?? '—'}</td>
+                    <td className="px-6 py-3 text-sm text-white/50 whitespace-nowrap">
+                      {player.playsNational ? (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896' }}>Yes</span>
+                      ) : '—'}
+                    </td>
+                    {customParamKeys.map(key => (
+                      <td key={key} className="px-6 py-3 text-sm text-white/20">—</td>
+                    ))}
                     {canEdit && (
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" style={{ position: 'sticky', right: 0, background: rowBg, zIndex: 1 }}>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => setEditingPlayer(player)} title="Edit"
                             className="w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors"
@@ -380,7 +453,7 @@ export default PlayersTable
 
 // ─── Column Header with sort + filter dropdown ────────────────────────────────
 
-function ColHeader({ label, sortKey, filterKey, currentSort, sortDir, onSort, hasFilter, openFilter, setOpenFilter, children }: {
+function ColHeader({ label, sortKey, filterKey, currentSort, sortDir, onSort, hasFilter, openFilter, setOpenFilter, children, minWidth, sticky, noFilter, noSort }: {
   label: string
   sortKey: SortKey
   filterKey: FilterKey
@@ -391,9 +464,13 @@ function ColHeader({ label, sortKey, filterKey, currentSort, sortDir, onSort, ha
   openFilter: FilterKey | null
   setOpenFilter: (k: FilterKey | null) => void
   children: React.ReactNode
+  minWidth?: number
+  sticky?: 'left' | 'right'
+  noFilter?: boolean
+  noSort?: boolean
 }) {
-  const isOpen = openFilter === filterKey
-  const isSorted = currentSort === sortKey
+  const isOpen = openFilter === filterKey && !noFilter
+  const isSorted = currentSort === sortKey && !noSort
   const btnRef = useRef<HTMLButtonElement>(null)
   const [dropPos, setDropPos] = useState<{ top: number; left: number } | null>(null)
 
@@ -401,7 +478,6 @@ function ColHeader({ label, sortKey, filterKey, currentSort, sortDir, onSort, ha
     if (!isOpen) return
     function handleClick(e: MouseEvent) {
       const target = e.target as Node
-      // ignore clicks inside any filter dropdown
       const dropdown = document.getElementById(`filter-drop-${filterKey}`)
       if (dropdown?.contains(target)) return
       if (btnRef.current?.contains(target)) return
@@ -412,6 +488,7 @@ function ColHeader({ label, sortKey, filterKey, currentSort, sortDir, onSort, ha
   }, [isOpen, setOpenFilter, filterKey])
 
   function handleFilterClick() {
+    if (noFilter) return
     if (isOpen) {
       setOpenFilter(null)
     } else {
@@ -424,40 +501,49 @@ function ColHeader({ label, sortKey, filterKey, currentSort, sortDir, onSort, ha
   }
 
   return (
-    <th className="text-left px-4 py-3" style={{ minWidth: filterKey === 'name' ? 180 : undefined }}>
+    <th className="text-left px-4 py-3" style={{
+      minWidth,
+      ...(sticky ? { position: 'sticky', [sticky]: 0, background: '#141720', zIndex: 2 } : {}),
+    }}>
       <div className="flex items-center gap-1">
-        {/* Sort button */}
-        <button
-          onClick={() => onSort(sortKey)}
-          className="flex items-center gap-1 text-xs uppercase tracking-widest font-medium transition-colors"
-          style={{ color: isSorted ? '#00c896' : 'rgba(255,255,255,0.3)' }}
-        >
-          {label}
-          <span className="text-[10px]">{isSorted ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
-        </button>
+        {/* Sort / label */}
+        {noSort ? (
+          <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>{label}</span>
+        ) : (
+          <button
+            onClick={() => onSort(sortKey)}
+            className="flex items-center gap-1 text-xs uppercase tracking-widest font-medium transition-colors"
+            style={{ color: isSorted ? '#00c896' : 'rgba(255,255,255,0.3)' }}
+          >
+            {label}
+            <span className="text-[10px]">{isSorted ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
+          </button>
+        )}
 
         {/* Filter icon */}
-        <button
-          ref={btnRef}
-          onClick={handleFilterClick}
-          className="w-5 h-5 flex items-center justify-center rounded transition-colors flex-shrink-0"
-          style={{
-            background: hasFilter ? 'rgba(0,200,150,0.15)' : (isOpen ? 'rgba(255,255,255,0.08)' : 'transparent'),
-            color: hasFilter ? '#00c896' : 'rgba(255,255,255,0.3)',
-          }}
-          title="Filter"
-        >
-          {hasFilter ? (
-            <span className="w-2 h-2 rounded-full bg-[#00c896]" />
-          ) : (
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39A1 1 0 0 0 18.95 4H5.04a1 1 0 0 0-.79 1.61z"/>
-            </svg>
-          )}
-        </button>
+        {!noFilter && (
+          <button
+            ref={btnRef}
+            onClick={handleFilterClick}
+            className="w-5 h-5 flex items-center justify-center rounded transition-colors flex-shrink-0"
+            style={{
+              background: hasFilter ? 'rgba(0,200,150,0.15)' : (isOpen ? 'rgba(255,255,255,0.08)' : 'transparent'),
+              color: hasFilter ? '#00c896' : 'rgba(255,255,255,0.3)',
+            }}
+            title="Filter"
+          >
+            {hasFilter ? (
+              <span className="w-2 h-2 rounded-full bg-[#00c896]" />
+            ) : (
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39A1 1 0 0 0 18.95 4H5.04a1 1 0 0 0-.79 1.61z"/>
+              </svg>
+            )}
+          </button>
+        )}
       </div>
 
-      {/* Dropdown — fixed position to escape overflow:hidden */}
+      {/* Dropdown — fixed position to escape overflow */}
       {isOpen && dropPos && (
         <div
           id={`filter-drop-${filterKey}`}

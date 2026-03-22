@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import WebsitesManager from '../settings/WebsitesManager'
+import SearchParamsPanel, { PARAM_KEYS } from './SearchParamsPanel'
 
 interface PlayerResult {
   id: string
@@ -15,6 +16,7 @@ interface PlayerResult {
   weightKg: number | null
   photo: string | null
   description: string | null
+  marketValue: string | null
   sourceUrl: string
   sourceName: string
 }
@@ -38,14 +40,32 @@ interface Website {
   category: string | null
 }
 
+interface SiteStat {
+  name: string
+  url: string
+  count: number
+  error: boolean
+}
+
 export default function SearchClient({ databases, websites }: { databases: Database[]; websites: Website[] }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PlayerResult[]>([])
+  const [siteStats, setSiteStats] = useState<SiteStat[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [noSitesSelected, setNoSitesSelected] = useState(false)
-  const [importing, setImporting] = useState<PlayerResult | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [merging, setMerging] = useState(false)
+  const [visibleParams, setVisibleParams] = useState<Set<string>>(new Set())
   const inputRef = useRef<HTMLInputElement>(null)
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -53,18 +73,20 @@ export default function SearchClient({ databases, websites }: { databases: Datab
     setLoading(true)
     setSearched(true)
     setNoSitesSelected(false)
+    setSiteStats([])
+    setSelectedIds(new Set())
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
     const data = await res.json()
     setResults(data.players || [])
+    setSiteStats(data.siteStats || [])
     setNoSitesSelected(!!data.noSitesSelected)
     setLoading(false)
   }
 
   return (
     <div>
-    <div className="max-w-5xl">
-      {/* Search bar */}
-      <form onSubmit={handleSearch} className="flex gap-3 mb-8">
+      {/* Search bar — full width above the two-column layout */}
+      <form onSubmit={handleSearch} className="flex gap-3 mb-6">
         <div className="flex-1 relative">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -90,6 +112,10 @@ export default function SearchClient({ databases, websites }: { databases: Datab
           {loading ? 'Searching...' : 'Search'}
         </button>
       </form>
+
+    {/* Two-column row: results left, coverage right */}
+    <div className="flex gap-6 items-stretch">
+    <div className="flex-1 min-w-0">
 
       {/* Loading */}
       {loading && (
@@ -129,104 +155,343 @@ export default function SearchClient({ databases, websites }: { databases: Datab
       {/* Results */}
       {!loading && results.length > 0 && (
         <div>
-          <p className="text-xs text-white/30 uppercase tracking-widest mb-4">{results.length} player{results.length !== 1 ? 's' : ''} found</p>
+          {/* Action bar */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs text-white/30 uppercase tracking-widest">{results.length} result{results.length !== 1 ? 's' : ''} found</p>
+            {selectedIds.size > 0 ? (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-white/50">{selectedIds.size} selected</span>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-xs text-white/30 hover:text-white/60 transition-colors"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setMerging(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-black"
+                  style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                  Merge & Import
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-white/20">Select results to merge & import</p>
+            )}
+          </div>
           <div className="flex flex-col gap-4">
             {results.map(player => (
-              <PlayerCard key={player.id} player={player} onImport={() => setImporting(player)} />
+              <PlayerCard
+                key={player.id}
+                player={player}
+                selected={selectedIds.has(player.id)}
+                onToggleSelect={() => toggleSelect(player.id)}
+                visibleParams={visibleParams}
+              />
             ))}
           </div>
         </div>
       )}
 
-      {/* Import modal */}
-      {importing && (
-        <ImportModal
-          player={importing}
+      {/* Merge modal */}
+      {merging && (
+        <MergeModal
+          players={results.filter(p => selectedIds.has(p.id))}
           databases={databases}
-          onClose={() => setImporting(null)}
+          onClose={() => setMerging(false)}
         />
       )}
-    </div>
+    </div>{/* end left column */}
 
-    {/* Scouting Websites — full width */}
-    <div className="mt-10">
-      <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">Scouting Websites</p>
-      <WebsitesManager websites={websites} />
+    {/* Right column: Search Coverage + Parameter Coverage */}
+    <div className="w-64 flex-shrink-0 flex flex-col gap-4">
+      <div className="rounded-2xl border border-white/8 overflow-hidden flex flex-col" style={{ background: '#141720' }}>
+        <div className="px-4 py-3 border-b border-white/8 flex-shrink-0">
+          <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Search Coverage</p>
+        </div>
+        {!searched ? (
+          <div className="flex-1 flex items-center justify-center px-4 py-6">
+            <p className="text-xs text-white/25 text-center leading-relaxed">Run a search to see<br/>which sites were checked</p>
+          </div>
+        ) : loading ? (
+          <div className="px-4 py-5 flex flex-col gap-2">
+            {[1,2,3].map(i => (
+              <div key={i} className="h-8 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+            ))}
+          </div>
+        ) : noSitesSelected ? (
+          <div className="px-4 py-5">
+            <p className="text-xs text-white/25 text-center">No sites selected for search</p>
+          </div>
+        ) : siteStats.length === 0 ? (
+          <div className="px-4 py-5">
+            <p className="text-xs text-white/25 text-center">No sites with scrapers were searched</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {siteStats
+              .sort((a, b) => b.count - a.count)
+              .map(site => (
+              <div key={site.name} className="flex items-center gap-3 px-4 py-2.5">
+                {/* Status icon */}
+                {site.error ? (
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,100,100,0.12)' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#ff6464"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                  </div>
+                ) : site.count > 0 ? (
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                  </div>
+                ) : (
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)"><path d="M19 13H5v-2h14v2z"/></svg>
+                  </div>
+                )}
+                {/* Site info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate" style={{ color: site.count > 0 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)' }}>
+                    {site.name}
+                  </p>
+                  {site.error ? (
+                    <p className="text-[10px]" style={{ color: '#ff6464aa' }}>Error</p>
+                  ) : (
+                    <p className="text-[10px]" style={{ color: site.count > 0 ? '#00c896aa' : 'rgba(255,255,255,0.2)' }}>
+                      {site.count > 0 ? `${site.count} result${site.count !== 1 ? 's' : ''}` : 'No results'}
+                    </p>
+                  )}
+                </div>
+                {/* Count badge */}
+                {site.count > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896' }}>
+                    {site.count}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Summary footer */}
+        {searched && !loading && siteStats.length > 0 && (
+          <div className="px-4 py-2.5 border-t border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <p className="text-[10px] text-white/30">
+              {siteStats.filter(s => s.count > 0).length} of {siteStats.length} sites found results
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Parameter Coverage Panel */}
+      <ParameterCoveragePanel results={results} searched={searched} loading={loading} />
+    </div>{/* end right column */}
+
+    </div>{/* end flex row */}
+
+    {/* Bottom row: Scouting Websites + Search Parameters */}
+    <div className="mt-10 flex gap-6 items-start">
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">Scouting Websites</p>
+        <WebsitesManager websites={websites} />
+      </div>
+      <div className="w-64 flex-shrink-0">
+        <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">&nbsp;</p>
+        <SearchParamsPanel onChange={setVisibleParams} />
+      </div>
     </div>
     </div>
   )
 }
 
-function PlayerCard({ player, onImport }: { player: PlayerResult; onImport: () => void }) {
+// ─── Parameter Coverage Panel ─────────────────────────────────────────────────
+
+const PARAM_LABELS: Record<string, string> = {
+  photo:       'Photo',
+  nationality: 'Nationality',
+  team:        'Team / Club',
+  position:    'Position',
+  age:         'Age',
+  dateOfBirth: 'Date of Birth',
+  height:      'Height',
+  weight:      'Weight',
+  marketValue: 'Market Value',
+  description: 'Bio / Description',
+}
+
+function countField(results: PlayerResult[], key: string): number {
+  switch (key) {
+    case 'photo':       return results.filter(p => !!p.photo).length
+    case 'nationality': return results.filter(p => !!p.nationality).length
+    case 'team':        return results.filter(p => !!p.team).length
+    case 'position':    return results.filter(p => !!p.position).length
+    case 'age':
+    case 'dateOfBirth': return results.filter(p => !!p.dateOfBirth).length
+    case 'height':      return results.filter(p => p.heightCm !== null).length
+    case 'weight':      return results.filter(p => p.weightKg !== null).length
+    case 'marketValue': return results.filter(p => !!p.marketValue).length
+    case 'description': return results.filter(p => !!p.description).length
+    default:            return 0
+  }
+}
+
+function ParameterCoveragePanel({ results, searched, loading }: {
+  results: PlayerResult[]
+  searched: boolean
+  loading: boolean
+}) {
+  return (
+    <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#141720' }}>
+      <div className="px-4 py-3 border-b border-white/8">
+        <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Parameter Coverage</p>
+      </div>
+
+      {!searched ? (
+        <div className="flex items-center justify-center px-4 py-6">
+          <p className="text-xs text-white/25 text-center leading-relaxed">Run a search to see<br/>which parameters were found</p>
+        </div>
+      ) : loading ? (
+        <div className="px-4 py-4 flex flex-col gap-2">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="h-6 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+          ))}
+        </div>
+      ) : (
+        <div className="divide-y divide-white/5">
+          {PARAM_KEYS.map(key => {
+            const count = countField(results, key)
+            const found = count > 0
+            return (
+              <div key={key} className="flex items-center gap-3 px-4 py-2">
+                {/* Icon */}
+                {found ? (
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                  </div>
+                ) : (
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)"><path d="M19 13H5v-2h14v2z"/></svg>
+                  </div>
+                )}
+                {/* Label */}
+                <span className="text-xs flex-1" style={{ color: found ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.25)' }}>
+                  {PARAM_LABELS[key]}
+                </span>
+                {/* Count */}
+                {found && (
+                  <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: '#00c896aa' }}>
+                    {count}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Footer */}
+      {searched && !loading && results.length > 0 && (
+        <div className="px-4 py-2 border-t border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+          <p className="text-[10px] text-white/30">
+            {PARAM_KEYS.filter(k => countField(results, k) > 0).length} of {PARAM_KEYS.length} parameters found
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PlayerCard({ player, selected, onToggleSelect, visibleParams }: {
+  player: PlayerResult
+  selected: boolean
+  onToggleSelect: () => void
+  visibleParams: Set<string>
+}) {
   const [expanded, setExpanded] = useState(false)
+  const show = (key: string) => visibleParams.size === 0 || visibleParams.has(key)
 
   const age = player.dateOfBirth
     ? Math.floor((Date.now() - new Date(player.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
 
   return (
-    <div className="rounded-2xl border border-white/5 overflow-hidden transition-all" style={{
-      background: 'linear-gradient(135deg, #141720 0%, #111318 100%)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-    }}>
+    <div
+      className="rounded-2xl border overflow-hidden transition-all cursor-pointer"
+      style={{
+        background: 'linear-gradient(135deg, #141720 0%, #111318 100%)',
+        boxShadow: selected ? '0 0 0 2px #00c896' : '0 8px 32px rgba(0,0,0,0.3)',
+        borderColor: selected ? '#00c896' : 'rgba(255,255,255,0.05)',
+      }}
+      onClick={onToggleSelect}
+    >
       <div className="flex items-center gap-5 p-5">
-        {/* Photo */}
-        <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.05)' }}>
-          {player.photo ? (
-            <img src={player.photo} alt={player.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
-          ) : (
-            <span className="text-2xl font-bold text-white/20">{player.name[0]}</span>
+        {/* Checkbox */}
+        <div
+          className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
+          style={{
+            background: selected ? '#00c896' : 'transparent',
+            border: `2px solid ${selected ? '#00c896' : 'rgba(255,255,255,0.2)'}`,
+          }}
+        >
+          {selected && (
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#000">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
           )}
         </div>
+
+        {/* Photo */}
+        {show('photo') && (
+          <div
+            className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.05)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {player.photo ? (
+              <img src={player.photo} alt={player.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
+            ) : (
+              <span className="text-2xl font-bold text-white/20">{player.name[0]}</span>
+            )}
+          </div>
+        )}
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-bold text-white mb-1">{player.name}</h3>
           <div className="flex items-center gap-3 flex-wrap">
-            {player.team && <span className="text-sm text-white/50">{player.team}</span>}
-            {player.position && (
+            {show('team') && player.team && <span className="text-sm text-white/50">{player.team}</span>}
+            {show('position') && player.position && (
               <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>
                 {player.position}
               </span>
             )}
-            {player.nationality && <span className="text-sm text-white/40">{player.nationality}</span>}
+            {show('nationality') && player.nationality && <span className="text-sm text-white/40">{player.nationality}</span>}
           </div>
-          <div className="flex items-center gap-4 mt-2">
-            {age && <Stat label="Age" value={`${age}`} />}
-            {player.heightCm && <Stat label="Height" value={`${player.heightCm} cm`} />}
-            {player.weightKg && <Stat label="Weight" value={`${player.weightKg} kg`} />}
-            {player.dateOfBirth && <Stat label="Born" value={new Date(player.dateOfBirth).toLocaleDateString()} />}
+          <div className="flex items-center gap-4 mt-2 flex-wrap">
+            {show('age') && age && <Stat label="Age" value={`${age}`} />}
+            {show('height') && player.heightCm && <Stat label="Height" value={`${player.heightCm} cm`} />}
+            {show('weight') && player.weightKg && <Stat label="Weight" value={`${player.weightKg} kg`} />}
+            {show('dateOfBirth') && player.dateOfBirth && <Stat label="Born" value={new Date(player.dateOfBirth).toLocaleDateString()} />}
+            {show('marketValue') && player.marketValue && <Stat label="Market Value" value={player.marketValue} />}
           </div>
-          <div className="flex items-center gap-1 mt-2">
+          <div className="flex items-center gap-1 mt-2" onClick={e => e.stopPropagation()}>
             <span className="text-xs text-white/50">Source:</span>
             <a href={player.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium hover:text-[#00c896] transition-colors underline underline-offset-2" style={{ color: '#00c896aa' }}>{player.sourceName} ↗</a>
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col gap-2 flex-shrink-0">
+        {/* Expand description button */}
+        {show('description') && player.description && (
           <button
-            onClick={onImport}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-black"
-            style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+            onClick={e => { e.stopPropagation(); setExpanded(v => !v) }}
+            className="text-xs text-white/30 hover:text-white/60 transition-colors flex-shrink-0"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            Import
+            {expanded ? 'Less ↑' : 'More ↓'}
           </button>
-          {player.description && (
-            <button
-              onClick={() => setExpanded(e => !e)}
-              className="text-xs text-white/30 hover:text-white/60 transition-colors text-center"
-            >
-              {expanded ? 'Less ↑' : 'More ↓'}
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Expanded description */}
-      {expanded && player.description && (
-        <div className="px-5 pb-5 border-t border-white/5 pt-4">
+      {show('description') && expanded && player.description && (
+        <div className="px-5 pb-5 border-t border-white/5 pt-4" onClick={e => e.stopPropagation()}>
           <p className="text-sm text-white/50 leading-relaxed line-clamp-4">{player.description}</p>
           <a href={player.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs mt-2 inline-block" style={{ color: '#00c896' }}>
             View full profile →
@@ -246,97 +511,222 @@ function Stat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ImportModal({ player, databases, onClose }: { player: PlayerResult; databases: Database[]; onClose: () => void }) {
+// ─── Merge & Import Modal ──────────────────────────────────────────────────────
+
+function parseMarketValueToNumber(v: string | null): number | null {
+  if (!v) return null
+  const lower = v.toLowerCase()
+  const num = parseFloat(v.replace(/[^0-9.]/g, ''))
+  if (isNaN(num)) return null
+  if (lower.includes('b')) return Math.round(num * 1_000_000_000)
+  if (lower.includes('m')) return Math.round(num * 1_000_000)
+  if (lower.includes('k')) return Math.round(num * 1_000)
+  return Math.round(num)
+}
+
+function getSources(players: PlayerResult[], getter: (p: PlayerResult) => string | null | undefined) {
+  const out: { sourceName: string; value: string }[] = []
+  for (const p of players) {
+    const v = getter(p)
+    if (v != null && String(v).trim() !== '') out.push({ sourceName: p.sourceName, value: String(v) })
+  }
+  return out
+}
+
+function pickBest(sources: { sourceName: string; value: string }[]) {
+  return sources[0]?.value ?? ''
+}
+
+function hasConflict(sources: { sourceName: string; value: string }[]) {
+  if (sources.length <= 1) return false
+  return new Set(sources.map(s => s.value)).size > 1
+}
+
+function MergeModal({ players, databases, onClose }: {
+  players: PlayerResult[]
+  databases: Database[]
+  onClose: () => void
+}) {
+  const router = useRouter()
   const [selectedDb, setSelectedDb] = useState(databases[0]?.id ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const router = useRouter()
 
-  const age = player.dateOfBirth
-    ? Math.floor((Date.now() - new Date(player.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-    : null
+  // Build source lists per field
+  const nameSources   = getSources(players, p => p.name)
+  const posSources    = getSources(players, p => p.position)
+  const clubSources   = getSources(players, p => p.team)
+  const natSources    = getSources(players, p => p.nationality)
+  const dobSources    = getSources(players, p => p.dateOfBirth)
+  const htSources     = getSources(players, p => p.heightCm?.toString())
+  const wtSources     = getSources(players, p => p.weightKg?.toString())
+  const mvSources     = getSources(players, p => p.marketValue)
+
+  const bestName = pickBest(nameSources).trim().split(/\s+/)
+
+  const [form, setForm] = useState({
+    firstName:   bestName[0] ?? '',
+    lastName:    bestName.slice(1).join(' ') || '',
+    position:    pickBest(posSources),
+    clubName:    pickBest(clubSources),
+    nationality: pickBest(natSources),
+    dateOfBirth: pickBest(dobSources),
+    heightCm:    pickBest(htSources),
+    weightKg:    pickBest(wtSources),
+    marketValue: pickBest(mvSources),
+  })
+
+  function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
 
   async function handleImport() {
     if (!selectedDb) return
     setLoading(true)
     setError('')
-
-    const nameParts = player.name.trim().split(' ')
-    const firstName = nameParts[0]
-    const lastName = nameParts.slice(1).join(' ') || '-'
-
     const res = await fetch(`/api/databases/${selectedDb}/players`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        firstName,
-        lastName,
-        nationality: player.nationality,
-        clubName: player.team,
-        position: player.position,
-        dateOfBirth: player.dateOfBirth,
-        heightCm: player.heightCm,
-        weightKg: player.weightKg,
-        sourceName: 'TheSportsDB',
-        sourceUrl: player.sourceUrl,
+        firstName:   form.firstName.trim(),
+        lastName:    form.lastName.trim() || '-',
+        position:    form.position    || null,
+        clubName:    form.clubName    || null,
+        nationality: form.nationality || null,
+        dateOfBirth: form.dateOfBirth || null,
+        heightCm:    form.heightCm    ? parseInt(form.heightCm)    : null,
+        weightKg:    form.weightKg    ? parseInt(form.weightKg)    : null,
+        marketValue: parseMarketValueToNumber(form.marketValue),
+        sourceName:  players.map(p => p.sourceName).join(', '),
+        sourceUrl:   players[0]?.sourceUrl,
       }),
     })
-
     if (res.ok) {
       const data = await res.json()
       router.push(`/databases/${selectedDb}/players/${data.id}`)
     } else {
-      const data = await res.json()
-      setError(data.error || 'Something went wrong')
+      const d = await res.json().catch(() => ({}))
+      setError(d.error || 'Something went wrong')
       setLoading(false)
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl p-6 border border-white/10" style={{ background: '#141720' }} onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-white mb-1">Import Player</h2>
-        <p className="text-sm text-white/30 mb-5">Choose which database to import into</p>
+  const sourceNames = [...new Set(players.map(p => p.sourceName))]
 
-        {/* Player summary */}
-        <div className="flex items-center gap-3 p-3 rounded-xl mb-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          {player.photo && (
-            <img src={player.photo} alt={player.name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" onError={e => { e.currentTarget.style.display = 'none' }} />
-          )}
-          <div>
-            <p className="text-sm font-semibold text-white">{player.name}</p>
-            <p className="text-xs text-white/40">{[player.team, player.nationality, age ? `${age} yrs` : null].filter(Boolean).join(' · ')}</p>
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl border border-white/10 max-h-[90vh] flex flex-col" style={{ background: '#141720' }} onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-white/5 flex-shrink-0">
+          <h2 className="text-lg font-semibold text-white mb-0.5">Merge & Import Player</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-white/30">Merging {players.length} source{players.length !== 1 ? 's' : ''}:</span>
+            {sourceNames.map(s => (
+              <span key={s} className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.2)' }}>{s}</span>
+            ))}
           </div>
         </div>
 
-        {/* Database selector */}
-        {databases.length === 0 ? (
-          <p className="text-sm text-red-400 mb-4">You have no databases. Create one first.</p>
-        ) : (
-          <div className="flex flex-col gap-2 mb-5">
-            {databases.map(db => (
-              <label key={db.id} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all" style={{
-                background: selectedDb === db.id ? 'rgba(0,200,150,0.08)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${selectedDb === db.id ? 'rgba(0,200,150,0.3)' : 'rgba(255,255,255,0.06)'}`,
-              }}>
-                <input type="radio" name="database" value={db.id} checked={selectedDb === db.id} onChange={() => setSelectedDb(db.id)} className="accent-[#00c896]" />
-                <span className="text-sm text-white">{db.name}</span>
-              </label>
-            ))}
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <MergeField label="First Name *" value={form.firstName} onChange={v => set('firstName', v)} />
+            <MergeField label="Last Name *" value={form.lastName} onChange={v => set('lastName', v)} />
           </div>
-        )}
+          <MergeField label="Position" value={form.position} onChange={v => set('position', v)} sources={posSources} onPick={v => set('position', v)} />
+          <MergeField label="Club" value={form.clubName} onChange={v => set('clubName', v)} sources={clubSources} onPick={v => set('clubName', v)} />
+          <MergeField label="Nationality" value={form.nationality} onChange={v => set('nationality', v)} sources={natSources} onPick={v => set('nationality', v)} />
+          <div className="grid grid-cols-3 gap-3">
+            <MergeField label="Date of Birth" value={form.dateOfBirth} onChange={v => set('dateOfBirth', v)} type="date" sources={dobSources} onPick={v => set('dateOfBirth', v)} />
+            <MergeField label="Height (cm)" value={form.heightCm} onChange={v => set('heightCm', v)} sources={htSources} onPick={v => set('heightCm', v)} />
+            <MergeField label="Weight (kg)" value={form.weightKg} onChange={v => set('weightKg', v)} sources={wtSources} onPick={v => set('weightKg', v)} />
+          </div>
+          <MergeField label="Market Value" value={form.marketValue} onChange={v => set('marketValue', v)} sources={mvSources} onPick={v => set('marketValue', v)} />
 
-        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+          {/* Database selector */}
+          <div className="border-t border-white/5 pt-4">
+            <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Import into database</p>
+            {databases.length === 0 ? (
+              <p className="text-sm text-red-400">You have no databases. Create one first.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {databases.map(db => (
+                  <label key={db.id} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all" style={{
+                    background: selectedDb === db.id ? 'rgba(0,200,150,0.08)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${selectedDb === db.id ? 'rgba(0,200,150,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                  }}>
+                    <input type="radio" name="db" value={db.id} checked={selectedDb === db.id} onChange={() => setSelectedDb(db.id)} className="accent-[#00c896]" />
+                    <span className="text-sm text-white">{db.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
 
-        <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            Cancel
-          </button>
-          <button onClick={handleImport} disabled={loading || !selectedDb || databases.length === 0} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-white/5 flex gap-3 flex-shrink-0">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70 transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>Cancel</button>
+          <button onClick={handleImport} disabled={loading || !form.firstName.trim() || !selectedDb || databases.length === 0} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
             {loading ? 'Importing...' : 'Import Player'}
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function MergeField({ label, value, onChange, type = 'text', sources = [], onPick }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  sources?: { sourceName: string; value: string }[]
+  onPick?: (v: string) => void
+}) {
+  const conflict = hasConflict(sources)
+  const agree    = !conflict && sources.length > 1
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-xs text-white/40">{label}</label>
+        {agree   && <span className="text-[10px]" style={{ color: '#00c896aa' }}>✓ {sources.length} sources agree</span>}
+        {conflict && <span className="text-[10px]" style={{ color: '#ffaa44' }}>⚠ {sources.length} sources differ</span>}
+      </div>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none transition-colors"
+        style={{
+          background: '#0f1117',
+          border: `1px solid ${conflict ? 'rgba(255,170,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
+        }}
+        onFocus={e => e.currentTarget.style.borderColor = conflict ? 'rgba(255,170,68,0.7)' : '#00c896'}
+        onBlur={e => e.currentTarget.style.borderColor = conflict ? 'rgba(255,170,68,0.4)' : 'rgba(255,255,255,0.1)'}
+      />
+      {/* Source chips — always shown when multiple sources, clickable to set value */}
+      {sources.length > 1 && onPick && (
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {sources.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onPick(s.value)}
+              className="text-[10px] px-2 py-0.5 rounded-md transition-all"
+              style={{
+                background: value === s.value ? (conflict ? 'rgba(255,170,68,0.15)' : 'rgba(0,200,150,0.12)') : 'rgba(255,255,255,0.04)',
+                color:      value === s.value ? (conflict ? '#ffaa44' : '#00c896') : 'rgba(255,255,255,0.3)',
+                border:     `1px solid ${value === s.value ? (conflict ? 'rgba(255,170,68,0.3)' : 'rgba(0,200,150,0.25)') : 'rgba(255,255,255,0.06)'}`,
+              }}
+            >
+              {s.sourceName}: {s.value}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

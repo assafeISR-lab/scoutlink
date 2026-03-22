@@ -4,60 +4,96 @@ export const transfermarktScraper: SiteScraper = {
   domains: ['transfermarkt.com', 'www.transfermarkt.com'],
   name: 'Transfermarkt',
   async search(query: string): Promise<ScrapedPlayer[]> {
+    try {
+    const baseHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    }
+
+    // Step 1: visit homepage to collect cookies
+    let cookieStr = ''
+    try {
+      const homeRes = await fetch('https://www.transfermarkt.com/', {
+        headers: { ...baseHeaders, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+      })
+      const setCookies = (homeRes.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.()
+      if (setCookies?.length) {
+        cookieStr = setCookies.map(c => c.split(';')[0]).join('; ')
+      } else {
+        const raw = homeRes.headers.get('set-cookie') ?? ''
+        cookieStr = raw.split(',').map(c => c.trim().split(';')[0]).join('; ')
+      }
+    } catch { /* continue without cookies */ }
+
+    // Step 2: perform search
     const res = await fetch(
       `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(query)}&Spieler_page=0`,
       {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          ...baseHeaders,
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
+          'Referer': 'https://www.transfermarkt.com/',
+          ...(cookieStr ? { 'Cookie': cookieStr } : {}),
         },
-        next: { revalidate: 300 },
       }
     )
-    if (!res.ok) return []
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const html = await res.text()
+    if (html.includes('cf-browser-verification') || html.includes('Just a moment') || html.includes('_cf_chl')) throw new Error('Cloudflare block')
 
     const players: ScrapedPlayer[] = []
+    const seen = new Set<string>()
 
-    // Find the players results section (between "Players" heading and next section)
-    const spielerSection = html.match(/id="yw1"[\s\S]*?<\/table>/)?.[0] ?? ''
-    if (!spielerSection) return []
+    // Find all player profile anchor tags
+    // Structure: <a title="Name" href="/slug/profil/spieler/ID">Name</a>
+    const linkRe = /<a[^>]*href="\/(([^"\/]+)\/profil\/spieler\/(\d+))"[^>]*>([^<]+)<\/a>/g
+    const linkMatches = [...html.matchAll(linkRe)]
 
-    // Each player row
-    const rows = [...spielerSection.matchAll(/<tr[^>]*class="[^"]*(?:odd|even)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi)]
+    for (const match of linkMatches) {
+      const slug = match[2]
+      const playerId = match[3]
+      const name = match[4].trim()
+      if (!name || name.length < 2 || seen.has(playerId)) continue
+      seen.add(playerId)
 
-    for (const row of rows) {
-      const rowHtml = row[1]
+      const linkPos = match.index!
 
-      // Player name + link
-      const nameMatch = rowHtml.match(/spieler\/(\d+)"[^>]*>\s*([^<]+)<\/a>/)
-      if (!nameMatch) continue
-      const playerId = nameMatch[1]
-      const name = nameMatch[2].trim()
+      // Photo appears just before the player name link in the same row
+      const before = html.slice(Math.max(0, linkPos - 600), linkPos)
+      // Position, club, nationality, age appear in the outer row AFTER the player link
+      const after = html.slice(linkPos, linkPos + 2500)
 
-      // Position
-      const posMatch = rowHtml.match(/<td[^>]*>([A-Za-z\s]+)<\/td>/)
-      const position = posMatch?.[1]?.trim() ?? null
+      // Photo: Transfermarkt uses tmssl.akamaized.net CDN, portrait images
+      const photoMatches = [...before.matchAll(/src="(https?:\/\/[^"]+\/portrait\/[^"]+\.(?:jpg|png|webp)[^"]*)"[^>]*class="bilderrahmen/gi)]
+      const photo = photoMatches.length > 0 ? photoMatches[photoMatches.length - 1][1] : null
 
-      // Age (number in a td)
-      const ageMatch = rowHtml.match(/<td[^>]*>(\d{2})<\/td>/)
-      const age = ageMatch ? parseInt(ageMatch[1]) : null
-      const approxDob = age
+      // Position: 1–3 uppercase letters in a zentriert td — appears in outer row after link
+      const posMatch = after.match(/<td[^>]*class="zentriert"[^>]*>\s*([A-Z]{1,3})\s*<\/td>/)
+      const position = posMatch ? normalizePosition(posMatch[1]) : null
+
+      // Age: 2-digit number in a zentriert td (distinct from position — numbers only)
+      const ageMatches = [...after.matchAll(/<td[^>]*class="zentriert"[^>]*>\s*(\d{1,2})\s*<\/td>/g)]
+      const age = ageMatches.length > 0 ? parseInt(ageMatches[0][1]) : null
+      const approxDob = age && age > 14 && age < 55
         ? new Date(new Date().getFullYear() - age, 0, 1).toISOString().split('T')[0]
         : null
 
-      // Club
-      const clubMatch = rowHtml.match(/verein\/\d+[^>]*>\s*([^<]+)<\/a>/)
+      // Club: verein link — prefer title attribute, fallback to inner text
+      const clubMatch = after.match(/href="\/[^"]+\/(?:startseite|kader)\/verein\/\d+"[^>]*title="([^"]+)"/)
+        ?? after.match(/href="\/[^"]+\/(?:startseite|kader)\/verein\/\d+"[^>]*>([^<]+)<\/a>/)
       const club = clubMatch?.[1]?.trim() ?? null
 
-      // Photo
-      const photoMatch = rowHtml.match(/src="(https:\/\/img\.transfermarkt\.com\/[^"]+)"/i)
-      const photo = photoMatch?.[1] ?? null
+      // Nationality: flag image alt text
+      const natMatch = after.match(/class="[^"]*flagge[^"]*"[^>]+alt="([^"]+)"/i)
+        ?? after.match(/alt="([^"]+)"[^>]*class="[^"]*flagge[^"]*"/i)
+      const nationality = natMatch?.[1]?.trim() ?? null
 
-      // Nationality (alt text of flag img)
-      const natMatch = rowHtml.match(/flaggenrahmen[^>]+alt="([^"]+)"/)
-      const nationality = natMatch?.[1] ?? null
+      // Market value: <td class="rechts hauptlink">€1.00m</td>
+      const mvMatch = after.match(/<td[^>]*class="rechts hauptlink"[^>]*>([^<]+)<\/td>/)
+      const marketValue = mvMatch?.[1]?.trim() ?? null
 
       players.push({
         id: `tm-${playerId}`,
@@ -70,10 +106,27 @@ export const transfermarktScraper: SiteScraper = {
         weightKg: null,
         photo,
         description: null,
-        sourceUrl: `https://www.transfermarkt.com/x/profil/spieler/${playerId}`,
+        marketValue,
+        sourceUrl: `https://www.transfermarkt.com/${slug}/profil/spieler/${playerId}`,
         sourceName: 'Transfermarkt',
       })
     }
+
     return players
+    } catch {
+      return []
+    }
   },
+}
+
+function normalizePosition(pos: string): string {
+  const map: Record<string, string> = {
+    GK: 'Goalkeeper', TW: 'Goalkeeper',
+    CB: 'Defender', RB: 'Defender', LB: 'Defender', RWB: 'Defender', LWB: 'Defender',
+    LA: 'Defender', RA: 'Defender',
+    CDM: 'Midfielder', DM: 'Midfielder', CM: 'Midfielder', ZM: 'Midfielder',
+    CAM: 'Midfielder', OM: 'Midfielder', AM: 'Midfielder', RM: 'Midfielder', LM: 'Midfielder',
+    RW: 'Forward', LW: 'Forward', ST: 'Forward', CF: 'Forward', SS: 'Forward',
+  }
+  return map[pos.toUpperCase()] ?? pos
 }

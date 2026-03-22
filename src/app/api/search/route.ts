@@ -43,20 +43,62 @@ export async function GET(req: NextRequest) {
     return true
   })
 
-  // Run all scrapers in parallel with individual error isolation
+  // Build query variations — for 3+ word names, also try first+last (skipping middle names)
+  // e.g. "Idrissa Gana Gueye" → ["Idrissa Gana Gueye", "Idrissa Gueye"]
+  const buildVariations = (q: string): string[] => {
+    const words = q.trim().split(/\s+/)
+    const vars = [q.trim()]
+    if (words.length >= 3) vars.push(`${words[0]} ${words[words.length - 1]}`)
+    if (words.length >= 4) vars.push(`${words[0]} ${words[1]} ${words[words.length - 1]}`)
+    return [...new Set(vars)]
+  }
+  const queryVariations = buildVariations(query.trim())
+
+  // Run all scrapers in parallel — 15 s timeout per site so one slow site can't block others
+  // Each scraper runs all query variations in parallel and deduplicates by player id
+  const withTimeout = (p: Promise<ScrapedPlayer[]>): Promise<ScrapedPlayer[]> =>
+    Promise.race([p, new Promise<ScrapedPlayer[]>((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))])
+
   const results = await Promise.allSettled(
-    uniqueScrapers.map(e => e.scraper.search(query.trim()))
+    uniqueScrapers.map(async e => {
+      const varResults = await Promise.all(
+        queryVariations.map(q => withTimeout(e.scraper.search(q)).catch(() => [] as ScrapedPlayer[]))
+      )
+      // Flatten and deduplicate by player id across all variations
+      const seenIds = new Set<string>()
+      return varResults.flat().filter(p => {
+        if (seenIds.has(p.id)) return false
+        seenIds.add(p.id)
+        return true
+      })
+    })
   )
 
+  // Filter: player name must contain at least 2 words from the query (for multi-word queries)
+  // Prevents single-word partial matches like "Gueye" matching unrelated players
+  const queryWords = query.trim().toLowerCase().split(/\s+/).filter(w => w.length > 1)
+  const nameMatchesQuery = (playerName: string): boolean => {
+    if (queryWords.length <= 1) return true
+    const nameLower = playerName.toLowerCase()
+    const matchCount = queryWords.filter(w => nameLower.includes(w)).length
+    return matchCount >= 2
+  }
+
   const players: ScrapedPlayer[] = []
-  results.forEach(result => {
+  const siteStats: { name: string; url: string; count: number; error: boolean }[] = []
+
+  results.forEach((result, i) => {
     if (result.status === 'fulfilled') {
-      players.push(...result.value)
+      const filtered = result.value.filter(p => nameMatchesQuery(p.name))
+      players.push(...filtered)
+      siteStats.push({ name: uniqueScrapers[i].scraper.name, url: uniqueScrapers[i].url, count: filtered.length, error: false })
+    } else {
+      siteStats.push({ name: uniqueScrapers[i].scraper.name, url: uniqueScrapers[i].url, count: 0, error: true })
     }
   })
 
   // Log search activity (fire and forget)
   prisma.activityLog.create({ data: { agentId: user.id, action: 'search', detail: query } }).catch(() => {})
 
-  return NextResponse.json({ players })
+  return NextResponse.json({ players, siteStats })
 }

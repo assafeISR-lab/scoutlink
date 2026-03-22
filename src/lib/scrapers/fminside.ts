@@ -11,69 +11,76 @@ export const fmInsideScraper: SiteScraper = {
       'Referer': 'https://fminside.net/players',
     }
 
-    // Step 1: GET the players page first to pick up any session cookies
-    const getRes = await fetch('https://fminside.net/players', { headers })
-    const cookies = getRes.headers.get('set-cookie') ?? ''
+    // Step 1: GET page to collect cookies + CSRF token
+    let cookies = ''
+    let csrf = ''
+    try {
+      const getRes = await fetch('https://fminside.net/players', { headers })
+      const setCookieHeaders = (getRes.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.()
+      cookies = setCookieHeaders?.length
+        ? setCookieHeaders.map(c => c.split(';')[0]).join('; ')
+        : getRes.headers.get('set-cookie') ?? ''
+      const pageHtml = await getRes.text()
+      const csrfMatch = pageHtml.match(/name="_token"[^>]*value="([^"]+)"/)
+        ?? pageHtml.match(/meta[^>]*name="csrf-token"[^>]*content="([^"]+)"/)
+      csrf = csrfMatch?.[1] ?? ''
+    } catch { /* continue */ }
 
-    // Step 2: POST search with player name
-    const formData = new URLSearchParams()
-    formData.set('name', query)
-    formData.set('db', '7') // FM26 (latest)
+    // Step 2: POST search
+    let html = ''
+    try {
+      const formData = new URLSearchParams()
+      formData.set('name', query)
+      formData.set('database_version', '7') // FM26
+      formData.set('gender', '0')
+      if (csrf) formData.set('_token', csrf)
 
-    const res = await fetch('https://fminside.net/players', {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': cookies,
-      },
-      body: formData.toString(),
-    })
+      const res = await fetch('https://fminside.net/players', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': cookies },
+        body: formData.toString(),
+      })
+      if (!res.ok) return []
+      html = await res.text()
+    } catch {
+      return []
+    }
 
-    if (!res.ok) return []
-    const html = await res.text()
+    // Parse player links — actual structure uses <a> tags inside <b> blocks, NOT <tr> rows
+    // Link format: href="/players/{db-version}/{id}-{slug}"
+    const linkRe = /<a[^>]*href="\/players\/([\w-]+)\/((\d+)-([^"]+))"[^>]*title="([^"]+)"[^>]*>/g
+    const linkMatches = [...html.matchAll(linkRe)]
 
     const players: ScrapedPlayer[] = []
+    const seen = new Set<string>()
 
-    // Parse player rows from the table
-    // Row pattern: <tr> with player link /players/{db}/{id}-{slug}
-    const rowMatches = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)]
+    for (const match of linkMatches) {
+      const dbVersion = match[1]
+      const playerId = match[3]
+      const playerSlug = match[4]
+      const name = match[5].trim()
+      if (!name || name.length < 2 || seen.has(playerId)) continue
+      seen.add(playerId)
 
-    for (const row of rowMatches) {
-      const rowHtml = row[1]
+      const linkPos = match.index!
+      const before = html.slice(Math.max(0, linkPos - 400), linkPos)
+      const after = html.slice(linkPos, linkPos + 600)
 
-      // Player link and name
-      const linkMatch = rowHtml.match(/href="\/players\/\d+\/((\d+)-([^"]+))"[^>]*>\s*([^<]+)<\/a>/i)
-      if (!linkMatch) continue
-      const playerId = linkMatch[2]
-      const playerSlug = linkMatch[3]
-      const name = linkMatch[4].trim()
-      if (!name || name.length < 2) continue
-
-      // Position — look for common position abbreviations in td cells
-      const posMatch = rowHtml.match(/<td[^>]*>\s*(GK|CB|RB|LB|RWB|LWB|CDM|CM|CAM|RM|LM|RW|LW|ST|CF|AM)\s*<\/td>/i)
-      const position = posMatch ? normalizePosition(posMatch[1]) : null
-
-      // Age
-      const ageMatch = rowHtml.match(/<td[^>]*>\s*(\d{2})\s*<\/td>/)
-      const age = ageMatch ? parseInt(ageMatch[1]) : null
-      const approxDob = age
-        ? new Date(new Date().getFullYear() - age, 6, 1).toISOString().split('T')[0]
-        : null
-
-      // Club name
-      const clubMatch = rowHtml.match(/title="([^"]+)"[^>]*>\s*<img[^>]+(?:club|team)/i)
-        ?? rowHtml.match(/class="[^"]*club[^"]*"[^>]*>\s*([^<]+)<\//i)
-      const club = clubMatch?.[1]?.trim() ?? null
-
-      // Nationality flag alt text
-      const natMatch = rowHtml.match(/<img[^>]+(?:flag|nationality)[^>]+alt="([^"]+)"/i)
-        ?? rowHtml.match(/alt="([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)"[^>]*class="[^"]*flag/i)
+      // Nationality: <img class="flag" code="France" src="...">
+      const natMatch = before.match(/class="flag"[^>]*code="([^"]+)"/)
+        ?? before.match(/code="([^"]+)"[^>]*class="flag"/)
       const nationality = natMatch?.[1]?.trim() ?? null
 
-      // Photo
-      const photoMatch = rowHtml.match(/src="(https?:\/\/[^"]+player[^"]+(?:png|jpg|webp)[^"]*)"/i)
-      const photo = photoMatch?.[1] ?? null
+      // Photo: constructed from player ID
+      const photo = `https://img.fminside.net/facesfm26/${playerId}.png`
+
+      // Position: first <span position="..."> after the link
+      const posMatch = after.match(/<span[^>]*position="([^"]+)"[^>]*class="position/)
+      const position = posMatch ? normalizePosition(posMatch[1]) : null
+
+      // Club: text content of club link after the img tag
+      const clubMatch = after.match(/href="\/clubs\/[^"]*">(?:<img[^>]*>)?([^<]+)<\/a>/)
+      const club = clubMatch?.[1]?.trim() ?? null
 
       players.push({
         id: `fmi-${playerId}`,
@@ -81,12 +88,13 @@ export const fmInsideScraper: SiteScraper = {
         nationality,
         team: club,
         position,
-        dateOfBirth: approxDob,
+        dateOfBirth: null,
         heightCm: null,
         weightKg: null,
         photo,
         description: null,
-        sourceUrl: `https://fminside.net/players/7/${playerId}-${playerSlug}`,
+        marketValue: null,
+        sourceUrl: `https://fminside.net/players/${dbVersion}/${playerId}-${playerSlug}`,
         sourceName: 'FMInside',
       })
     }
@@ -97,10 +105,10 @@ export const fmInsideScraper: SiteScraper = {
 
 function normalizePosition(pos: string): string {
   const map: Record<string, string> = {
-    GK: 'Goalkeeper',
-    CB: 'Defender', RB: 'Defender', LB: 'Defender', RWB: 'Defender', LWB: 'Defender',
-    CDM: 'Midfielder', CM: 'Midfielder', CAM: 'Midfielder', RM: 'Midfielder', LM: 'Midfielder',
-    RW: 'Forward', LW: 'Forward', ST: 'Forward', CF: 'Forward', AM: 'Midfielder',
+    gk: 'Goalkeeper',
+    dc: 'Defender', dr: 'Defender', dl: 'Defender', wb: 'Defender', wbr: 'Defender', wbl: 'Defender',
+    dm: 'Midfielder', mc: 'Midfielder', ml: 'Midfielder', mr: 'Midfielder', am: 'Midfielder', aml: 'Midfielder', amr: 'Midfielder',
+    st: 'Forward', sc: 'Forward',
   }
-  return map[pos.toUpperCase()] ?? pos
+  return map[pos.toLowerCase()] ?? pos.toUpperCase()
 }

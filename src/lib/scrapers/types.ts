@@ -9,6 +9,7 @@ export interface ScrapedPlayer {
   weightKg: number | null
   photo: string | null
   description: string | null
+  marketValue: string | null
   sourceUrl: string
   sourceName: string
 }
