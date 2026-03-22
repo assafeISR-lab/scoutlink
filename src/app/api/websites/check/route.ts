@@ -19,8 +19,8 @@ async function detectLoginRequired(url: string): Promise<{ requiresLogin: boolea
 
     // Hard status codes
     if (res.status === 401) return { requiresLogin: true, reason: 'Returns 401 Unauthorized' }
-    if (res.status === 403) return { requiresLogin: true, reason: 'Returns 403 Forbidden' }
     if (res.status === 407) return { requiresLogin: true, reason: 'Requires proxy authentication' }
+    // 403 can mean Cloudflare/bot protection (not a login wall) — fall through to content check
 
     // Check if redirected to login page
     const finalUrl = res.url.toLowerCase()
@@ -35,6 +35,12 @@ async function detectLoginRequired(url: string): Promise<{ requiresLogin: boolea
     }
 
     const html = await res.text()
+
+    // Cloudflare / bot protection — site is accessible, scraper handles it
+    if (html.includes('cf-browser-verification') || html.includes('Just a moment') || html.includes('_cf_chl') || res.status === 403) {
+      return { requiresLogin: false, reason: 'Accessible (bot protection active)' }
+    }
+
     const lower = html.toLowerCase()
 
     const loginSignals = [
