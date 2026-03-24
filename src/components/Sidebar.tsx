@@ -216,7 +216,7 @@ export default function Sidebar({ userName, userEmail, userInitial, userId }: Si
       </nav>
 
       {/* User */}
-      <div className="px-4 py-4 border-t border-white/5">
+      <div className="px-4 py-4 border-t border-white/5 flex flex-col gap-2">
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-black font-bold text-sm flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 0 10px rgba(0,200,150,0.4)' }}>
@@ -227,6 +227,22 @@ export default function Sidebar({ userName, userEmail, userInitial, userId }: Si
             <p className="text-xs truncate" style={{ color: '#00c896', opacity: 0.7 }}>{userEmail}</p>
           </div>
         </div>
+        <button
+          onClick={async () => {
+            const { createClient } = await import('@/lib/supabase/client')
+            await createClient().auth.signOut()
+            router.push('/login')
+          }}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl w-full text-left transition-all duration-200"
+          style={{ color: 'rgba(255,255,255,0.3)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,80,80,0.08)'; e.currentTarget.style.color = '#ff6b6b' }}
+          onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.3)' }}
+        >
+          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+          </svg>
+          <span className="text-sm font-medium">Sign Out</span>
+        </button>
       </div>
 
       {/* Create modal overlay (full screen) */}
