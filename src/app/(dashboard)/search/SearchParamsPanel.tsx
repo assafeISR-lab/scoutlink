@@ -90,25 +90,21 @@ export default function SearchParamsPanel({ onChange }: Props) {
   }
 
   function toggle(key: string) {
-    setActive(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]))
-      notify(next, customActive)
-      return next
-    })
+    const next = new Set(active)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]))
+    setActive(next)
+    notify(next, customActive)
   }
 
   function toggleCustom(key: string) {
-    setCustomActive(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...next]))
-      notify(active, next)
-      return next
-    })
+    const next = new Set(customActive)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...next]))
+    setCustomActive(next)
+    notify(active, next)
   }
 
   function selectAll() {
