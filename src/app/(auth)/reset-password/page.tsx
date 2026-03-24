@@ -13,8 +13,7 @@ function ResetPasswordForm() {
   const [ready, setReady] = useState(false)
   const [exchangeError, setExchangeError] = useState(false)
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const supabase = createClient()
+const supabase = createClient()
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined

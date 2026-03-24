@@ -85,72 +85,76 @@ export default function SearchClient({ databases, websites }: { databases: Datab
 
   return (
     <div>
-      {/* Search bar — full width above the two-column layout */}
-      <form onSubmit={handleSearch} className="flex gap-3 mb-6">
-        <div className="flex-1 relative">
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" viewBox="0 0 24 24" fill="currentColor">
+      {/* Top zone: Search */}
+      <div className="rounded-2xl border border-white/8 overflow-hidden mb-4" style={{ background: 'rgba(255,255,255,0.01)' }}>
+        {/* Zone header */}
+        <div className="flex items-center gap-2.5 px-6 py-4 border-b border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
           </svg>
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search for a player (e.g. Messi, Ronaldo, Mbappe...)"
-            className="w-full pl-12 pr-4 py-4 rounded-2xl text-white placeholder-white/20 text-base focus:outline-none transition-colors"
-            style={{ background: '#141720', border: '1px solid rgba(255,255,255,0.08)' }}
-            onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-            onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
-          />
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Player Search</p>
         </div>
-        <button
-          type="submit"
-          disabled={loading || !query.trim()}
-          className="px-8 py-4 rounded-2xl font-semibold text-black text-base disabled:opacity-50 transition-all"
-          style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
-        >
-          {loading ? 'Searching...' : 'Search'}
-        </button>
-      </form>
 
-    {/* Two-column row: results left, coverage right */}
-    <div className="flex gap-6 items-stretch">
-    <div className="flex-1 min-w-0">
+        <div className="p-6">
+          {/* Search bar */}
+          <form onSubmit={handleSearch} className="flex gap-3 mb-6">
+            <div className="flex-1 relative">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+              </svg>
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search for a player (e.g. Messi, Ronaldo, Mbappe...)"
+                className="w-full pl-12 pr-4 py-4 rounded-2xl text-white placeholder-white/20 text-base focus:outline-none transition-colors"
+                style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.08)' }}
+                onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+                onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="px-8 py-4 rounded-2xl font-semibold text-black text-base disabled:opacity-50 transition-all"
+              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+            >
+              {loading ? 'Searching...' : 'Search'}
+            </button>
+          </form>
 
-      {/* Loading */}
-      {loading && (
-        <div className="text-center py-16">
-          <div className="w-10 h-10 rounded-full border-2 border-[#00c896] border-t-transparent animate-spin mx-auto mb-4" />
-          <p className="text-white/30 text-sm">Searching player database...</p>
-        </div>
-      )}
+          {/* Results area — only shown after a search */}
+          {searched && (
+          <div className="flex gap-6 items-stretch">
+            <div className="flex-1 min-w-0">
 
-      {/* No sites selected */}
-      {!loading && searched && noSitesSelected && (
-        <div className="rounded-2xl border border-dashed p-16 text-center" style={{ borderColor: 'rgba(255,159,67,0.3)', background: 'rgba(255,159,67,0.03)' }}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(255,159,67,0.1)', border: '1px solid rgba(255,159,67,0.25)' }}>
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ff9f43"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-          </div>
-          <p className="text-sm font-medium mb-1" style={{ color: '#ff9f43' }}>No scouting sites selected</p>
-          <p className="text-white/30 text-xs">Check the boxes next to the sites you want to search in below</p>
-        </div>
-      )}
+              {/* Loading */}
+              {loading && (
+                <div className="text-center py-16">
+                  <div className="w-10 h-10 rounded-full border-2 border-[#00c896] border-t-transparent animate-spin mx-auto mb-4" />
+                  <p className="text-white/30 text-sm">Searching player database...</p>
+                </div>
+              )}
 
-      {/* No results */}
-      {!loading && searched && !noSitesSelected && results.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center">
-          <p className="text-white/40 text-sm mb-1">No players found for "{query}"</p>
-          <p className="text-white/20 text-xs">Try a different name or check the spelling</p>
-        </div>
-      )}
+              {/* No sites selected */}
+              {!loading && noSitesSelected && (
+                <div className="rounded-2xl border border-dashed p-16 text-center" style={{ borderColor: 'rgba(255,159,67,0.3)', background: 'rgba(255,159,67,0.03)' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(255,159,67,0.1)', border: '1px solid rgba(255,159,67,0.25)' }}>
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ff9f43"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                  </div>
+                  <p className="text-sm font-medium mb-1" style={{ color: '#ff9f43' }}>No scouting sites selected</p>
+                  <p className="text-white/30 text-xs">Check the boxes next to the sites you want to search in below</p>
+                </div>
+              )}
 
-      {/* Empty state */}
-      {!loading && !searched && (
-        <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center" style={{ background: 'rgba(255,255,255,0.01)' }}>
-          <p className="text-white/40 text-sm mb-1">Search for any football player</p>
-          <p className="text-white/20 text-xs">Type a player name above to find their stats and profile</p>
-        </div>
-      )}
+              {/* No results */}
+              {!loading && !noSitesSelected && results.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center">
+                  <p className="text-white/40 text-sm mb-1">No players found for "{query}"</p>
+                  <p className="text-white/20 text-xs">Try a different name or check the spelling</p>
+                </div>
+              )}
 
       {/* Results */}
       {!loading && results.length > 0 && (
@@ -194,27 +198,23 @@ export default function SearchClient({ databases, websites }: { databases: Datab
         </div>
       )}
 
-      {/* Merge modal */}
-      {merging && (
-        <MergeModal
-          players={results.filter(p => selectedIds.has(p.id))}
-          databases={databases}
-          onClose={() => setMerging(false)}
-        />
-      )}
-    </div>{/* end left column */}
+              {/* Merge modal */}
+              {merging && (
+                <MergeModal
+                  players={results.filter(p => selectedIds.has(p.id))}
+                  databases={databases}
+                  onClose={() => setMerging(false)}
+                />
+              )}
+            </div>{/* end left column */}
 
-    {/* Right column: Search Coverage + Parameter Coverage */}
-    <div className="w-64 flex-shrink-0 flex flex-col gap-4">
-      <div className="rounded-2xl border border-white/8 overflow-hidden flex flex-col" style={{ background: '#141720' }}>
-        <div className="px-4 py-3 border-b border-white/8 flex-shrink-0">
-          <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Search Coverage</p>
-        </div>
-        {!searched ? (
-          <div className="flex-1 flex items-center justify-center px-4 py-6">
-            <p className="text-xs text-white/25 text-center leading-relaxed">Run a search to see<br/>which sites were checked</p>
-          </div>
-        ) : loading ? (
+            {/* Right column: Search Coverage + Parameter Coverage */}
+            <div className="w-64 flex-shrink-0 flex flex-col gap-4">
+              <div className="rounded-2xl border border-white/8 overflow-hidden flex flex-col" style={{ background: '#141720' }}>
+                <div className="px-4 py-3 border-b border-white/8 flex-shrink-0">
+                  <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Search Coverage</p>
+                </div>
+                {loading ? (
           <div className="px-4 py-5 flex flex-col gap-2">
             {[1,2,3].map(i => (
               <div key={i} className="h-8 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
@@ -271,31 +271,45 @@ export default function SearchClient({ databases, websites }: { databases: Datab
             ))}
           </div>
         )}
-        {/* Summary footer */}
-        {searched && !loading && siteStats.length > 0 && (
-          <div className="px-4 py-2.5 border-t border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
-            <p className="text-[10px] text-white/30">
-              {siteStats.filter(s => s.count > 0).length} of {siteStats.length} sites found results
-            </p>
+                {/* Summary footer */}
+                {!loading && siteStats.length > 0 && (
+                  <div className="px-4 py-2.5 border-t border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <p className="text-[10px] text-white/30">
+                      {siteStats.filter(s => s.count > 0).length} of {siteStats.length} sites found results
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Parameter Coverage Panel */}
+              <ParameterCoveragePanel results={results} searched={searched} loading={loading} />
+            </div>{/* end right column */}
+
           </div>
-        )}
+          )}{/* end searched condition */}
+        </div>{/* end p-6 */}
+      </div>{/* end top zone */}
+
+    {/* Bottom zone: Search Configuration */}
+    <div className="mt-10 rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.01)' }}>
+      {/* Zone header */}
+      <div className="flex items-center gap-2.5 px-6 py-4 border-b border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
+          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Search Configuration</p>
       </div>
 
-      {/* Parameter Coverage Panel */}
-      <ParameterCoveragePanel results={results} searched={searched} loading={loading} />
-    </div>{/* end right column */}
-
-    </div>{/* end flex row */}
-
-    {/* Bottom row: Scouting Websites + Search Parameters */}
-    <div className="mt-10 flex gap-6 items-start">
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">Scouting Websites</p>
-        <WebsitesManager websites={websites} />
-      </div>
-      <div className="w-64 flex-shrink-0">
-        <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">&nbsp;</p>
-        <SearchParamsPanel onChange={setVisibleParams} />
+      {/* Content */}
+      <div className="flex gap-6 items-start p-6">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">Scouting Websites</p>
+          <WebsitesManager websites={websites} />
+        </div>
+        <div className="w-64 flex-shrink-0">
+          <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">Search Parameters</p>
+          <SearchParamsPanel onChange={setVisibleParams} />
+        </div>
       </div>
     </div>
     </div>
