@@ -43,14 +43,19 @@ export async function GET(req: NextRequest) {
     return true
   })
 
+  // Strip diacritics/accents — e.g. "Martín" → "Martin", "Páez" → "Paez"
+  const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
   // Build query variations — for 3+ word names, also try first+last (skipping middle names)
-  // e.g. "Idrissa Gana Gueye" → ["Idrissa Gana Gueye", "Idrissa Gueye"]
+  // Also add accent-stripped versions so scrapers can match "Martin" as well as "Martín"
   const buildVariations = (q: string): string[] => {
     const words = q.trim().split(/\s+/)
     const vars = [q.trim()]
     if (words.length >= 3) vars.push(`${words[0]} ${words[words.length - 1]}`)
     if (words.length >= 4) vars.push(`${words[0]} ${words[1]} ${words[words.length - 1]}`)
-    return [...new Set(vars)]
+    // Add accent-stripped versions
+    const stripped = vars.map(stripAccents)
+    return [...new Set([...vars, ...stripped])]
   }
   const queryVariations = buildVariations(query.trim())
 
@@ -76,12 +81,19 @@ export async function GET(req: NextRequest) {
 
   // Filter: player name must contain at least 2 words from the query (for multi-word queries)
   // Prevents single-word partial matches like "Gueye" matching unrelated players
-  const queryWords = query.trim().toLowerCase().split(/\s+/).filter(w => w.length > 1)
+  // Both query and player name are accent-stripped for comparison
+  const queryNorm = stripAccents(query.trim().toLowerCase())
+  const queryWords = queryNorm.split(/\s+/).filter(w => w.length > 1)
   const nameMatchesQuery = (playerName: string): boolean => {
     if (queryWords.length <= 1) return true
-    const nameLower = playerName.toLowerCase()
+    const nameLower = stripAccents(playerName.toLowerCase())
+    // Standard check: at least 2 query words appear in the player name
     const matchCount = queryWords.filter(w => nameLower.includes(w)).length
-    return matchCount >= 2
+    if (matchCount >= 2) return true
+    // Nickname check: each word of the player name appears within the full query string
+    // Catches "Gavi" matching "Pablo Martín Páez Gavira" (gavi is inside gavira)
+    const nameWords = nameLower.split(/\s+/).filter(w => w.length > 2)
+    return nameWords.length > 0 && nameWords.every(w => queryNorm.includes(w))
   }
 
   const players: ScrapedPlayer[] = []

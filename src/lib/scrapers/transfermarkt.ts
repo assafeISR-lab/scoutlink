@@ -109,10 +109,57 @@ export const transfermarktScraper: SiteScraper = {
         marketValue,
         sourceUrl: `https://www.transfermarkt.com/${slug}/profil/spieler/${playerId}`,
         sourceName: 'Transfermarkt',
-      })
+        _profileUrl: `https://www.transfermarkt.com/${slug}/profil/spieler/${playerId}`,
+      } as any)
     }
 
-    return players
+    // Fetch height/weight from each player's profile page in parallel
+    const enriched = await Promise.allSettled(
+      players.map(async (p: any) => {
+        try {
+          const profileRes = await fetch(p._profileUrl, {
+            headers: {
+              ...baseHeaders,
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Referer': 'https://www.transfermarkt.com/',
+              ...(cookieStr ? { 'Cookie': cookieStr } : {}),
+            },
+          })
+          if (!profileRes.ok) return p
+          const profileHtml = await profileRes.text()
+
+          // Height: "1,76 m" or "176 cm"
+          const heightMatch = profileHtml.match(/(\d[,\.]\d{2})\s*m\b/) ?? profileHtml.match(/(\d{3})\s*cm/i)
+          let heightCm: number | null = null
+          if (heightMatch) {
+            const raw = heightMatch[1]
+            if (raw.includes(',') || raw.includes('.')) {
+              heightCm = Math.round(parseFloat(raw.replace(',', '.')) * 100)
+            } else {
+              heightCm = parseInt(raw)
+            }
+          }
+
+          // Weight: "70 kg"
+          const weightMatch = profileHtml.match(/(\d{2,3})\s*kg/i)
+          const weightKg = weightMatch ? parseInt(weightMatch[1]) : null
+
+          // Date of birth: "Jan 5, 2002" or "05.01.2002"
+          const dobMatch = profileHtml.match(/(\d{2})\.(\d{2})\.(\d{4})/)
+          const dateOfBirth = dobMatch ? `${dobMatch[3]}-${dobMatch[2]}-${dobMatch[1]}` : p.dateOfBirth
+
+          delete p._profileUrl
+          return { ...p, heightCm, weightKg, dateOfBirth }
+        } catch {
+          delete p._profileUrl
+          return p
+        }
+      })
+    )
+
+    return enriched
+      .filter(r => r.status === 'fulfilled')
+      .map(r => (r as PromiseFulfilledResult<any>).value)
     } catch {
       return []
     }
