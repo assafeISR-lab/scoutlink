@@ -45,6 +45,7 @@ interface SiteStat {
   url: string
   count: number
   error: boolean
+  noScraper?: boolean
 }
 
 export default function SearchClient({ databases, websites }: { databases: Database[]; websites: Website[] }) {
@@ -86,20 +87,29 @@ export default function SearchClient({ databases, websites }: { databases: Datab
   return (
     <div>
       {/* Top zone: Search */}
-      <div className="rounded-2xl border border-white/8 overflow-hidden mb-4" style={{ background: 'rgba(255,255,255,0.01)' }}>
+      <div className="rounded-2xl overflow-hidden mb-4" style={{
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.01)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      }}>
         {/* Zone header */}
-        <div className="flex items-center gap-2.5 px-6 py-4 border-b border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
-          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
-            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-          </svg>
-          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Player Search</p>
+        <div className="flex items-center gap-3 px-6 py-4 border-b" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)', border: '1px solid rgba(0,200,150,0.3)' }}>
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#00c896">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white tracking-wide">Player Search</p>
+            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Search across all scouting sources</p>
+          </div>
         </div>
 
         <div className="p-6">
           {/* Search bar */}
           <form onSubmit={handleSearch} className="flex gap-3 mb-6">
             <div className="flex-1 relative">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" viewBox="0 0 24 24" fill="rgba(0,200,150,0.5)">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
               </svg>
               <input
@@ -108,17 +118,17 @@ export default function SearchClient({ databases, websites }: { databases: Datab
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search for a player (e.g. Messi, Ronaldo, Mbappe...)"
-                className="w-full pl-12 pr-4 py-4 rounded-2xl text-white placeholder-white/20 text-base focus:outline-none transition-colors"
-                style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.08)' }}
-                onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-                onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+                className="w-full pl-12 pr-4 py-4 rounded-2xl text-white text-base focus:outline-none transition-all"
+                style={{ background: '#0f1117', border: '2px solid rgba(0,200,150,0.55)', boxShadow: '0 0 16px rgba(0,200,150,0.12)', color: 'white' }}
+                onFocus={e => { e.currentTarget.style.borderColor = '#00c896'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,200,150,0.15), 0 0 20px rgba(0,200,150,0.2)' }}
+                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.55)'; e.currentTarget.style.boxShadow = '0 0 16px rgba(0,200,150,0.12)' }}
               />
             </div>
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="px-8 py-4 rounded-2xl font-semibold text-black text-base disabled:opacity-50 transition-all"
-              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+              className="px-8 py-4 rounded-2xl font-bold text-black text-base disabled:opacity-50 transition-all hover:opacity-90 active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 4px 16px rgba(0,200,150,0.3)' }}
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
@@ -231,13 +241,21 @@ export default function SearchClient({ databases, websites }: { databases: Datab
         ) : (
           <div className="divide-y divide-white/5">
             {siteStats
-              .sort((a, b) => b.count - a.count)
+              .sort((a, b) => {
+                // Results first, then no-results, then errors, then no-scraper
+                const rank = (s: SiteStat) => s.count > 0 ? 0 : s.error ? 2 : s.noScraper ? 3 : 1
+                return rank(a) - rank(b) || b.count - a.count
+              })
               .map(site => (
               <div key={site.name} className="flex items-center gap-3 px-4 py-2.5">
                 {/* Status icon */}
                 {site.error ? (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,100,100,0.12)' }}>
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#ff6464"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                  </div>
+                ) : site.noScraper ? (
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="rgba(255,255,255,0.15)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                   </div>
                 ) : site.count > 0 ? (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
@@ -250,11 +268,13 @@ export default function SearchClient({ databases, websites }: { databases: Datab
                 )}
                 {/* Site info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: site.count > 0 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)' }}>
+                  <p className="text-xs font-medium truncate" style={{ color: site.count > 0 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)' }}>
                     {site.name}
                   </p>
                   {site.error ? (
-                    <p className="text-[10px]" style={{ color: '#ff6464aa' }}>Error</p>
+                    <p className="text-[10px]" style={{ color: '#ff6464aa' }}>Did not succeed to scrape</p>
+                  ) : site.noScraper ? (
+                    <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>No scraper available</p>
                   ) : (
                     <p className="text-[10px]" style={{ color: site.count > 0 ? '#00c896aa' : 'rgba(255,255,255,0.2)' }}>
                       {site.count > 0 ? `${site.count} result${site.count !== 1 ? 's' : ''}` : 'No results'}
@@ -275,7 +295,7 @@ export default function SearchClient({ databases, websites }: { databases: Datab
                 {!loading && siteStats.length > 0 && (
                   <div className="px-4 py-2.5 border-t border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
                     <p className="text-[10px] text-white/30">
-                      {siteStats.filter(s => s.count > 0).length} of {siteStats.length} sites found results
+                      {siteStats.filter(s => s.count > 0).length} of {siteStats.filter(s => !s.noScraper).length} scraped sites found results
                     </p>
                   </div>
                 )}
@@ -291,13 +311,18 @@ export default function SearchClient({ databases, websites }: { databases: Datab
       </div>{/* end top zone */}
 
     {/* Bottom zone: Search Configuration */}
-    <div className="mt-10 rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.01)' }}>
+    <div className="mt-8 flex items-center gap-3 mb-4">
+      <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
+      <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>Search Configuration</span>
+      <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
+    </div>
+    <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.01)' }}>
       {/* Zone header */}
       <div className="flex items-center gap-2.5 px-6 py-4 border-b border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
         <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
           <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
         </svg>
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Search Configuration</p>
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>Configure Sources &amp; Parameters</p>
       </div>
 
       {/* Content */}

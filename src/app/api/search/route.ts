@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ players: [] })
 
-  // Fetch user's active websites that we have scrapers for
+  // Fetch user's active websites
   const websites = await prisma.agentWebsite.findMany({
     where: { agentId: user.id, isActive: true, useForSearch: true },
-    select: { url: true, loginStatus: true },
+    select: { url: true, loginStatus: true, name: true },
   })
 
   if (websites.length === 0) {
@@ -66,9 +66,16 @@ export async function GET(req: NextRequest) {
 
   const results = await Promise.allSettled(
     uniqueScrapers.map(async e => {
+      let anySucceeded = false
       const varResults = await Promise.all(
-        queryVariations.map(q => withTimeout(e.scraper.search(q)).catch(() => [] as ScrapedPlayer[]))
+        queryVariations.map(q =>
+          withTimeout(e.scraper.search(q))
+            .then(r => { anySucceeded = true; return r })
+            .catch(() => [] as ScrapedPlayer[])
+        )
       )
+      // If every variation threw (network error, Cloudflare block, etc.), surface it as an error
+      if (!anySucceeded) throw new Error('scraper failed')
       // Flatten and deduplicate by player id across all variations
       const seenIds = new Set<string>()
       return varResults.flat().filter(p => {
@@ -97,17 +104,29 @@ export async function GET(req: NextRequest) {
   }
 
   const players: ScrapedPlayer[] = []
-  const siteStats: { name: string; url: string; count: number; error: boolean }[] = []
+  const siteStats: { name: string; url: string; count: number; error: boolean; noScraper?: boolean }[] = []
 
+  // Sites that were scraped
+  const scrapedUrls = new Set<string>()
   results.forEach((result, i) => {
+    const entry = uniqueScrapers[i]
+    scrapedUrls.add(entry.url)
     if (result.status === 'fulfilled') {
       const filtered = result.value.filter(p => nameMatchesQuery(p.name))
       players.push(...filtered)
-      siteStats.push({ name: uniqueScrapers[i].scraper.name, url: uniqueScrapers[i].url, count: filtered.length, error: false })
+      siteStats.push({ name: entry.scraper.name, url: entry.url, count: filtered.length, error: false })
     } else {
-      siteStats.push({ name: uniqueScrapers[i].scraper.name, url: uniqueScrapers[i].url, count: 0, error: true })
+      siteStats.push({ name: entry.scraper.name, url: entry.url, count: 0, error: true })
     }
   })
+
+  // Sites that are selected but have no scraper — include them so user knows they were skipped
+  for (const site of searchableSites) {
+    if (!scrapedUrls.has(site.url)) {
+      const hostname = (() => { try { return new URL(site.url).hostname.replace(/^www\./, '') } catch { return site.url } })()
+      siteStats.push({ name: site.name || hostname, url: site.url, count: 0, error: false, noScraper: true })
+    }
+  }
 
   // Log search activity (fire and forget)
   prisma.activityLog.create({ data: { agentId: user.id, action: 'search', detail: query } }).catch(() => {})

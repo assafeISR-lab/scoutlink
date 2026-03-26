@@ -40,8 +40,10 @@ export const transfermarktScraper: SiteScraper = {
         },
       }
     )
+    console.log('[Transfermarkt] search status:', res.status)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const html = await res.text()
+    console.log('[Transfermarkt] html length:', html.length, '| sample:', html.slice(0, 300).replace(/\s+/g, ' '))
     if (html.includes('cf-browser-verification') || html.includes('Just a moment') || html.includes('_cf_chl')) throw new Error('Cloudflare block')
 
     const players: ScrapedPlayer[] = []
@@ -160,8 +162,8 @@ export const transfermarktScraper: SiteScraper = {
     return enriched
       .filter(r => r.status === 'fulfilled')
       .map(r => (r as PromiseFulfilledResult<any>).value)
-    } catch {
-      return []
+    } catch (err) {
+      throw err
     }
   },
 }

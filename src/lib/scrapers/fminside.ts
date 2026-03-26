@@ -11,35 +11,11 @@ export const fmInsideScraper: SiteScraper = {
       'Referer': 'https://fminside.net/players',
     }
 
-    // Step 1: GET page to collect cookies + CSRF token
-    let cookies = ''
-    let csrf = ''
-    try {
-      const getRes = await fetch('https://fminside.net/players', { headers })
-      const setCookieHeaders = (getRes.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.()
-      cookies = setCookieHeaders?.length
-        ? setCookieHeaders.map(c => c.split(';')[0]).join('; ')
-        : getRes.headers.get('set-cookie') ?? ''
-      const pageHtml = await getRes.text()
-      const csrfMatch = pageHtml.match(/name="_token"[^>]*value="([^"]+)"/)
-        ?? pageHtml.match(/meta[^>]*name="csrf-token"[^>]*content="([^"]+)"/)
-      csrf = csrfMatch?.[1] ?? ''
-    } catch { /* continue */ }
-
-    // Step 2: POST search
+    // GET with query params — CSRF token is JS-rendered so POST approach doesn't work
     let html = ''
     try {
-      const formData = new URLSearchParams()
-      formData.set('name', query)
-      formData.set('database_version', '7') // FM26
-      formData.set('gender', '0')
-      if (csrf) formData.set('_token', csrf)
-
-      const res = await fetch('https://fminside.net/players', {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': cookies },
-        body: formData.toString(),
-      })
+      const url = `https://fminside.net/players?name=${encodeURIComponent(query)}&database_version=7&gender=0`
+      const res = await fetch(url, { headers })
       if (!res.ok) return []
       html = await res.text()
     } catch {
@@ -55,7 +31,7 @@ export const fmInsideScraper: SiteScraper = {
     const seen = new Set<string>()
 
     for (const match of linkMatches) {
-      const dbVersion = match[1]
+      const dbVer = match[1]
       const playerId = match[3]
       const playerSlug = match[4]
       const name = match[5].trim()
@@ -94,7 +70,7 @@ export const fmInsideScraper: SiteScraper = {
         photo,
         description: null,
         marketValue: null,
-        sourceUrl: `https://fminside.net/players/${dbVersion}/${playerId}-${playerSlug}`,
+        sourceUrl: `https://fminside.net/players/${dbVer}/${playerId}-${playerSlug}`,
         sourceName: 'FMInside',
       })
     }
