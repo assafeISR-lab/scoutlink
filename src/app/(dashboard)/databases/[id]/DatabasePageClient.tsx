@@ -3,7 +3,6 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import PlayersTable, { PlayersTableHandle } from './PlayersTable'
-import ShareButton from './ShareButton'
 import AddPlayerButton from './AddPlayerButton'
 import ColumnPicker from './ColumnPicker'
 import ImportPlayersModal from '../ImportPlayersModal'
@@ -90,7 +89,6 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
             columnConfig={colConfig}
             onUpdate={setColConfig}
           />
-          {isOwner && <ShareButton databaseId={databaseId} />}
           {canEdit && <AddPlayerButton databaseId={databaseId} />}
         </div>
       </div>

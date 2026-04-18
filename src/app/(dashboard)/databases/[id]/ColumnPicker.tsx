@@ -134,12 +134,8 @@ export default function ColumnPicker({ databaseId, columnConfig, onUpdate }: Pro
       {/* Trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
-        style={{
-          background: columnConfig !== null ? 'rgba(108,143,255,0.12)' : 'var(--hover-bg)',
-          color:      columnConfig !== null ? '#6c8fff' : 'var(--text-secondary)',
-          border:     columnConfig !== null ? '1px solid rgba(108,143,255,0.25)' : '1px solid var(--border)',
-        }}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+        style={{ background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.25)' }}
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>

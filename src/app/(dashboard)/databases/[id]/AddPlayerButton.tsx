@@ -102,8 +102,8 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-black transition-all duration-200 hover:opacity-90"
-        style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200"
+        style={{ background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.25)' }}
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         Add Player

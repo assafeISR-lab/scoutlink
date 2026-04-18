@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
@@ -80,11 +80,11 @@ interface ConflictPlayer extends MappedPlayer { isConflict: boolean; rowIndex: n
 
 export default function ImportPlayersModal({
   onClose,
-  databases,
+  databases = [],
   preselectedDatabaseId,
 }: {
   onClose: () => void
-  databases: Database[]
+  databases?: Database[]
   preselectedDatabaseId?: string
 }) {
   const router = useRouter()
@@ -213,13 +213,16 @@ export default function ImportPlayersModal({
     const data = await res.json()
     setResult(data)
     setImporting(false)
-    router.refresh()
   }
 
   function handleDone() {
     onClose()
-    if (targetDbId) router.push(`/databases/${targetDbId}`)
-    else router.refresh()
+    if (targetDbId) {
+      router.push(`/databases/${targetDbId}`)
+      router.refresh()
+    } else {
+      router.refresh()
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -329,26 +332,35 @@ export default function ImportPlayersModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                    {columns.map(col => (
-                      <tr key={col}>
-                        <td className="px-4 py-2.5 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{col}</td>
-                        <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)', maxWidth: 120 }}>
-                          <span className="truncate block">{rows[0]?.[col] ?? '—'}</span>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <select value={mapping[col] ?? ''} onChange={e => setMapping(m => ({ ...m, [col]: e.target.value }))}
-                            className="w-full px-2.5 py-1.5 rounded-lg text-sm focus:outline-none"
-                            style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: mapping[col] ? 'var(--text-primary)' : 'var(--text-faint)' }}>
-                            <option value="">Ignore</option>
-                            {groupBy(SCOUTLINK_FIELDS, 'group').map(([group, fields]) => (
-                              <optgroup key={group} label={group}>
-                                {fields.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-                              </optgroup>
-                            ))}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
+                    {columns.map(col => {
+                      const usedByOthers = new Set(
+                        Object.entries(mapping).filter(([c, v]) => c !== col && v).map(([, v]) => v)
+                      )
+                      return (
+                        <tr key={col}>
+                          <td className="px-4 py-2.5 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{col}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)', maxWidth: 120 }}>
+                            <span className="truncate block">{rows[0]?.[col] ?? '—'}</span>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <select value={mapping[col] ?? ''} onChange={e => setMapping(m => ({ ...m, [col]: e.target.value }))}
+                              className="w-full px-2.5 py-1.5 rounded-lg text-sm focus:outline-none"
+                              style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: mapping[col] ? 'var(--text-primary)' : 'var(--text-faint)' }}>
+                              <option value="">Ignore</option>
+                              {groupBy(SCOUTLINK_FIELDS, 'group').map(([group, fields]) => (
+                                <optgroup key={group} label={group}>
+                                  {fields.map(f => (
+                                    <option key={f.key} value={f.key} disabled={usedByOthers.has(f.key)}>
+                                      {f.label}{usedByOthers.has(f.key) ? ' (already mapped)' : ''}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -437,7 +449,7 @@ export default function ImportPlayersModal({
                   {result.overwritten > 0 && <span className="text-sm" style={{ color: '#f59e0b' }}>{result.overwritten} overwritten</span>}
                   {result.skipped > 0 && <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{result.skipped} skipped</span>}
                 </div>
-                {result.errors.length > 0 && (
+                {(result.errors ?? []).length > 0 && (
                   <p className="text-xs text-red-400 mt-2">{result.errors.length} row{result.errors.length !== 1 ? 's' : ''} failed</p>
                 )}
               </div>
@@ -517,7 +529,7 @@ function applyMapping(row: ParsedRow, mapping: Record<string, string>): MappedPl
     if (fieldKey === 'fullName') {
       const parts = raw.split(/\s+/)
       out.firstName = parts[0] ?? ''
-      out.lastName  = parts.slice(1).join(' ') || parts[0] ?? ''
+      out.lastName  = parts.slice(1).join(' ') || (parts[0] ?? '')
       continue
     }
 
