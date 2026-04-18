@@ -35,6 +35,14 @@ type SortKey = 'name' | 'position' | 'club' | 'nationality' | 'age' | 'marketVal
 type SortDir = 'asc' | 'desc'
 type FilterMode = 'AND' | 'OR'
 type FilterKey = 'name' | 'position' | 'club' | 'nationality' | 'age' | 'marketValue' | 'height' | 'weight' | 'league' | 'preferredFoot' | 'contractExpiry' | 'fmWages'
+type FilterParamType = 'text' | 'range' | 'multi'
+
+interface FilterParam {
+  key: FilterKey
+  label: string
+  group: string
+  type: FilterParamType
+}
 
 interface Filters {
   name: string
@@ -49,7 +57,6 @@ interface Filters {
   heightMax: number | null
   weightMin: number | null
   weightMax: number | null
-  // Extended
   league: string
   preferredFeet: string[]
   contractExpiryYearMin: number | null
@@ -59,19 +66,30 @@ interface Filters {
 }
 
 const DEFAULT_FILTERS: Filters = {
-  name: '',
-  positions: [],
-  club: '',
-  nationalities: [],
+  name: '', positions: [], club: '', nationalities: [],
   ageMin: null, ageMax: null,
   marketValueMin: null, marketValueMax: null,
   heightMin: null, heightMax: null,
   weightMin: null, weightMax: null,
-  league: '',
-  preferredFeet: [],
+  league: '', preferredFeet: [],
   contractExpiryYearMin: null, contractExpiryYearMax: null,
   fmWagesMin: null, fmWagesMax: null,
 }
+
+const FILTER_PARAMS: FilterParam[] = [
+  { key: 'nationality',    label: 'Nationality',    group: 'Identity',      type: 'multi' },
+  { key: 'preferredFoot', label: 'Preferred Foot', group: 'Identity',      type: 'multi' },
+  { key: 'age',           label: 'Age',            group: 'Identity',      type: 'range' },
+  { key: 'height',        label: 'Height',         group: 'Identity',      type: 'range' },
+  { key: 'weight',        label: 'Weight',         group: 'Identity',      type: 'range' },
+  { key: 'name',          label: 'Player Name',    group: 'Club / Career', type: 'text'  },
+  { key: 'club',          label: 'Club',           group: 'Club / Career', type: 'text'  },
+  { key: 'league',        label: 'League',         group: 'Club / Career', type: 'text'  },
+  { key: 'position',      label: 'Position',       group: 'Club / Career', type: 'multi' },
+  { key: 'contractExpiry',label: 'Contract Expiry',group: 'Club / Career', type: 'range' },
+  { key: 'marketValue',   label: 'Market Value',   group: 'Financial',     type: 'range' },
+  { key: 'fmWages',       label: 'FM Wages',       group: 'Financial',     type: 'range' },
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,88 +124,61 @@ function isFilterActive(f: Filters): boolean {
     f.fmWagesMin !== null || f.fmWagesMax !== null)
 }
 
-function activeFilterCount(f: Filters): number {
-  let n = 0
-  if (f.name) n++
-  if (f.positions.length) n++
-  if (f.club) n++
-  if (f.nationalities.length) n++
-  if (f.ageMin !== null || f.ageMax !== null) n++
-  if (f.marketValueMin !== null || f.marketValueMax !== null) n++
-  if (f.heightMin !== null || f.heightMax !== null) n++
-  if (f.weightMin !== null || f.weightMax !== null) n++
-  if (f.league) n++
-  if (f.preferredFeet.length) n++
-  if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) n++
-  if (f.fmWagesMin !== null || f.fmWagesMax !== null) n++
-  return n
+function getActiveChips(f: Filters): FilterKey[] {
+  const keys: FilterKey[] = []
+  if (f.name) keys.push('name')
+  if (f.positions.length) keys.push('position')
+  if (f.club) keys.push('club')
+  if (f.nationalities.length) keys.push('nationality')
+  if (f.ageMin !== null || f.ageMax !== null) keys.push('age')
+  if (f.marketValueMin !== null || f.marketValueMax !== null) keys.push('marketValue')
+  if (f.heightMin !== null || f.heightMax !== null) keys.push('height')
+  if (f.weightMin !== null || f.weightMax !== null) keys.push('weight')
+  if (f.league) keys.push('league')
+  if (f.preferredFeet.length) keys.push('preferredFoot')
+  if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) keys.push('contractExpiry')
+  if (f.fmWagesMin !== null || f.fmWagesMax !== null) keys.push('fmWages')
+  return keys
 }
 
-function columnHasFilter(col: FilterKey, f: Filters): boolean {
-  if (col === 'name')        return !!f.name
-  if (col === 'position')    return f.positions.length > 0
-  if (col === 'club')        return !!f.club
-  if (col === 'nationality') return f.nationalities.length > 0
-  if (col === 'age')         return f.ageMin !== null || f.ageMax !== null
-  if (col === 'marketValue') return f.marketValueMin !== null || f.marketValueMax !== null
-  if (col === 'height')      return f.heightMin !== null || f.heightMax !== null
-  if (col === 'weight')      return f.weightMin !== null || f.weightMax !== null
-  if (col === 'league')      return !!f.league
-  if (col === 'preferredFoot') return f.preferredFeet.length > 0
-  if (col === 'contractExpiry') return f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null
-  if (col === 'fmWages')    return f.fmWagesMin !== null || f.fmWagesMax !== null
-  return false
+function chipValueSummary(key: FilterKey, f: Filters): string {
+  const fmtMV = (v: number) => v === 0 ? '€0' : `€${(v / 1_000_000).toFixed(1)}M`
+  const fmtW  = (v: number) => `£${(v / 1000).toFixed(0)}K`
+  switch (key) {
+    case 'name':          return f.name
+    case 'position':      return f.positions.join(', ')
+    case 'club':          return f.club
+    case 'nationality':   return f.nationalities.join(', ')
+    case 'league':        return f.league
+    case 'preferredFoot': return f.preferredFeet.join(', ')
+    case 'age':           return f.ageMin !== null && f.ageMax !== null ? `${f.ageMin} – ${f.ageMax}` : f.ageMin !== null ? `≥ ${f.ageMin}` : `≤ ${f.ageMax}`
+    case 'height':        return f.heightMin !== null && f.heightMax !== null ? `${f.heightMin} – ${f.heightMax} cm` : f.heightMin !== null ? `≥ ${f.heightMin} cm` : `≤ ${f.heightMax} cm`
+    case 'weight':        return f.weightMin !== null && f.weightMax !== null ? `${f.weightMin} – ${f.weightMax} kg` : f.weightMin !== null ? `≥ ${f.weightMin} kg` : `≤ ${f.weightMax} kg`
+    case 'marketValue':   return f.marketValueMin !== null && f.marketValueMax !== null ? `${fmtMV(f.marketValueMin)} – ${fmtMV(f.marketValueMax)}` : f.marketValueMin !== null ? `≥ ${fmtMV(f.marketValueMin)}` : `≤ ${fmtMV(f.marketValueMax!)}`
+    case 'contractExpiry':return f.contractExpiryYearMin !== null && f.contractExpiryYearMax !== null ? `${f.contractExpiryYearMin} – ${f.contractExpiryYearMax}` : f.contractExpiryYearMin !== null ? `≥ ${f.contractExpiryYearMin}` : `≤ ${f.contractExpiryYearMax}`
+    case 'fmWages':       return f.fmWagesMin !== null && f.fmWagesMax !== null ? `${fmtW(f.fmWagesMin)} – ${fmtW(f.fmWagesMax)}/w` : f.fmWagesMin !== null ? `≥ ${fmtW(f.fmWagesMin)}/w` : `≤ ${fmtW(f.fmWagesMax!)}/w`
+  }
+  return ''
 }
 
 function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
-  const age = calcAge(player.dateOfBirth)
+  const age          = calcAge(player.dateOfBirth)
   const contractYear = getContractYear(player)
-  const fmWages = getFmWages(player)
-
+  const fmWages      = getFmWages(player)
   const checks: (() => boolean)[] = []
 
-  if (f.name) checks.push(() => `${player.firstName} ${player.lastName}`.toLowerCase().includes(f.name.toLowerCase()))
-  if (f.positions.length)    checks.push(() => f.positions.some(p => (player.position ?? '').toLowerCase() === p.toLowerCase()))
-  if (f.club)                checks.push(() => (player.clubName ?? '').toLowerCase().includes(f.club.toLowerCase()))
+  if (f.name)            checks.push(() => `${player.firstName} ${player.lastName}`.toLowerCase().includes(f.name.toLowerCase()))
+  if (f.positions.length) checks.push(() => f.positions.some(p => (player.position ?? '').toLowerCase() === p.toLowerCase()))
+  if (f.club)            checks.push(() => (player.clubName ?? '').toLowerCase().includes(f.club.toLowerCase()))
   if (f.nationalities.length) checks.push(() => f.nationalities.some(n => (player.nationality ?? '').toLowerCase() === n.toLowerCase()))
-  if (f.ageMin !== null || f.ageMax !== null) checks.push(() => {
-    const a = age ?? 0
-    if (f.ageMin !== null && a < f.ageMin) return false
-    if (f.ageMax !== null && a > f.ageMax) return false
-    return true
-  })
-  if (f.marketValueMin !== null || f.marketValueMax !== null) checks.push(() => {
-    const mv = player.marketValue ?? 0
-    if (f.marketValueMin !== null && mv < f.marketValueMin) return false
-    if (f.marketValueMax !== null && mv > f.marketValueMax) return false
-    return true
-  })
-  if (f.heightMin !== null || f.heightMax !== null) checks.push(() => {
-    const h = player.heightCm ?? 0
-    if (f.heightMin !== null && h < f.heightMin) return false
-    if (f.heightMax !== null && h > f.heightMax) return false
-    return true
-  })
-  if (f.weightMin !== null || f.weightMax !== null) checks.push(() => {
-    const w = player.weightKg ?? 0
-    if (f.weightMin !== null && w < f.weightMin) return false
-    if (f.weightMax !== null && w > f.weightMax) return false
-    return true
-  })
-  if (f.league) checks.push(() => getCF(player, 'league').toLowerCase().includes(f.league.toLowerCase()))
+  if (f.ageMin !== null || f.ageMax !== null) checks.push(() => { const a = age ?? 0; return (f.ageMin === null || a >= f.ageMin) && (f.ageMax === null || a <= f.ageMax) })
+  if (f.marketValueMin !== null || f.marketValueMax !== null) checks.push(() => { const v = player.marketValue ?? 0; return (f.marketValueMin === null || v >= f.marketValueMin) && (f.marketValueMax === null || v <= f.marketValueMax) })
+  if (f.heightMin !== null || f.heightMax !== null) checks.push(() => { const h = player.heightCm ?? 0; return (f.heightMin === null || h >= f.heightMin) && (f.heightMax === null || h <= f.heightMax) })
+  if (f.weightMin !== null || f.weightMax !== null) checks.push(() => { const w = player.weightKg ?? 0; return (f.weightMin === null || w >= f.weightMin) && (f.weightMax === null || w <= f.weightMax) })
+  if (f.league)          checks.push(() => getCF(player, 'league').toLowerCase().includes(f.league.toLowerCase()))
   if (f.preferredFeet.length) checks.push(() => f.preferredFeet.some(foot => getCF(player, 'foot').toLowerCase() === foot.toLowerCase()))
-  if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) checks.push(() => {
-    const cy = contractYear ?? 0
-    if (f.contractExpiryYearMin !== null && cy < f.contractExpiryYearMin) return false
-    if (f.contractExpiryYearMax !== null && cy > f.contractExpiryYearMax) return false
-    return true
-  })
-  if (f.fmWagesMin !== null || f.fmWagesMax !== null) checks.push(() => {
-    const w = fmWages ?? 0
-    if (f.fmWagesMin !== null && w < f.fmWagesMin) return false
-    if (f.fmWagesMax !== null && w > f.fmWagesMax) return false
-    return true
-  })
+  if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) checks.push(() => { const cy = contractYear ?? 0; return (f.contractExpiryYearMin === null || cy >= f.contractExpiryYearMin) && (f.contractExpiryYearMax === null || cy <= f.contractExpiryYearMax) })
+  if (f.fmWagesMin !== null || f.fmWagesMax !== null) checks.push(() => { const w = fmWages ?? 0; return (f.fmWagesMin === null || w >= f.fmWagesMin) && (f.fmWagesMax === null || w <= f.fmWagesMax) })
 
   if (checks.length === 0) return true
   return mode === 'AND' ? checks.every(fn => fn()) : checks.some(fn => fn())
@@ -195,9 +186,7 @@ function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export interface PlayersTableHandle {
-  openCreateReport: () => void
-}
+export interface PlayersTableHandle { openCreateReport: () => void }
 
 const PlayersTable = forwardRef<PlayersTableHandle, {
   players: Player[]
@@ -210,30 +199,24 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const storageKey     = `scoutlink_filters_${databaseId}`
   const storageModeKey = `scoutlink_filter_mode_${databaseId}`
 
-  const [sortKey,  setSortKey]  = useState<SortKey>('name')
-  const [sortDir,  setSortDir]  = useState<SortDir>('asc')
-  const [filters,  setFilters]  = useState<Filters>(DEFAULT_FILTERS)
+  const [sortKey,    setSortKey]    = useState<SortKey>('name')
+  const [sortDir,    setSortDir]    = useState<SortDir>('asc')
+  const [filters,    setFilters]    = useState<Filters>(DEFAULT_FILTERS)
   const [filterMode, setFilterMode] = useState<FilterMode>('AND')
-  const [openFilter, setOpenFilter] = useState<FilterKey | null>(null)
+  const [addFilterOpen,  setAddFilterOpen]  = useState(false)
+  const [pendingFilter,  setPendingFilter]  = useState<FilterKey | null>(null)
   const [editingPlayer,  setEditingPlayer]  = useState<Player | null>(null)
   const [deletingPlayer, setDeletingPlayer] = useState<Player | null>(null)
-  const [showReport, setShowReport] = useState(false)
-  const [visibleParams, setVisibleParams] = useState<Set<string>>(new Set())
+  const [showReport,     setShowReport]     = useState(false)
+  const [visibleParams,  setVisibleParams]  = useState<Set<string>>(new Set())
 
   useImperativeHandle(ref, () => ({ openCreateReport: () => setShowReport(true) }))
 
-  // Visible columns: from DB-saved columnConfig prop, or fall back to global settings
   useEffect(() => {
-    if (columnConfig !== null) {
-      setVisibleParams(new Set(columnConfig))
-    } else {
-      const active       = loadActive()
-      const customActive = loadCustomActive()
-      setVisibleParams(new Set([...active, ...customActive]))
-    }
+    if (columnConfig !== null) setVisibleParams(new Set(columnConfig))
+    else setVisibleParams(new Set([...loadActive(), ...loadCustomActive()]))
   }, [columnConfig])
 
-  // Persisted filters
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
@@ -246,48 +229,65 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   useEffect(() => { localStorage.setItem(storageKey, JSON.stringify(filters)) }, [filters, storageKey])
   useEffect(() => { localStorage.setItem(storageModeKey, filterMode) }, [filterMode, storageModeKey])
 
-  // Column visibility helpers
-  const show = (key: string) => visibleParams.has(key)
+  const show    = (key: string) => visibleParams.has(key)
   const showDob = show('age') || show('dateOfBirth')
 
-  // Derived unique values for multi-select filters
-  const uniquePositions = useMemo(() =>
-    [...new Set(players.map(p => p.position).filter(Boolean) as string[])].sort(), [players])
-  const uniqueNationalities = useMemo(() =>
-    [...new Set(players.map(p => p.nationality).filter(Boolean) as string[])].sort(), [players])
-  const uniqueFeet = useMemo(() =>
-    [...new Set(players.map(p => getCF(p, 'foot')).filter(Boolean))].sort(), [players])
+  const uniquePositions     = useMemo(() => [...new Set(players.map(p => p.position).filter(Boolean) as string[])].sort(), [players])
+  const uniqueNationalities = useMemo(() => [...new Set(players.map(p => p.nationality).filter(Boolean) as string[])].sort(), [players])
+  const uniqueFeet          = useMemo(() => [...new Set(players.map(p => getCF(p, 'foot')).filter(Boolean))].sort(), [players])
 
-  // Range bounds
-  const ages      = useMemo(() => players.map(p => calcAge(p.dateOfBirth)).filter(Boolean) as number[], [players])
-  const ageRange  = { min: ages.length ? Math.min(...ages) : 15, max: ages.length ? Math.max(...ages) : 45 }
-  const mvs       = useMemo(() => players.map(p => p.marketValue).filter(Boolean) as number[], [players])
-  const mvRange   = { min: 0, max: mvs.length ? Math.max(...mvs) : 200_000_000 }
-  const heights   = useMemo(() => players.map(p => p.heightCm).filter(Boolean) as number[], [players])
-  const heightRange = { min: heights.length ? Math.min(...heights) : 150, max: heights.length ? Math.max(...heights) : 210 }
-  const weights   = useMemo(() => players.map(p => p.weightKg).filter(Boolean) as number[], [players])
-  const weightRange = { min: weights.length ? Math.min(...weights) : 50, max: weights.length ? Math.max(...weights) : 120 }
+  const ages          = useMemo(() => players.map(p => calcAge(p.dateOfBirth)).filter(Boolean) as number[], [players])
+  const ageRange      = { min: ages.length ? Math.min(...ages) : 15, max: ages.length ? Math.max(...ages) : 45 }
+  const heights       = useMemo(() => players.map(p => p.heightCm).filter(Boolean) as number[], [players])
+  const heightRange   = { min: heights.length ? Math.min(...heights) : 150, max: heights.length ? Math.max(...heights) : 210 }
+  const weights       = useMemo(() => players.map(p => p.weightKg).filter(Boolean) as number[], [players])
+  const weightRange   = { min: weights.length ? Math.min(...weights) : 50, max: weights.length ? Math.max(...weights) : 120 }
+  const cyears        = useMemo(() => players.map(p => getContractYear(p)).filter(Boolean) as number[], [players])
+  const contractRange = { min: cyears.length ? Math.min(...cyears) : new Date().getFullYear(), max: cyears.length ? Math.max(...cyears) : new Date().getFullYear() + 8 }
+  const wagesVals     = useMemo(() => players.map(p => getFmWages(p)).filter(Boolean) as number[], [players])
+  const wagesRange    = { min: 0, max: wagesVals.length ? Math.max(...wagesVals) : 200_000 }
 
-  const contractYears = useMemo(() =>
-    players.map(p => getContractYear(p)).filter(Boolean) as number[], [players])
-  const contractYearRange = {
-    min: contractYears.length ? Math.min(...contractYears) : new Date().getFullYear(),
-    max: contractYears.length ? Math.max(...contractYears) : new Date().getFullYear() + 8,
+  const multiOptions: Record<string, string[]> = {
+    position:     uniquePositions,
+    nationality:  uniqueNationalities,
+    preferredFoot: uniqueFeet.length ? uniqueFeet : ['Right', 'Left', 'Both'],
   }
-  const fmWagesVals = useMemo(() =>
-    players.map(p => getFmWages(p)).filter(Boolean) as number[], [players])
-  const fmWagesRange = { min: 0, max: fmWagesVals.length ? Math.max(...fmWagesVals) : 200_000 }
+
+  const rangeBounds: Record<string, { min: number; max: number; unit?: string; scale?: number }> = {
+    age:           { ...ageRange,      unit: 'y' },
+    height:        { ...heightRange,   unit: 'cm' },
+    weight:        { ...weightRange,   unit: 'kg' },
+    marketValue:   { min: 0, max: 200_000_000, unit: '€M', scale: 1_000_000 },
+    contractExpiry:{ ...contractRange },
+    fmWages:       { ...wagesRange,    unit: '£/w' },
+  }
 
   function updateFilter(patch: Partial<Filters>) { setFilters(f => ({ ...f, ...patch })) }
   function clearAllFilters() { setFilters(DEFAULT_FILTERS) }
+
+  function clearFilterByKey(key: FilterKey) {
+    const p: Partial<Filters> = {}
+    if (key === 'name')           p.name = ''
+    if (key === 'position')       p.positions = []
+    if (key === 'club')           p.club = ''
+    if (key === 'nationality')    p.nationalities = []
+    if (key === 'age')            { p.ageMin = null; p.ageMax = null }
+    if (key === 'marketValue')    { p.marketValueMin = null; p.marketValueMax = null }
+    if (key === 'height')         { p.heightMin = null; p.heightMax = null }
+    if (key === 'weight')         { p.weightMin = null; p.weightMax = null }
+    if (key === 'league')         p.league = ''
+    if (key === 'preferredFoot')  p.preferredFeet = []
+    if (key === 'contractExpiry') { p.contractExpiryYearMin = null; p.contractExpiryYearMax = null }
+    if (key === 'fmWages')        { p.fmWagesMin = null; p.fmWagesMax = null }
+    updateFilter(p)
+  }
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortKey(key); setSortDir('asc') }
   }
 
-  const filtered = useMemo(() =>
-    players.filter(p => matchesFilters(p, filters, filterMode)), [players, filters, filterMode])
+  const filtered = useMemo(() => players.filter(p => matchesFilters(p, filters, filterMode)), [players, filters, filterMode])
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     let av: string | number = 0, bv: string | number = 0
@@ -308,144 +308,54 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   }), [filtered, sortKey, sortDir])
 
   const hasFilters  = isFilterActive(filters)
-  const filterCount = activeFilterCount(filters)
+  const activeChips = getActiveChips(filters)
 
-  // Count visible data columns (for empty row colSpan)
-  const visibleColCount = 1 + // name always
-    (show('position') ? 1 : 0) +
-    (show('team') ? 1 : 0) +
-    (show('league') ? 1 : 0) +
-    (show('nationality') ? 1 : 0) +
-    (showDob ? 1 : 0) +
-    (show('height') ? 1 : 0) +
-    (show('weight') ? 1 : 0) +
-    (show('marketValue') ? 1 : 0) +
-    (show('contractExpiry') ? 1 : 0) +
-    (show('preferredFoot') ? 1 : 0) +
-    (show('fmWages') ? 1 : 0) +
-    (canEdit ? 1 : 0)
+  const visibleColCount = 1 +
+    (show('position') ? 1 : 0) + (show('team') ? 1 : 0) + (show('league') ? 1 : 0) +
+    (show('nationality') ? 1 : 0) + (showDob ? 1 : 0) + (show('height') ? 1 : 0) +
+    (show('weight') ? 1 : 0) + (show('marketValue') ? 1 : 0) + (show('contractExpiry') ? 1 : 0) +
+    (show('preferredFoot') ? 1 : 0) + (show('fmWages') ? 1 : 0) + (canEdit ? 1 : 0)
 
   return (
     <div>
-      {/* Active filters bar */}
-      {hasFilters && (
-        <div className="flex items-center gap-3 mb-3 px-1">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#00c896] animate-pulse" />
-            <span className="text-xs text-white/50">{filterCount} filter{filterCount !== 1 ? 's' : ''} active</span>
-          </div>
-          <div className="flex items-center rounded-lg overflow-hidden border border-white/10 text-xs">
-            <button onClick={() => setFilterMode('AND')} className="px-2.5 py-1 font-semibold transition-colors"
-              style={{ background: filterMode === 'AND' ? '#00c896' : 'var(--hover-bg)', color: filterMode === 'AND' ? '#000' : 'var(--text-muted)' }}>AND</button>
-            <button onClick={() => setFilterMode('OR')} className="px-2.5 py-1 font-semibold transition-colors"
-              style={{ background: filterMode === 'OR' ? '#6c8fff' : 'var(--hover-bg)', color: filterMode === 'OR' ? '#000' : 'var(--text-muted)' }}>OR</button>
-          </div>
-          <span className="text-xs text-white/25">{sorted.length} of {players.length} players shown</span>
-          <button onClick={clearAllFilters} className="ml-auto text-xs text-white/30 hover:text-red-400 transition-colors">
-            Clear all filters ✕
-          </button>
-        </div>
-      )}
+      <FilterBar
+        filters={filters}
+        filterMode={filterMode}
+        activeChips={activeChips}
+        totalCount={players.length}
+        filteredCount={sorted.length}
+        addFilterOpen={addFilterOpen}
+        pendingFilter={pendingFilter}
+        onSetMode={setFilterMode}
+        onRemoveChip={key => { clearFilterByKey(key); if (pendingFilter === key) setPendingFilter(null) }}
+        onEditChip={key => { setAddFilterOpen(false); setPendingFilter(key) }}
+        onToggleAddFilter={() => { setAddFilterOpen(o => !o); setPendingFilter(null) }}
+        onSelectParam={key => { setAddFilterOpen(false); setPendingFilter(key) }}
+        onClearAll={() => { clearAllFilters(); setPendingFilter(null) }}
+        multiOptions={multiOptions}
+        rangeBounds={rangeBounds}
+        updateFilter={updateFilter}
+        onClosePending={() => setPendingFilter(null)}
+      />
 
-      {/* Table */}
       <div className="rounded-2xl border border-white/5" style={{ background: 'var(--card-bg)', borderRadius: '16px' }}>
         <div style={{ borderRadius: '16px', overflowX: 'auto' }}>
           <table style={{ minWidth: '600px', width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr className="border-b border-white/5">
-
-                {/* Player — always shown */}
-                <ColHeader label="Player" sortKey="name" filterKey="name" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('name', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={200} sticky="left">
-                  <TextFilter label="Search name" value={filters.name} onChange={v => updateFilter({ name: v })} />
-                </ColHeader>
-
-                {show('position') && (
-                  <ColHeader label="Position" sortKey="position" filterKey="position" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('position', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={110}>
-                    <MultiSelectFilter options={uniquePositions} selected={filters.positions} onChange={v => updateFilter({ positions: v })} emptyText="No positions in list" />
-                  </ColHeader>
-                )}
-
-                {show('team') && (
-                  <ColHeader label="Club" sortKey="club" filterKey="club" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('club', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={150}>
-                    <TextFilter label="Search club" value={filters.club} onChange={v => updateFilter({ club: v })} />
-                  </ColHeader>
-                )}
-
-                {show('league') && (
-                  <ColHeader label="League" sortKey="league" filterKey="league" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('league', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={140}>
-                    <TextFilter label="Search league" value={filters.league} onChange={v => updateFilter({ league: v })} />
-                  </ColHeader>
-                )}
-
-                {show('nationality') && (
-                  <ColHeader label="Nationality" sortKey="nationality" filterKey="nationality" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('nationality', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={120}>
-                    <MultiSelectFilter options={uniqueNationalities} selected={filters.nationalities} onChange={v => updateFilter({ nationalities: v })} emptyText="No nationalities in list" />
-                  </ColHeader>
-                )}
-
-                {showDob && (
-                  <ColHeader label="Date of Birth" sortKey="age" filterKey="age" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('age', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={130}>
-                    <RangeFilter label="Age range" min={ageRange.min} max={ageRange.max}
-                      low={filters.ageMin ?? ageRange.min} high={filters.ageMax ?? ageRange.max}
-                      onChange={(lo, hi) => updateFilter({ ageMin: lo === ageRange.min ? null : lo, ageMax: hi === ageRange.max ? null : hi })}
-                      format={v => `${v}y`} />
-                  </ColHeader>
-                )}
-
-                {show('height') && (
-                  <ColHeader label="Height" sortKey="height" filterKey="height" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('height', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={90}>
-                    <RangeFilter label="Height range" min={heightRange.min} max={heightRange.max}
-                      low={filters.heightMin ?? heightRange.min} high={filters.heightMax ?? heightRange.max}
-                      onChange={(lo, hi) => updateFilter({ heightMin: lo === heightRange.min ? null : lo, heightMax: hi === heightRange.max ? null : hi })}
-                      format={v => `${v}cm`} />
-                  </ColHeader>
-                )}
-
-                {show('weight') && (
-                  <ColHeader label="Weight" sortKey="weight" filterKey="weight" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('weight', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={90}>
-                    <RangeFilter label="Weight range" min={weightRange.min} max={weightRange.max}
-                      low={filters.weightMin ?? weightRange.min} high={filters.weightMax ?? weightRange.max}
-                      onChange={(lo, hi) => updateFilter({ weightMin: lo === weightRange.min ? null : lo, weightMax: hi === weightRange.max ? null : hi })}
-                      format={v => `${v}kg`} />
-                  </ColHeader>
-                )}
-
-                {show('marketValue') && (
-                  <ColHeader label="Market Value" sortKey="marketValue" filterKey="marketValue" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('marketValue', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={130}>
-                    <RangeFilter label="Market value range" min={mvRange.min} max={mvRange.max}
-                      low={filters.marketValueMin ?? mvRange.min} high={filters.marketValueMax ?? mvRange.max}
-                      onChange={(lo, hi) => updateFilter({ marketValueMin: lo === mvRange.min ? null : lo, marketValueMax: hi === mvRange.max ? null : hi })}
-                      format={v => v === 0 ? '€0' : `€${(v / 1_000_000).toFixed(1)}M`} />
-                  </ColHeader>
-                )}
-
-                {show('contractExpiry') && (
-                  <ColHeader label="Contract" sortKey="contractExpiry" filterKey="contractExpiry" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('contractExpiry', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={110}>
-                    <RangeFilter label="Expiry year" min={contractYearRange.min} max={contractYearRange.max}
-                      low={filters.contractExpiryYearMin ?? contractYearRange.min} high={filters.contractExpiryYearMax ?? contractYearRange.max}
-                      onChange={(lo, hi) => updateFilter({ contractExpiryYearMin: lo === contractYearRange.min ? null : lo, contractExpiryYearMax: hi === contractYearRange.max ? null : hi })}
-                      format={v => String(v)} />
-                  </ColHeader>
-                )}
-
-                {show('preferredFoot') && (
-                  <ColHeader label="Foot" sortKey="name" filterKey="preferredFoot" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('preferredFoot', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={80} noSort>
-                    <MultiSelectFilter options={uniqueFeet.length ? uniqueFeet : ['Right', 'Left', 'Both']} selected={filters.preferredFeet} onChange={v => updateFilter({ preferredFeet: v })} emptyText="No data" />
-                  </ColHeader>
-                )}
-
-                {show('fmWages') && (
-                  <ColHeader label="FM Wages" sortKey="fmWages" filterKey="fmWages" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} hasFilter={columnHasFilter('fmWages', filters)} openFilter={openFilter} setOpenFilter={setOpenFilter} minWidth={110}>
-                    <RangeFilter label="FM Wages range" min={fmWagesRange.min} max={fmWagesRange.max}
-                      low={filters.fmWagesMin ?? fmWagesRange.min} high={filters.fmWagesMax ?? fmWagesRange.max}
-                      onChange={(lo, hi) => updateFilter({ fmWagesMin: lo === fmWagesRange.min ? null : lo, fmWagesMax: hi === fmWagesRange.max ? null : hi })}
-                      format={v => v === 0 ? '0' : `${(v / 1000).toFixed(0)}K`} />
-                  </ColHeader>
-                )}
-
-                {canEdit && (
-                  <th className="px-4 py-3" style={{ minWidth: 72, position: 'sticky', right: 0, background: 'var(--card-solid)', zIndex: 2 }} />
-                )}
+                <ColHeader label="Player"       sortKey="name"          currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={200} sticky="left" />
+                {show('position')    && <ColHeader label="Position"     sortKey="position"     currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
+                {show('team')        && <ColHeader label="Club"         sortKey="club"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={150} />}
+                {show('league')      && <ColHeader label="League"       sortKey="league"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={140} />}
+                {show('nationality') && <ColHeader label="Nationality"  sortKey="nationality"  currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={120} />}
+                {showDob             && <ColHeader label="Date of Birth" sortKey="age"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={130} />}
+                {show('height')      && <ColHeader label="Height"       sortKey="height"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={90} />}
+                {show('weight')      && <ColHeader label="Weight"       sortKey="weight"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={90} />}
+                {show('marketValue') && <ColHeader label="Market Value" sortKey="marketValue"  currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={130} />}
+                {show('contractExpiry') && <ColHeader label="Contract"  sortKey="contractExpiry" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
+                {show('preferredFoot') && <ColHeader label="Foot"       sortKey="name"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={80} noSort />}
+                {show('fmWages')     && <ColHeader label="FM Wages"     sortKey="fmWages"      currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
+                {canEdit && <th className="px-4 py-3" style={{ minWidth: 72, position: 'sticky', right: 0, background: 'var(--card-solid)', zIndex: 2 }} />}
               </tr>
             </thead>
             <tbody>
@@ -459,8 +369,6 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                 const rowBg = i % 2 !== 0 ? 'var(--subtle-bg)' : 'var(--card-solid)'
                 return (
                   <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group" style={{ background: rowBg }}>
-
-                    {/* Player name — always shown */}
                     <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
                       <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-black flex-shrink-0" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
@@ -469,27 +377,14 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                         <p className="text-sm font-medium text-white group-hover:text-[#00c896] transition-colors whitespace-nowrap">{player.firstName} {player.lastName}</p>
                       </Link>
                     </td>
-
                     {show('position') && (
                       <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">
-                        {player.position
-                          ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{player.position}</span>
-                          : <span className="text-white/25">—</span>}
+                        {player.position ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{player.position}</span> : <span className="text-white/25">—</span>}
                       </td>
                     )}
-
-                    {show('team') && (
-                      <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.clubName || <span className="text-white/25">—</span>}</td>
-                    )}
-
-                    {show('league') && (
-                      <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{getCF(player, 'league') || <span className="text-white/25">—</span>}</td>
-                    )}
-
-                    {show('nationality') && (
-                      <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.nationality || <span className="text-white/25">—</span>}</td>
-                    )}
-
+                    {show('team')        && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.clubName || <span className="text-white/25">—</span>}</td>}
+                    {show('league')      && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{getCF(player, 'league') || <span className="text-white/25">—</span>}</td>}
+                    {show('nationality') && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.nationality || <span className="text-white/25">—</span>}</td>}
                     {showDob && (
                       <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">
                         {player.dateOfBirth
@@ -497,58 +392,35 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                           : <span className="text-white/25">—</span>}
                       </td>
                     )}
-
-                    {show('height') && (
-                      <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.heightCm ? `${player.heightCm} cm` : <span className="text-white/25">—</span>}</td>
-                    )}
-
-                    {show('weight') && (
-                      <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.weightKg ? `${player.weightKg} kg` : <span className="text-white/25">—</span>}</td>
-                    )}
-
+                    {show('height')      && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.heightCm ? `${player.heightCm} cm` : <span className="text-white/25">—</span>}</td>}
+                    {show('weight')      && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.weightKg ? `${player.weightKg} kg` : <span className="text-white/25">—</span>}</td>}
                     {show('marketValue') && (
                       <td className="px-6 py-3 text-sm whitespace-nowrap" style={{ color: player.marketValue ? '#00c896' : 'rgba(255,255,255,0.25)' }}>
                         {player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(1)}M` : '—'}
                       </td>
                     )}
-
                     {show('contractExpiry') && (() => {
                       const raw = getCF(player, 'contractExpiry')
                       const year = getContractYear(player)
-                      const isExpiringSoon = year !== null && year <= new Date().getFullYear() + 1
+                      const soon = year !== null && year <= new Date().getFullYear() + 1
                       return (
-                        <td className="px-6 py-3 text-sm whitespace-nowrap" style={{ color: raw ? (isExpiringSoon ? '#f59e0b' : 'rgba(255,255,255,0.75)') : 'rgba(255,255,255,0.25)' }}>
+                        <td className="px-6 py-3 text-sm whitespace-nowrap" style={{ color: raw ? (soon ? '#f59e0b' : 'rgba(255,255,255,0.75)') : 'rgba(255,255,255,0.25)' }}>
                           {raw ? new Date(raw).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '—'}
                         </td>
                       )
                     })()}
-
-                    {show('preferredFoot') && (
-                      <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">
-                        {getCF(player, 'foot') || <span className="text-white/25">—</span>}
-                      </td>
-                    )}
-
+                    {show('preferredFoot') && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{getCF(player, 'foot') || <span className="text-white/25">—</span>}</td>}
                     {show('fmWages') && (() => {
                       const w = getFmWages(player)
-                      return (
-                        <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">
-                          {w != null ? `£${w.toLocaleString()}/w` : <span className="text-white/25">—</span>}
-                        </td>
-                      )
+                      return <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{w != null ? `£${w.toLocaleString()}/w` : <span className="text-white/25">—</span>}</td>
                     })()}
-
                     {canEdit && (
                       <td className="px-4 py-3" style={{ position: 'sticky', right: 0, background: rowBg, zIndex: 1 }}>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setEditingPlayer(player)} title="Edit"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors"
-                            style={{ background: 'var(--hover-bg)' }}>
+                          <button onClick={() => setEditingPlayer(player)} title="Edit" className="w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                           </button>
-                          <button onClick={() => setDeletingPlayer(player)} title="Delete"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-red-400 transition-colors"
-                            style={{ background: 'var(--hover-bg)' }}>
+                          <button onClick={() => setDeletingPlayer(player)} title="Delete" className="w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-red-400 transition-colors" style={{ background: 'var(--hover-bg)' }}>
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                           </button>
                         </div>
@@ -562,11 +434,9 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
         </div>
       </div>
 
-      {editingPlayer  && <EditModal player={editingPlayer}   databaseId={databaseId} onClose={() => setEditingPlayer(null)} />}
+      {editingPlayer  && <EditModal  player={editingPlayer}   databaseId={databaseId} onClose={() => setEditingPlayer(null)} />}
       {deletingPlayer && <DeleteModal player={deletingPlayer} databaseId={databaseId} onClose={() => setDeletingPlayer(null)} />}
-      {showReport && (
-        <CreateReportModal players={sorted} databaseId={databaseId} databaseName={databaseName} onClose={() => setShowReport(false)} />
-      )}
+      {showReport && <CreateReportModal players={sorted} databaseId={databaseId} databaseName={databaseName} onClose={() => setShowReport(false)} />}
     </div>
   )
 })
@@ -575,171 +445,265 @@ export default PlayersTable
 
 // ─── Column Header ────────────────────────────────────────────────────────────
 
-function ColHeader({ label, sortKey, filterKey, currentSort, sortDir, onSort, hasFilter, openFilter, setOpenFilter, children, minWidth, sticky, noSort }: {
-  label: string
-  sortKey: SortKey
-  filterKey: FilterKey
-  currentSort: SortKey
-  sortDir: SortDir
-  onSort: (k: SortKey) => void
-  hasFilter: boolean
-  openFilter: FilterKey | null
-  setOpenFilter: (k: FilterKey | null) => void
-  children: React.ReactNode
-  minWidth?: number
-  sticky?: 'left' | 'right'
-  noSort?: boolean
+function ColHeader({ label, sortKey, currentSort, sortDir, onSort, minWidth, sticky, noSort }: {
+  label: string; sortKey: SortKey; currentSort: SortKey; sortDir: SortDir
+  onSort: (k: SortKey) => void; minWidth?: number; sticky?: 'left' | 'right'; noSort?: boolean
 }) {
-  const isOpen   = openFilter === filterKey
   const isSorted = currentSort === sortKey && !noSort
-  const btnRef   = useRef<HTMLButtonElement>(null)
-  const [dropPos, setDropPos] = useState<{ top: number; left: number } | null>(null)
-
-  useEffect(() => {
-    if (!isOpen) return
-    function handleClick(e: MouseEvent) {
-      const target = e.target as Node
-      const dropdown = document.getElementById(`filter-drop-${filterKey}`)
-      if (dropdown?.contains(target)) return
-      if (btnRef.current?.contains(target)) return
-      setOpenFilter(null)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [isOpen, setOpenFilter, filterKey])
-
-  function handleFilterClick() {
-    if (isOpen) { setOpenFilter(null); return }
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect()
-      setDropPos({ top: rect.bottom + 6, left: rect.left })
-    }
-    setOpenFilter(filterKey)
-  }
-
   return (
-    <th className="text-left px-4 py-3" style={{
-      minWidth,
-      ...(sticky ? { position: 'sticky', [sticky]: 0, background: 'var(--card-solid)', zIndex: 2 } : {}),
-    }}>
-      <div className="flex items-center gap-1">
-        {noSort ? (
-          <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-        ) : (
-          <button onClick={() => onSort(sortKey)}
-            className="flex items-center gap-1 text-xs uppercase tracking-widest font-medium transition-colors"
-            style={{ color: isSorted ? '#00c896' : 'var(--text-secondary)' }}>
-            {label}
-            <span className="text-[10px]">{isSorted ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
-          </button>
-        )}
-        <button ref={btnRef} onClick={handleFilterClick}
-          className="w-5 h-5 flex items-center justify-center rounded transition-colors flex-shrink-0"
-          style={{
-            background: hasFilter ? 'rgba(0,200,150,0.15)' : (isOpen ? 'var(--hover-bg)' : 'transparent'),
-            color: hasFilter ? '#00c896' : 'var(--text-faint)',
-          }} title="Filter">
-          {hasFilter
-            ? <span className="w-2 h-2 rounded-full bg-[#00c896]" />
-            : <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39A1 1 0 0 0 18.95 4H5.04a1 1 0 0 0-.79 1.61z"/></svg>}
-        </button>
-      </div>
-      {isOpen && dropPos && (
-        <div id={`filter-drop-${filterKey}`}
-          className="rounded-xl border border-white/10 p-3 min-w-[220px]"
-          style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999, background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)' }}
-          onMouseDown={e => e.stopPropagation()}>
-          {children}
-        </div>
-      )}
+    <th className="text-left px-4 py-3" style={{ minWidth, ...(sticky ? { position: 'sticky', [sticky]: 0, background: 'var(--card-solid)', zIndex: 2 } : {}) }}>
+      {noSort
+        ? <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+        : <button onClick={() => onSort(sortKey)} className="flex items-center gap-1 text-xs uppercase tracking-widest font-medium transition-colors" style={{ color: isSorted ? '#00c896' : 'var(--text-secondary)' }}>
+            {label}<span className="text-[10px]">{isSorted ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
+          </button>}
     </th>
   )
 }
 
-// ─── Filter UIs ───────────────────────────────────────────────────────────────
+// ─── Filter Bar ───────────────────────────────────────────────────────────────
 
-function TextFilter({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div>
-      <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">{label}</p>
-      <div className="relative">
-        <input autoFocus value={value} onChange={e => onChange(e.target.value)} placeholder="Type to filter..."
-          className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none"
-          style={{ background: 'var(--hover-bg)', border: '1px solid var(--border)' }} />
-        {value && <button onClick={() => onChange('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 text-xs">✕</button>}
-      </div>
-    </div>
-  )
-}
-
-function MultiSelectFilter({ options, selected, onChange, emptyText }: {
-  options: string[]; selected: string[]; onChange: (v: string[]) => void; emptyText: string
+function FilterBar({ filters, filterMode, activeChips, totalCount, filteredCount, addFilterOpen, pendingFilter,
+  onSetMode, onRemoveChip, onEditChip, onToggleAddFilter, onSelectParam, onClearAll,
+  multiOptions, rangeBounds, updateFilter, onClosePending }: {
+  filters: Filters; filterMode: FilterMode; activeChips: FilterKey[]
+  totalCount: number; filteredCount: number; addFilterOpen: boolean; pendingFilter: FilterKey | null
+  onSetMode: (m: FilterMode) => void; onRemoveChip: (k: FilterKey) => void; onEditChip: (k: FilterKey) => void
+  onToggleAddFilter: () => void; onSelectParam: (k: FilterKey) => void; onClearAll: () => void
+  multiOptions: Record<string, string[]>; rangeBounds: Record<string, { min: number; max: number; unit?: string; scale?: number }>
+  updateFilter: (patch: Partial<Filters>) => void; onClosePending: () => void
 }) {
-  function toggle(opt: string) {
-    onChange(selected.includes(opt) ? selected.filter(s => s !== opt) : [...selected, opt])
-  }
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!addFilterOpen) return
+    function handle(e: MouseEvent) {
+      const t = e.target as Node
+      if (document.getElementById('add-filter-dropdown')?.contains(t)) return
+      if (btnRef.current?.contains(t)) return
+      onToggleAddFilter()
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [addFilterOpen, onToggleAddFilter])
+
+  const hasFilters = activeChips.length > 0
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] uppercase tracking-widest text-white/30">Select</p>
-        {selected.length > 0 && <button onClick={() => onChange([])} className="text-[10px] text-white/30 hover:text-red-400 transition-colors">Clear</button>}
-      </div>
-      {options.length === 0
-        ? <p className="text-xs text-white/20 py-2">{emptyText}</p>
-        : (
-          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-            {options.map(opt => (
-              <label key={opt} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors"
-                style={{ background: selected.includes(opt) ? 'rgba(0,200,150,0.08)' : 'transparent' }}>
-                <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} className="accent-[#00c896] w-3.5 h-3.5" />
-                <span className="text-sm text-white/70">{opt}</span>
-              </label>
-            ))}
+    <div className="mb-4">
+      <div className="relative flex items-center gap-2 flex-wrap rounded-xl border px-3 py-2" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
+        <span className="text-[11px] font-semibold uppercase tracking-widest mr-1" style={{ color: 'var(--text-faint)' }}>Filter</span>
+
+        <div className="flex rounded-md overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--border-strong)' }}>
+          <button onClick={() => onSetMode('AND')} className="px-2.5 py-1 text-[11px] font-semibold transition-colors"
+            style={{ background: filterMode === 'AND' ? 'rgba(0,200,150,0.18)' : 'transparent', color: filterMode === 'AND' ? '#00c896' : 'var(--text-faint)' }}>AND</button>
+          <button onClick={() => onSetMode('OR')} className="px-2.5 py-1 text-[11px] font-semibold transition-colors"
+            style={{ background: filterMode === 'OR' ? 'rgba(108,143,255,0.18)' : 'transparent', color: filterMode === 'OR' ? '#6c8fff' : 'var(--text-faint)' }}>OR</button>
+        </div>
+
+        {activeChips.map(key => (
+          <div key={key} className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] cursor-pointer select-none"
+            style={{ background: 'rgba(0,200,150,0.12)', border: '1px solid rgba(0,200,150,0.25)' }}
+            onClick={() => onEditChip(key)}>
+            <span className="font-semibold" style={{ color: '#00c896' }}>{FILTER_PARAMS.find(p => p.key === key)?.label}</span>
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{chipValueSummary(key, filters)}</span>
+            <button className="w-4 h-4 rounded flex items-center justify-center text-[10px] transition-all ml-0.5"
+              style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
+              onClick={e => { e.stopPropagation(); onRemoveChip(key) }}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,80,80,0.2)'; el.style.color = '#ff6b6b' }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'var(--hover-bg)'; el.style.color = 'var(--text-muted)' }}>✕</button>
           </div>
+        ))}
+
+        <button ref={btnRef} onClick={onToggleAddFilter}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12.5px] transition-all"
+          style={{ background: addFilterOpen ? 'rgba(0,200,150,0.08)' : 'transparent', border: `1px dashed ${addFilterOpen ? '#00c896' : 'var(--border-strong)'}`, color: addFilterOpen ? '#00c896' : 'var(--text-muted)' }}>
+          + Add Filter {addFilterOpen && <span className="text-[10px]">▴</span>}
+        </button>
+
+        {hasFilters && (
+          <button onClick={onClearAll} className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[12.5px] transition-all"
+            style={{ background: 'rgba(255,80,80,0.1)', border: '1px solid rgba(255,80,80,0.25)', color: '#ff6b6b' }}>
+            ✕ Clear all
+          </button>
         )}
+
+        <span className="text-xs ml-auto whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>
+          {hasFilters
+            ? <><strong style={{ color: '#00c896' }}>{filteredCount}</strong> of {totalCount} players</>
+            : <><strong style={{ color: '#00c896' }}>{totalCount}</strong> players</>}
+        </span>
+
+        {addFilterOpen && <AddFilterDropdown activeKeys={activeChips} onSelect={onSelectParam} />}
+      </div>
+
+      {pendingFilter && (
+        <FilterInputPanel
+          filterKey={pendingFilter}
+          filters={filters}
+          multiOptions={multiOptions}
+          rangeBounds={rangeBounds}
+          onApply={patch => { updateFilter(patch); onClosePending() }}
+          onCancel={onClosePending}
+        />
+      )}
     </div>
   )
 }
 
-function RangeFilter({ label, min, max, low, high, onChange, format }: {
-  label: string; min: number; max: number; low: number; high: number
-  onChange: (lo: number, hi: number) => void; format: (v: number) => string
-}) {
-  const safeLow  = Math.max(min, Math.min(low, high))
-  const safeHigh = Math.min(max, Math.max(high, low))
+// ─── Add Filter Dropdown ──────────────────────────────────────────────────────
+
+function AddFilterDropdown({ activeKeys, onSelect }: { activeKeys: FilterKey[]; onSelect: (k: FilterKey) => void }) {
+  const [search, setSearch] = useState('')
+
+  const groups = useMemo(() => {
+    const list = search ? FILTER_PARAMS.filter(p => p.label.toLowerCase().includes(search.toLowerCase())) : FILTER_PARAMS
+    const map = new Map<string, FilterParam[]>()
+    for (const p of list) {
+      if (!map.has(p.group)) map.set(p.group, [])
+      map.get(p.group)!.push(p)
+    }
+    return map
+  }, [search])
+
+  const TAG: Record<FilterParamType, { label: string; color: string; bg: string }> = {
+    range: { label: 'range', color: '#00c896', bg: 'rgba(0,200,150,0.1)' },
+    multi: { label: 'multi', color: '#7b9fff', bg: 'rgba(100,150,255,0.1)' },
+    text:  { label: 'text',  color: '#ffc840', bg: 'rgba(255,200,80,0.1)' },
+  }
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[10px] uppercase tracking-widest text-white/30">{label}</p>
-        <span className="text-xs text-white/50">{format(safeLow)} – {format(safeHigh)}</span>
+    <div id="add-filter-dropdown" className="absolute rounded-xl border overflow-hidden"
+      style={{ top: 'calc(100% + 6px)', left: 14, width: 300, background: '#1a1d27', borderColor: '#2a2d3a', boxShadow: '0 12px 40px rgba(0,0,0,0.5)', zIndex: 9999 }}>
+      <div className="p-2.5 border-b" style={{ borderColor: '#2a2d3a' }}>
+        <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search parameters…"
+          className="w-full px-2.5 py-1.5 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none"
+          style={{ background: '#0f1117', border: '1px solid #2a2d3a' }}
+          onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+          onBlur={e => e.currentTarget.style.borderColor = '#2a2d3a'} />
       </div>
-      <DualRangeSlider min={min} max={max} low={safeLow} high={safeHigh} onChange={onChange} />
+      <div style={{ maxHeight: 340, overflowY: 'auto', padding: '6px 0' }}>
+        {[...groups.entries()].map(([group, params]) => (
+          <div key={group}>
+            <div className="px-3 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.28)' }}>{group}</div>
+            {params.map(p => {
+              const active = activeKeys.includes(p.key)
+              const tag = TAG[p.type]
+              return (
+                <button key={p.key} onClick={() => onSelect(p.key)}
+                  className="w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors"
+                  style={{ color: active ? '#00c896' : 'rgba(255,255,255,0.75)', background: 'transparent' }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
+                  <span>{active ? '✓ ' : ''}{p.label}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: tag.bg, color: tag.color }}>{tag.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        ))}
+        {groups.size === 0 && <p className="px-4 py-3 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>No parameters match</p>}
+      </div>
     </div>
   )
 }
 
-function DualRangeSlider({ min, max, low, high, onChange }: {
-  min: number; max: number; low: number; high: number; onChange: (lo: number, hi: number) => void
+// ─── Filter Input Panel ───────────────────────────────────────────────────────
+
+function FilterInputPanel({ filterKey, filters, multiOptions, rangeBounds, onApply, onCancel }: {
+  filterKey: FilterKey; filters: Filters
+  multiOptions: Record<string, string[]>; rangeBounds: Record<string, { min: number; max: number; unit?: string; scale?: number }>
+  onApply: (patch: Partial<Filters>) => void; onCancel: () => void
 }) {
-  const range   = max - min || 1
-  const lowPct  = ((low  - min) / range) * 100
-  const highPct = ((high - min) / range) * 100
+  const param  = FILTER_PARAMS.find(p => p.key === filterKey)!
+  const bounds = rangeBounds[filterKey] ?? { min: 0, max: 100 }
+  const scale  = bounds.scale ?? 1
+
+  const [textVal,       setTextVal]       = useState(() => filterKey === 'name' ? filters.name : filterKey === 'club' ? filters.club : filters.league)
+  const [multiSelected, setMultiSelected] = useState<string[]>(() =>
+    filterKey === 'position' ? filters.positions : filterKey === 'nationality' ? filters.nationalities : filters.preferredFeet)
+  const [rangeMin, setRangeMin] = useState(() => {
+    const v = filterKey === 'age' ? filters.ageMin : filterKey === 'height' ? filters.heightMin : filterKey === 'weight' ? filters.weightMin : filterKey === 'marketValue' ? filters.marketValueMin : filterKey === 'contractExpiry' ? filters.contractExpiryYearMin : filters.fmWagesMin
+    return v !== null ? String(v / scale) : ''
+  })
+  const [rangeMax, setRangeMax] = useState(() => {
+    const v = filterKey === 'age' ? filters.ageMax : filterKey === 'height' ? filters.heightMax : filterKey === 'weight' ? filters.weightMax : filterKey === 'marketValue' ? filters.marketValueMax : filterKey === 'contractExpiry' ? filters.contractExpiryYearMax : filters.fmWagesMax
+    return v !== null ? String(v / scale) : ''
+  })
+
+  function handleApply() {
+    if (param.type === 'text') {
+      if (filterKey === 'name')   return onApply({ name: textVal.trim() })
+      if (filterKey === 'club')   return onApply({ club: textVal.trim() })
+      if (filterKey === 'league') return onApply({ league: textVal.trim() })
+    }
+    if (param.type === 'multi') {
+      if (filterKey === 'position')      return onApply({ positions: multiSelected })
+      if (filterKey === 'nationality')   return onApply({ nationalities: multiSelected })
+      if (filterKey === 'preferredFoot') return onApply({ preferredFeet: multiSelected })
+    }
+    if (param.type === 'range') {
+      const lo = rangeMin !== '' ? parseFloat(rangeMin) * scale : null
+      const hi = rangeMax !== '' ? parseFloat(rangeMax) * scale : null
+      if (filterKey === 'age')            return onApply({ ageMin: lo, ageMax: hi })
+      if (filterKey === 'height')         return onApply({ heightMin: lo, heightMax: hi })
+      if (filterKey === 'weight')         return onApply({ weightMin: lo, weightMax: hi })
+      if (filterKey === 'marketValue')    return onApply({ marketValueMin: lo, marketValueMax: hi })
+      if (filterKey === 'contractExpiry') return onApply({ contractExpiryYearMin: lo !== null ? Math.round(lo) : null, contractExpiryYearMax: hi !== null ? Math.round(hi) : null })
+      if (filterKey === 'fmWages')        return onApply({ fmWagesMin: lo, fmWagesMax: hi })
+    }
+  }
+
+  const inputStyle = { background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff' } as React.CSSProperties
+
   return (
-    <div className="relative pt-1 pb-4">
-      <div className="relative h-1.5 rounded-full" style={{ background: 'var(--border)' }}>
-        <div className="absolute h-full rounded-full" style={{ background: 'linear-gradient(90deg, #00c896, #00a878)', left: `${lowPct}%`, right: `${100 - highPct}%` }} />
-      </div>
-      <input type="range" min={min} max={max} value={low} onChange={e => { const v = Number(e.target.value); if (v < high) onChange(v, high) }}
-        className="absolute inset-0 w-full h-1.5 opacity-0 cursor-pointer" style={{ zIndex: low > max - range * 0.05 ? 5 : 3 }} />
-      <input type="range" min={min} max={max} value={high} onChange={e => { const v = Number(e.target.value); if (v > low) onChange(low, v) }}
-        className="absolute inset-0 w-full h-1.5 opacity-0 cursor-pointer" style={{ zIndex: 4 }} />
-      <div className="absolute top-0 w-4 h-4 rounded-full border-2 pointer-events-none -translate-y-1/4"
-        style={{ background: 'var(--card-solid)', borderColor: '#00c896', left: `calc(${lowPct}% - 8px)` }} />
-      <div className="absolute top-0 w-4 h-4 rounded-full border-2 pointer-events-none -translate-y-1/4"
-        style={{ background: 'var(--card-solid)', borderColor: '#00c896', left: `calc(${highPct}% - 8px)` }} />
-      <div className="flex justify-between mt-3">
-        <span className="text-[10px] text-white/25">{min}</span>
-        <span className="text-[10px] text-white/25">{max}</span>
+    <div className="flex items-center gap-3 flex-wrap rounded-xl border px-4 py-3 mt-2" style={{ background: '#1a1d27', borderColor: '#2a2d3a' }}>
+      <span className="text-sm font-semibold" style={{ color: '#00c896' }}>{param.label}</span>
+
+      {param.type === 'text' && (
+        <input autoFocus value={textVal} onChange={e => setTextVal(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleApply()}
+          placeholder="Type to filter…"
+          className="px-2.5 py-1.5 rounded-lg text-sm focus:outline-none"
+          style={{ ...inputStyle, width: 200 }}
+          onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+          onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'} />
+      )}
+
+      {param.type === 'range' && (
+        <>
+          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>from</span>
+          <input type="number" value={rangeMin} onChange={e => setRangeMin(e.target.value)} placeholder={String(bounds.min / scale)}
+            className="px-2.5 py-1.5 rounded-lg text-sm focus:outline-none" style={{ ...inputStyle, width: 90 }}
+            onFocus={e => e.currentTarget.style.borderColor = '#00c896'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'} />
+          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>to</span>
+          <input type="number" value={rangeMax} onChange={e => setRangeMax(e.target.value)} placeholder={String(bounds.max / scale)}
+            className="px-2.5 py-1.5 rounded-lg text-sm focus:outline-none" style={{ ...inputStyle, width: 90 }}
+            onFocus={e => e.currentTarget.style.borderColor = '#00c896'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'} />
+          {bounds.unit && <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{bounds.unit}</span>}
+        </>
+      )}
+
+      {param.type === 'multi' && (
+        <div className="flex flex-wrap gap-1.5">
+          {(multiOptions[filterKey] ?? []).map(opt => {
+            const checked = multiSelected.includes(opt)
+            return (
+              <button key={opt} onClick={() => setMultiSelected(s => s.includes(opt) ? s.filter(x => x !== opt) : [...s, opt])}
+                className="px-2.5 py-1 rounded-md text-xs transition-all"
+                style={{ background: checked ? 'rgba(0,200,150,0.15)' : 'rgba(255,255,255,0.07)', border: `1px solid ${checked ? 'rgba(0,200,150,0.4)' : 'rgba(255,255,255,0.12)'}`, color: checked ? '#00c896' : 'rgba(255,255,255,0.7)', fontWeight: checked ? 600 : 400 }}>
+                {opt}
+              </button>
+            )
+          })}
+          {!(multiOptions[filterKey] ?? []).length && <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>No options available yet</span>}
+        </div>
+      )}
+
+      <div className="flex gap-2 ml-auto">
+        <button onClick={onCancel} className="px-3 py-1.5 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}>Cancel</button>
+        <button onClick={handleApply} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-black" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>Apply</button>
       </div>
     </div>
   )
@@ -779,9 +743,7 @@ function EditModal({ player, databaseId, onClose }: { player: Player; databaseId
     e.preventDefault()
     setLoading(true); setError('')
     const res = await fetch(`/api/databases/${databaseId}/players/${player.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
     })
     if (res.ok) { onClose(); router.refresh() }
     else { const d = await res.json(); setError(d.error || 'Something went wrong') }
@@ -800,8 +762,8 @@ function EditModal({ player, databaseId, onClose }: { player: Player; databaseId
             <Field label="Last Name *"  value={form.lastName} onChange={v => set('lastName', v)} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Position"  value={form.position}  onChange={v => set('position', v)} />
-            <Field label="Club"      value={form.clubName}  onChange={v => set('clubName', v)} />
+            <Field label="Position" value={form.position} onChange={v => set('position', v)} />
+            <Field label="Club"     value={form.clubName} onChange={v => set('clubName', v)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Nationality" value={form.nationality} onChange={v => set('nationality', v)} />
@@ -824,9 +786,9 @@ function EditModal({ player, databaseId, onClose }: { player: Player; databaseId
           <div className="border-t border-white/5 pt-4">
             <p className="text-xs uppercase tracking-widest text-white/30 mb-3">Career Statistics</p>
             <div className="grid grid-cols-3 gap-3">
-              <Field label="Goals This Year"    value={form.goalsThisYear} onChange={v => set('goalsThisYear', v)} type="number" />
-              <Field label="Total Goals"        value={form.totalGoals}    onChange={v => set('totalGoals', v)}    type="number" />
-              <Field label="Total Games"        value={form.totalGames}    onChange={v => set('totalGames', v)}    type="number" />
+              <Field label="Goals This Year"    value={form.goalsThisYear}  onChange={v => set('goalsThisYear', v)}  type="number" />
+              <Field label="Total Goals"        value={form.totalGoals}     onChange={v => set('totalGoals', v)}     type="number" />
+              <Field label="Total Games"        value={form.totalGames}     onChange={v => set('totalGames', v)}     type="number" />
               <Field label="National Team Games" value={form.nationalGames} onChange={v => set('nationalGames', v)} type="number" />
               <Field label="Years in Pro Club"  value={form.yearsInProClub} onChange={v => set('yearsInProClub', v)} type="number" />
             </div>
@@ -835,9 +797,7 @@ function EditModal({ player, databaseId, onClose }: { player: Player; databaseId
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <div className="flex gap-3 mt-2">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/50" style={{ background: 'var(--hover-bg)' }}>Cancel</button>
-            <button type="submit" disabled={loading || !form.firstName.trim() || !form.lastName.trim()}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
+            <button type="submit" disabled={loading || !form.firstName.trim() || !form.lastName.trim()} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
@@ -894,24 +854,14 @@ function CreateReportModal({ players, databaseId, databaseName, onClose }: {
     if (!name.trim()) { setError('Report name is required'); return }
     setLoading(true)
     const snapshot = players.map(p => ({
-      id: p.id,
-      name: `${p.firstName} ${p.lastName}`,
-      position: p.position,
-      clubName: p.clubName,
-      nationality: p.nationality,
-      age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null,
-      heightCm: p.heightCm,
-      weightKg: p.weightKg,
-      marketValue: p.marketValue,
-      goalsThisYear: p.goalsThisYear,
-      totalGoals: p.totalGoals,
-      totalGames: p.totalGames,
-      playsNational: p.playsNational,
+      id: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, clubName: p.clubName,
+      nationality: p.nationality, age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null,
+      heightCm: p.heightCm, weightKg: p.weightKg, marketValue: p.marketValue,
+      goalsThisYear: p.goalsThisYear, totalGoals: p.totalGoals, totalGames: p.totalGames, playsNational: p.playsNational,
     }))
     try {
       const res = await fetch('/api/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), databaseId, databaseName, players: snapshot }),
       })
       if (res.ok) { onClose(); router.push('/reports'); router.refresh() }
@@ -931,9 +881,7 @@ function CreateReportModal({ players, databaseId, databaseName, onClose }: {
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#6c8fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
         </div>
         <h2 className="text-lg font-semibold text-white mb-1">Create Report</h2>
-        <p className="text-xs text-white/30 mb-5">
-          Saving {players.length} player{players.length !== 1 ? 's' : ''} from <span className="text-white/50">{databaseName}</span>
-        </p>
+        <p className="text-xs text-white/30 mb-5">Saving {players.length} player{players.length !== 1 ? 's' : ''} from <span className="text-white/50">{databaseName}</span></p>
         <div className="mb-4">
           <label className="block text-xs text-white/40 mb-1">Report Name *</label>
           <input autoFocus value={name} onChange={e => { setName(e.target.value); setError('') }}

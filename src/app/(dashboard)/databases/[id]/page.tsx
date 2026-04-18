@@ -30,6 +30,12 @@ export default async function DatabaseDetailPage({ params }: { params: Promise<{
 
   const canEdit = isOwner || db.access[0]?.permission === 'contributor'
 
+  const allDatabases = await prisma.playerDatabase.findMany({
+    where: { OR: [{ ownerId: user.id }, { access: { some: { agentId: user.id, permission: 'contributor' } } }] },
+    select: { id: true, name: true },
+    orderBy: { createdAt: 'asc' },
+  })
+
   const players = db.players.map(p => ({
     ...p,
     dateOfBirth: p.dateOfBirth?.toISOString() ?? null,
@@ -54,6 +60,7 @@ export default async function DatabaseDetailPage({ params }: { params: Promise<{
           isOwner={isOwner}
           canEdit={canEdit}
           columnConfig={Array.isArray(db.columnConfig) ? db.columnConfig as string[] : null}
+          allDatabases={allDatabases}
         />
       </main>
     </div>

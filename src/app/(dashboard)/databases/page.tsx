@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Sidebar from '@/components/Sidebar'
 import CreateDatabaseButton from './CreateDatabaseButton'
+import ImportDatabasesButton from './ImportDatabasesButton'
 
 export default async function DatabasesPage() {
   const supabase = await createClient()
@@ -37,6 +38,7 @@ export default async function DatabasesPage() {
             <h1 className="text-3xl font-bold text-white mb-1">My Players Watch List</h1>
             <p style={{ color: 'var(--text-muted)' }} className="text-sm">Manage your scouting Lists</p>
           </div>
+          <ImportDatabasesButton databases={[...ownedDbs.map(d => ({ id: d.id, name: d.name })), ...sharedAccess.filter(a => a.permission === 'contributor').map(a => ({ id: a.database.id, name: a.database.name }))]} />
           <CreateDatabaseButton />
         </div>
 

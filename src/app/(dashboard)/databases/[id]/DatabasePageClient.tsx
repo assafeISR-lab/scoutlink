@@ -6,6 +6,7 @@ import PlayersTable, { PlayersTableHandle } from './PlayersTable'
 import ShareButton from './ShareButton'
 import AddPlayerButton from './AddPlayerButton'
 import ColumnPicker from './ColumnPicker'
+import ImportPlayersModal from '../ImportPlayersModal'
 
 interface Player {
   id: string
@@ -38,12 +39,13 @@ interface Props {
   isOwner: boolean
   canEdit: boolean
   columnConfig: string[] | null
+  allDatabases: { id: string; name: string }[]
 }
 
-export default function DatabasePageClient({ players, databaseId, databaseName, ownerName, isOwner, canEdit, columnConfig: initialColumnConfig }: Props) {
+export default function DatabasePageClient({ players, databaseId, databaseName, ownerName, isOwner, canEdit, columnConfig: initialColumnConfig, allDatabases }: Props) {
   const tableRef = useRef<PlayersTableHandle>(null)
-  // Local state so the table updates instantly after ColumnPicker saves
   const [colConfig, setColConfig] = useState<string[] | null>(initialColumnConfig)
+  const [showImport, setShowImport] = useState(false)
 
   return (
     <>
@@ -75,6 +77,14 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
               Create Report
             </button>
           )}
+          {canEdit && (
+            <button onClick={() => setShowImport(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.25)' }}>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Import
+            </button>
+          )}
           <ColumnPicker
             databaseId={databaseId}
             columnConfig={colConfig}
@@ -102,6 +112,14 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
           databaseName={databaseName}
           canEdit={canEdit}
           columnConfig={colConfig}
+        />
+      )}
+
+      {showImport && (
+        <ImportPlayersModal
+          onClose={() => setShowImport(false)}
+          databases={allDatabases}
+          preselectedDatabaseId={databaseId}
         />
       )}
     </>
