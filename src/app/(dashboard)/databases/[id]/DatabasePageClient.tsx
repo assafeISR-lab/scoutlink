@@ -1,10 +1,11 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import PlayersTable, { PlayersTableHandle } from './PlayersTable'
 import ShareButton from './ShareButton'
 import AddPlayerButton from './AddPlayerButton'
+import ColumnPicker from './ColumnPicker'
 
 interface Player {
   id: string
@@ -26,6 +27,7 @@ interface Player {
   yearsInProClub: number | null
   playsNational: boolean
   createdAt: string
+  customFields: { fieldName: string; value: string }[]
 }
 
 interface Props {
@@ -35,10 +37,13 @@ interface Props {
   ownerName: string
   isOwner: boolean
   canEdit: boolean
+  columnConfig: string[] | null
 }
 
-export default function DatabasePageClient({ players, databaseId, databaseName, ownerName, isOwner, canEdit }: Props) {
+export default function DatabasePageClient({ players, databaseId, databaseName, ownerName, isOwner, canEdit, columnConfig: initialColumnConfig }: Props) {
   const tableRef = useRef<PlayersTableHandle>(null)
+  // Local state so the table updates instantly after ColumnPicker saves
+  const [colConfig, setColConfig] = useState<string[] | null>(initialColumnConfig)
 
   return (
     <>
@@ -53,7 +58,7 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white mb-1">{databaseName}</h1>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             {players.length} player{players.length !== 1 ? 's' : ''} · {isOwner ? 'You own this database' : `Shared by ${ownerName}`}
           </p>
         </div>
@@ -70,6 +75,11 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
               Create Report
             </button>
           )}
+          <ColumnPicker
+            databaseId={databaseId}
+            columnConfig={colConfig}
+            onUpdate={setColConfig}
+          />
           {isOwner && <ShareButton databaseId={databaseId} />}
           {canEdit && <AddPlayerButton databaseId={databaseId} />}
         </div>
@@ -91,6 +101,7 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
           databaseId={databaseId}
           databaseName={databaseName}
           canEdit={canEdit}
+          columnConfig={colConfig}
         />
       )}
     </>

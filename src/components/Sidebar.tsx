@@ -3,12 +3,15 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import ThemeToggle from './ThemeToggle'
 
 interface SidebarProps {
   userName: string
   userEmail: string
   userInitial: string
   userId: string
+  playerName?: string
+  playerDatabaseId?: string
 }
 
 interface Database {
@@ -17,7 +20,7 @@ interface Database {
   ownerId: string
 }
 
-export default function Sidebar({ userName, userEmail, userInitial, userId }: SidebarProps) {
+export default function Sidebar({ userName, userEmail, userInitial, userId, playerName, playerDatabaseId }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -134,27 +137,35 @@ export default function Sidebar({ userName, userEmail, userInitial, userId }: Si
           <div className="ml-4 pl-3 border-l border-white/8 flex flex-col gap-0.5 mt-0.5">
             {databases.map(db => {
               const active = pathname.startsWith(`/databases/${db.id}`)
+              const showPlayer = playerName && playerDatabaseId === db.id
               return (
-                <Link
-                  key={db.id}
-                  href={`/databases/${db.id}`}
-                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all duration-150"
-                  style={active
-                    ? { background: 'rgba(0,200,150,0.1)', color: '#00c896' }
-                    : { color: 'rgba(255,255,255,0.4)' }
-                  }
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.7)' }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
-                >
-                  <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: active ? '#00c896' : 'rgba(255,255,255,0.2)' }} />
-                  <span className="truncate font-medium flex-1">{db.name}</span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium" style={db.ownerId === userId
-                    ? { background: 'rgba(0,200,150,0.12)', color: '#00c896' }
-                    : { background: 'rgba(108,143,255,0.12)', color: '#6c8fff' }
-                  }>
-                    {db.ownerId === userId ? 'Owner' : 'Shared'}
-                  </span>
-                </Link>
+                <div key={db.id} className="flex flex-col">
+                  <Link
+                    href={`/databases/${db.id}`}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all duration-150"
+                    style={active
+                      ? { background: 'rgba(0,200,150,0.1)', color: '#00c896' }
+                      : { color: 'rgba(255,255,255,0.4)' }
+                    }
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.7)' }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
+                  >
+                    <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: active ? '#00c896' : 'rgba(255,255,255,0.2)' }} />
+                    <span className="truncate font-medium flex-1">{db.name}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium" style={db.ownerId === userId
+                      ? { background: 'rgba(0,200,150,0.12)', color: '#00c896' }
+                      : { background: 'rgba(108,143,255,0.12)', color: '#6c8fff' }
+                    }>
+                      {db.ownerId === userId ? 'Owner' : 'Shared'}
+                    </span>
+                  </Link>
+                  {showPlayer && (
+                    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg ml-3" style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)' }}>
+                      <span className="text-[10px]" style={{ color: 'rgba(0,200,150,0.5)' }}>↳</span>
+                      <span className="text-xs font-semibold truncate" style={{ color: '#00c896' }}>{playerName}</span>
+                    </div>
+                  )}
+                </div>
               )
             })}
 
@@ -207,16 +218,12 @@ export default function Sidebar({ userName, userEmail, userInitial, userId }: Si
         {toolItems.map(item => (
           <NavItem key={item.href} icon={item.icon} label={item.label} color={item.color} href={item.href} active={pathname === item.href} />
         ))}
-        {/* Settings — disabled until new functionality is defined */}
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-30 cursor-not-allowed select-none" title="Coming soon">
-          <span className="w-4 h-4 flex-shrink-0" style={{ color: '#8b8fa8' }}><IconSettings /></span>
-          <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>Settings</span>
-          <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.3)' }}>Soon</span>
-        </div>
+        <NavItem icon={<IconSettings />} label="Settings" color="#8b8fa8" href="/settings" active={pathname === '/settings'} />
       </nav>
 
       {/* User */}
       <div className="px-4 py-4 border-t border-white/5 flex flex-col gap-2">
+        <ThemeToggle />
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-black font-bold text-sm flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 0 10px rgba(0,200,150,0.4)' }}>

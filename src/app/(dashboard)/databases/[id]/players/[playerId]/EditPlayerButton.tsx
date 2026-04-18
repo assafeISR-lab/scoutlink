@@ -55,8 +55,11 @@ export default function EditPlayerButton({ databaseId, playerId, player }: {
     playsNational: player.playsNational,
   })
 
+  const [changedFields, setChangedFields] = useState<Set<string>>(new Set())
+
   function set(field: string, value: string | boolean) {
     setForm(f => ({ ...f, [field]: value }))
+    setChangedFields(prev => new Set([...prev, field]))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -67,7 +70,7 @@ export default function EditPlayerButton({ databaseId, playerId, player }: {
     const res = await fetch(`/api/databases/${databaseId}/players/${playerId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, changedFields: [...changedFields] }),
     })
 
     if (res.ok) {
@@ -83,9 +86,9 @@ export default function EditPlayerButton({ databaseId, playerId, player }: {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setOpen(true); setChangedFields(new Set()) }}
         className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm"
-        style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.08)' }}
+        style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
         Edit Player
@@ -93,7 +96,7 @@ export default function EditPlayerButton({ databaseId, playerId, player }: {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setOpen(false)}>
-          <div className="w-full max-w-2xl rounded-2xl p-6 border border-white/10 max-h-[90vh] overflow-y-auto" style={{ background: '#141720' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-2xl rounded-2xl p-6 border border-white/10 max-h-[90vh] overflow-y-auto" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-white mb-1">Edit Player</h2>
             <p className="text-sm text-white/30 mb-6">Update player information</p>
 
@@ -145,7 +148,7 @@ export default function EditPlayerButton({ databaseId, playerId, player }: {
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
               <div className="flex gap-3 mt-2">
-                <button type="button" onClick={() => setOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white/50 hover:text-white transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <button type="button" onClick={() => setOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white/50 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
                   Cancel
                 </button>
                 <button type="submit" disabled={loading || !form.firstName.trim() || !form.lastName.trim()} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black transition-all disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
@@ -174,7 +177,7 @@ function Field({ label, value, onChange, placeholder, type = 'text', required }:
         placeholder={placeholder}
         required={required}
         className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00c896] transition-colors"
-        style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)' }}
+        style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}
       />
     </div>
   )

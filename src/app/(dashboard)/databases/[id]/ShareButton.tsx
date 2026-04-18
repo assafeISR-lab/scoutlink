@@ -93,7 +93,7 @@ function ShareModal({ databaseId, onClose }: { databaseId: string; onClose: () =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl p-6 border border-white/10" style={{ background: '#141720' }} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-2xl p-6 border border-white/10" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
@@ -118,9 +118,9 @@ function ShareModal({ databaseId, onClose }: { databaseId: string; onClose: () =
             onKeyDown={e => e.key === 'Enter' && handleShare()}
             placeholder="colleague@example.com"
             className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none mb-3"
-            style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)' }}
+            style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}
             onFocus={e => e.currentTarget.style.borderColor = '#6c8fff'}
-            onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
           />
 
           {/* Permission selector */}
@@ -132,8 +132,8 @@ function ShareModal({ databaseId, onClose }: { databaseId: string; onClose: () =
                 className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all capitalize"
                 style={{
                   background: permission === p ? (p === 'read' ? 'rgba(108,143,255,0.15)' : 'rgba(0,200,150,0.12)') : 'rgba(255,255,255,0.04)',
-                  color: permission === p ? (p === 'read' ? '#6c8fff' : '#00c896') : 'rgba(255,255,255,0.3)',
-                  border: `1px solid ${permission === p ? (p === 'read' ? 'rgba(108,143,255,0.3)' : 'rgba(0,200,150,0.25)') : 'rgba(255,255,255,0.08)'}`,
+                  color: permission === p ? (p === 'read' ? '#6c8fff' : '#00c896') : 'var(--text-faint)',
+                  border: `1px solid ${permission === p ? (p === 'read' ? 'rgba(108,143,255,0.3)' : 'rgba(0,200,150,0.25)') : 'var(--border)'}`,
                 }}
               >
                 {p === 'read' ? '👁 View only' : '✏️ Contributor'}
@@ -190,7 +190,7 @@ function ShareModal({ databaseId, onClose }: { databaseId: string; onClose: () =
           ))}
         </div>
 
-        <button onClick={onClose} className="mt-5 w-full py-2 rounded-xl text-sm text-white/30 hover:text-white/60 transition-colors" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <button onClick={onClose} className="mt-5 w-full py-2 rounded-xl text-sm text-white/30 hover:text-white/60 transition-colors" style={{ background: 'var(--hover-bg)' }}>
           Done
         </button>
       </div>

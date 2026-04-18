@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import WebsitesManager from '../settings/WebsitesManager'
-import SearchParamsPanel, { PARAM_KEYS } from './SearchParamsPanel'
+import { PARAM_KEYS, PARAM_LABELS, loadActive, loadCustomActive, loadCustomKeys } from './SearchParamsPanel'
 
 interface PlayerResult {
   id: string
@@ -17,8 +16,10 @@ interface PlayerResult {
   photo: string | null
   description: string | null
   marketValue: string | null
-  sourceUrl: string
-  sourceName: string
+  transfermarktUrl: string | null
+  sofascoreUrl: string | null
+  fmInsideUrl: string | null
+  sources: string[]
 }
 
 interface Database {
@@ -26,19 +27,6 @@ interface Database {
   name: string
 }
 
-interface Website {
-  id: string
-  name: string
-  url: string
-  requiresLogin: boolean
-  loginStatus: string
-  username: string | null
-  password: string | null
-  isActive: boolean
-  useForSearch: boolean
-  country: string | null
-  category: string | null
-}
 
 interface SiteStat {
   name: string
@@ -48,7 +36,7 @@ interface SiteStat {
   noScraper?: boolean
 }
 
-export default function SearchClient({ databases, websites }: { databases: Database[]; websites: Website[] }) {
+export default function SearchClient({ databases, userName }: { databases: Database[]; userName: string }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PlayerResult[]>([])
   const [siteStats, setSiteStats] = useState<SiteStat[]>([])
@@ -58,7 +46,16 @@ export default function SearchClient({ databases, websites }: { databases: Datab
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [merging, setMerging] = useState(false)
   const [visibleParams, setVisibleParams] = useState<Set<string>>(new Set())
+  const [customKeys, setCustomKeys] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const active = loadActive()
+    const customActive = loadCustomActive()
+    const customK = loadCustomKeys()
+    setVisibleParams(new Set([...active, ...customActive]))
+    setCustomKeys(customK)
+  }, [])
 
   function toggleSelect(id: string) {
     setSelectedIds(prev => {
@@ -88,12 +85,12 @@ export default function SearchClient({ databases, websites }: { databases: Datab
     <div>
       {/* Top zone: Search */}
       <div className="rounded-2xl overflow-hidden mb-4" style={{
-        border: '1px solid rgba(255,255,255,0.08)',
-        background: 'rgba(255,255,255,0.01)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+        border: '1px solid var(--border)',
+        background: 'var(--subtle-bg)',
+        boxShadow: 'var(--card-shadow)',
       }}>
         {/* Zone header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-3 px-6 py-4 border-b" style={{ background: 'var(--subtle-bg)', borderColor: 'var(--border)' }}>
           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)', border: '1px solid rgba(0,200,150,0.3)' }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#00c896">
               <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -101,7 +98,7 @@ export default function SearchClient({ databases, websites }: { databases: Datab
           </div>
           <div>
             <p className="text-sm font-bold text-white tracking-wide">Player Search</p>
-            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Search across all scouting sources</p>
+            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Search across all scouting sources</p>
           </div>
         </div>
 
@@ -119,7 +116,7 @@ export default function SearchClient({ databases, websites }: { databases: Datab
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search for a player (e.g. Messi, Ronaldo, Mbappe...)"
                 className="w-full pl-12 pr-4 py-4 rounded-2xl text-white text-base focus:outline-none transition-all"
-                style={{ background: '#0f1117', border: '2px solid rgba(0,200,150,0.55)', boxShadow: '0 0 16px rgba(0,200,150,0.12)', color: 'white' }}
+                style={{ background: 'var(--input-bg)', border: '2px solid rgba(0,200,150,0.55)', boxShadow: '0 0 16px rgba(0,200,150,0.12)', color: 'var(--text-primary)' }}
                 onFocus={e => { e.currentTarget.style.borderColor = '#00c896'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,200,150,0.15), 0 0 20px rgba(0,200,150,0.2)' }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.55)'; e.currentTarget.style.boxShadow = '0 0 16px rgba(0,200,150,0.12)' }}
               />
@@ -133,6 +130,9 @@ export default function SearchClient({ databases, websites }: { databases: Datab
               {loading ? 'Searching...' : 'Search'}
             </button>
           </form>
+
+          {/* Empty card — shown before first search */}
+          {!searched && !loading && <EmptyPlayerCard userName={userName} visibleParams={visibleParams} />}
 
           {/* Results area — only shown after a search */}
           {searched && (
@@ -171,7 +171,7 @@ export default function SearchClient({ databases, websites }: { databases: Datab
         <div>
           {/* Action bar */}
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs text-white/30 uppercase tracking-widest">{results.length} result{results.length !== 1 ? 's' : ''} found</p>
+            <p className="text-xs text-white/30 uppercase tracking-widest">{results.length} player{results.length !== 1 ? 's' : ''} found</p>
             {selectedIds.size > 0 ? (
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/50">{selectedIds.size} selected</span>
@@ -187,11 +187,11 @@ export default function SearchClient({ databases, websites }: { databases: Datab
                   style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                  Merge & Import
+                  Import Selected
                 </button>
               </div>
             ) : (
-              <p className="text-xs text-white/20">Select results to merge & import</p>
+              <p className="text-xs text-white/20">Select players to import</p>
             )}
           </div>
           <div className="flex flex-col gap-4">
@@ -201,6 +201,7 @@ export default function SearchClient({ databases, websites }: { databases: Datab
                 player={player}
                 selected={selectedIds.has(player.id)}
                 onToggleSelect={() => toggleSelect(player.id)}
+                userName={userName}
                 visibleParams={visibleParams}
               />
             ))}
@@ -208,9 +209,9 @@ export default function SearchClient({ databases, websites }: { databases: Datab
         </div>
       )}
 
-              {/* Merge modal */}
+              {/* Import modal */}
               {merging && (
-                <MergeModal
+                <ImportModal
                   players={results.filter(p => selectedIds.has(p.id))}
                   databases={databases}
                   onClose={() => setMerging(false)}
@@ -220,14 +221,14 @@ export default function SearchClient({ databases, websites }: { databases: Datab
 
             {/* Right column: Search Coverage + Parameter Coverage */}
             <div className="w-64 flex-shrink-0 flex flex-col gap-4">
-              <div className="rounded-2xl border border-white/8 overflow-hidden flex flex-col" style={{ background: '#141720' }}>
+              <div className="rounded-2xl border border-white/8 overflow-hidden flex flex-col" style={{ background: 'var(--card-bg)' }}>
                 <div className="px-4 py-3 border-b border-white/8 flex-shrink-0">
                   <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Search Coverage</p>
                 </div>
                 {loading ? (
           <div className="px-4 py-5 flex flex-col gap-2">
             {[1,2,3].map(i => (
-              <div key={i} className="h-8 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+              <div key={i} className="h-8 rounded-lg animate-pulse" style={{ background: 'var(--hover-bg)' }} />
             ))}
           </div>
         ) : noSitesSelected ? (
@@ -254,27 +255,27 @@ export default function SearchClient({ databases, websites }: { databases: Datab
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#ff6464"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                   </div>
                 ) : site.noScraper ? (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="rgba(255,255,255,0.15)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" className="opacity-20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                   </div>
                 ) : site.count > 0 ? (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                   </div>
                 ) : (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)"><path d="M19 13H5v-2h14v2z"/></svg>
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" className="opacity-20"><path d="M19 13H5v-2h14v2z"/></svg>
                   </div>
                 )}
                 {/* Site info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: site.count > 0 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)' }}>
+                  <p className="text-xs font-medium truncate" style={{ color: site.count > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                     {site.name}
                   </p>
                   {site.error ? (
                     <p className="text-[10px]" style={{ color: '#ff6464aa' }}>Did not succeed to scrape</p>
                   ) : site.noScraper ? (
-                    <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>No scraper available</p>
+                    <p className="text-[10px]" style={{ color: 'var(--text-faint)' }}>No scraper available</p>
                   ) : (
                     <p className="text-[10px]" style={{ color: site.count > 0 ? '#00c896aa' : 'rgba(255,255,255,0.2)' }}>
                       {site.count > 0 ? `${site.count} result${site.count !== 1 ? 's' : ''}` : 'No results'}
@@ -293,7 +294,7 @@ export default function SearchClient({ databases, websites }: { databases: Datab
         )}
                 {/* Summary footer */}
                 {!loading && siteStats.length > 0 && (
-                  <div className="px-4 py-2.5 border-t border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <div className="px-4 py-2.5 border-t border-white/8" style={{ background: 'var(--subtle-bg)' }}>
                     <p className="text-[10px] text-white/30">
                       {siteStats.filter(s => s.count > 0).length} of {siteStats.filter(s => !s.noScraper).length} scraped sites found results
                     </p>
@@ -302,7 +303,7 @@ export default function SearchClient({ databases, websites }: { databases: Datab
               </div>
 
               {/* Parameter Coverage Panel */}
-              <ParameterCoveragePanel results={results} searched={searched} loading={loading} />
+              <ParameterCoveragePanel results={results} searched={searched} loading={loading} visibleParams={visibleParams} customKeys={customKeys} />
             </div>{/* end right column */}
 
           </div>
@@ -310,75 +311,71 @@ export default function SearchClient({ databases, websites }: { databases: Datab
         </div>{/* end p-6 */}
       </div>{/* end top zone */}
 
-    {/* Bottom zone: Search Configuration */}
-    <div className="mt-8 flex items-center gap-3 mb-4">
-      <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
-      <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>Search Configuration</span>
-      <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
-    </div>
-    <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.01)' }}>
-      {/* Zone header */}
-      <div className="flex items-center gap-2.5 px-6 py-4 border-b border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
-        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
-          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-        </svg>
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>Configure Sources &amp; Parameters</p>
-      </div>
-
-      {/* Content */}
-      <div className="flex gap-6 items-start p-6">
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">Scouting Websites</p>
-          <WebsitesManager websites={websites} />
-        </div>
-        <div className="w-64 flex-shrink-0">
-          <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3 px-1">Search Parameters</p>
-          <SearchParamsPanel onChange={setVisibleParams} />
-        </div>
-      </div>
-    </div>
     </div>
   )
 }
 
 // ─── Parameter Coverage Panel ─────────────────────────────────────────────────
 
-const PARAM_LABELS: Record<string, string> = {
-  photo:       'Photo',
-  nationality: 'Nationality',
-  team:        'Team / Club',
-  position:    'Position',
-  age:         'Age',
-  dateOfBirth: 'Date of Birth',
-  height:      'Height',
-  weight:      'Weight',
-  marketValue: 'Market Value',
-  description: 'Bio / Description',
-}
-
-function countField(results: PlayerResult[], key: string): number {
+/** Map every param key to whether it was found in any merged player result */
+function isFound(results: PlayerResult[], key: string): boolean {
+  if (results.length === 0) return false
   switch (key) {
-    case 'photo':       return results.filter(p => !!p.photo).length
-    case 'nationality': return results.filter(p => !!p.nationality).length
-    case 'team':        return results.filter(p => !!p.team).length
-    case 'position':    return results.filter(p => !!p.position).length
+    case 'photo':            return results.some(p => !!p.photo)
+    case 'nationality':      return results.some(p => !!p.nationality)
     case 'age':
-    case 'dateOfBirth': return results.filter(p => !!p.dateOfBirth).length
-    case 'height':      return results.filter(p => p.heightCm !== null).length
-    case 'weight':      return results.filter(p => p.weightKg !== null).length
-    case 'marketValue': return results.filter(p => !!p.marketValue).length
-    case 'description': return results.filter(p => !!p.description).length
-    default:            return 0
+    case 'dateOfBirth':      return results.some(p => !!p.dateOfBirth)
+    case 'height':           return results.some(p => p.heightCm != null)
+    case 'weight':           return results.some(p => p.weightKg != null)
+    case 'team':             return results.some(p => !!p.team)
+    case 'position':         return results.some(p => !!p.position)
+    case 'marketValue':      return results.some(p => !!p.marketValue)
+    case 'description':      return results.some(p => !!p.description)
+    case 'transfermarktLink':return results.some(p => !!p.transfermarktUrl)
+    case 'sofascoreLink':    return results.some(p => !!p.sofascoreUrl)
+    case 'fmInsideUrl':      return results.some(p => !!p.fmInsideUrl)
+    // Fields not yet returned by any scraper (always not found from search)
+    case 'passports':
+    case 'preferredFoot':
+    case 'league':
+    case 'joiningDate':
+    case 'contractExpiry':
+    case 'seasonStats':
+    case 'fmWages':
+    case 'heatMap':
+    case 'keyStrengths':
+    case 'areasForImprovement':
+    // Manual-only fields (filled by user in the card, not from scrapers)
+    case 'transferFeeExpect':
+    case 'transferFeeReal':
+    case 'salaryExpect':
+    case 'salaryReal':
+    case 'recentForm':
+    case 'instagramLink':
+    case 'highlightsLink':
+    case 'sentBy':
+      return false
+    default:
+      return false
   }
 }
 
-function ParameterCoveragePanel({ results, searched, loading }: {
+function ParameterCoveragePanel({ results, searched, loading, visibleParams, customKeys }: {
   results: PlayerResult[]
   searched: boolean
   loading: boolean
+  visibleParams: Set<string>
+  customKeys: string[]
 }) {
+  // Build the ordered list of active keys: built-in first, then custom
+  const activeBuiltin = PARAM_KEYS.filter(k => visibleParams.has(k))
+  const activeCustom  = customKeys.filter(k => visibleParams.has(k))
+  const allActive     = [...activeBuiltin, ...activeCustom]
+
+  const foundCount = allActive.filter(k => isFound(results, k)).length
+
   return (
-    <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#141720' }}>
+    <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'var(--card-bg)' }}>
       <div className="px-4 py-3 border-b border-white/8">
         <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Parameter Coverage</p>
       </div>
@@ -389,36 +386,31 @@ function ParameterCoveragePanel({ results, searched, loading }: {
         </div>
       ) : loading ? (
         <div className="px-4 py-4 flex flex-col gap-2">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="h-6 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+          {[1,2,3,4,5,6].map(i => (
+            <div key={i} className="h-6 rounded-lg animate-pulse" style={{ background: 'var(--hover-bg)' }} />
           ))}
         </div>
       ) : (
-        <div className="divide-y divide-white/5">
-          {PARAM_KEYS.map(key => {
-            const count = countField(results, key)
-            const found = count > 0
+        <div className="divide-y divide-white/5 max-h-[480px] overflow-y-auto">
+          {allActive.map(key => {
+            const found = isFound(results, key)
+            const label = PARAM_LABELS[key as keyof typeof PARAM_LABELS] ?? key
             return (
               <div key={key} className="flex items-center gap-3 px-4 py-2">
-                {/* Icon */}
                 {found ? (
                   <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
                     <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                   </div>
                 ) : (
-                  <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="rgba(255,255,255,0.2)"><path d="M19 13H5v-2h14v2z"/></svg>
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" className="opacity-20"><path d="M19 13H5v-2h14v2z"/></svg>
                   </div>
                 )}
-                {/* Label */}
-                <span className="text-xs flex-1" style={{ color: found ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.25)' }}>
-                  {PARAM_LABELS[key]}
+                <span className="text-xs flex-1" style={{ color: found ? 'var(--text-secondary)' : 'var(--text-faint)' }}>
+                  {label}
                 </span>
-                {/* Count */}
                 {found && (
-                  <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: '#00c896aa' }}>
-                    {count}
-                  </span>
+                  <svg className="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                 )}
               </div>
             )
@@ -427,10 +419,10 @@ function ParameterCoveragePanel({ results, searched, loading }: {
       )}
 
       {/* Footer */}
-      {searched && !loading && results.length > 0 && (
-        <div className="px-4 py-2 border-t border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+      {searched && !loading && allActive.length > 0 && (
+        <div className="px-4 py-2 border-t border-white/8" style={{ background: 'var(--subtle-bg)' }}>
           <p className="text-[10px] text-white/30">
-            {PARAM_KEYS.filter(k => countField(results, k) > 0).length} of {PARAM_KEYS.length} parameters found
+            {foundCount} of {allActive.length} parameters found
           </p>
         </div>
       )}
@@ -438,14 +430,186 @@ function ParameterCoveragePanel({ results, searched, loading }: {
   )
 }
 
-function PlayerCard({ player, selected, onToggleSelect, visibleParams }: {
+// ─── param key → card field mapping ──────────────────────────────────────────
+// Used by both cards to gate visibility on the Search Parameters settings.
+const FIELD_PARAM_KEY: Record<string, string> = {
+  'Position':               'position',
+  'Height':                 'height',
+  'Weight':                 'weight',
+  'Age':                    'age',
+  'Date of Birth':          'dateOfBirth',
+  'Foot':                   'preferredFoot',
+  'Nationality':            'nationality',
+  'Passports':              'passports',
+  'Club':                   'team',
+  'League':                 'league',
+  'Joining Date':           'joiningDate',
+  'Contract Expiry':        'contractExpiry',
+  'Market Value':           'marketValue',
+  'FM Wages':               'fmWages',
+  'Fee Expectation':        'transferFeeExpect',
+  'Fee (Real)':             'transferFeeReal',
+  'Salary Expectation':     'salaryExpect',
+  'Salary (Real)':          'salaryReal',
+  'Sent by / Scout Name':   'sentBy',
+  'Recent Form':            'recentForm',
+  'Transfermarkt':          'transfermarktLink',
+  'Sofascore':              'sofascoreLink',
+  'Instagram':              'instagramLink',
+  'Highlights':             'highlightsLink',
+}
+
+// ─── Empty Player Card (shown before first search) ────────────────────────────
+
+function EmptyPlayerCard({ userName: _userName, visibleParams }: { userName: string; visibleParams: Set<string> }) {
+  // visibleParams.size === 0 means not yet loaded from localStorage → show all
+  const show = (key: string) => visibleParams.size === 0 || visibleParams.has(key)
+  const showField = (label: string) => { const k = FIELD_PARAM_KEY[label]; return !k || show(k) }
+  const seasons = ['25/26', '24/25', '23/24', '22/23']
+  return (
+    <div className="mt-4 rounded-2xl border overflow-hidden" style={{
+      background: 'var(--card-bg)',
+      border: '1px solid var(--border)',
+      boxShadow: 'var(--card-shadow)',
+    }}>
+      {/* Header */}
+      <div className="flex items-center gap-4 p-5 border-b border-white/5">
+        <div className="w-5 h-5 rounded-full flex-shrink-0" style={{ border: '2px solid var(--border)' }} />
+        <div className="w-14 h-14 rounded-xl flex-shrink-0 flex items-center justify-center" style={{ background: 'var(--subtle-bg)', border: '1px solid var(--border)' }}>
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" className="opacity-10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <div className="flex-1">
+          <div className="h-4 w-44 rounded-md mb-2" style={{ background: 'var(--hover-bg)' }} />
+          <div className="flex gap-2">
+            <div className="h-3 w-16 rounded-full" style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.12)' }} />
+            <div className="h-3 w-20 rounded-md" style={{ background: 'var(--hover-bg)' }} />
+            <div className="h-3 w-14 rounded-md" style={{ background: 'var(--subtle-bg)' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* 3-column body */}
+      <div className="grid grid-cols-3 divide-x divide-white/5">
+        {([
+          ['Physical',         ['Position', 'Height', 'Weight', 'Age', 'Date of Birth', 'Foot', 'Nationality', 'Passports']],
+          ['Contract & Value', ['Club', 'League', 'Joining Date', 'Contract Expiry', 'Market Value', 'FM Wages', 'Fee Expectation', 'Fee (Real)', 'Salary Expectation', 'Salary (Real)']],
+        ] as [string, string[]][]).map(([title, fields]) => (
+          <div key={title} className="p-4">
+            <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>{title}</p>
+            <div className="space-y-2.5">
+              {fields.filter(showField).map(f => (
+                <div key={f} className="flex items-center justify-between gap-2">
+                  <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>{f}</span>
+                  <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        {/* Scout Info column */}
+        <div className="p-4">
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Scout Info</p>
+          <div className="space-y-2.5">
+            {/* Added is always visible — no param key */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>Added</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+            </div>
+            {['Sent by / Scout Name', 'Recent Form', 'Transfermarkt', 'Sofascore', 'Instagram', 'Highlights'].filter(showField).map(f => (
+              <div key={f} className="flex items-center justify-between gap-2">
+                <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>{f}</span>
+                <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {show('heatMap') && (
+        <div className="border-t border-white/5 px-4 py-3 flex items-center gap-4" style={{ background: 'var(--subtle-bg)' }}>
+          <p className="text-[10px] uppercase tracking-widest font-medium flex-shrink-0 w-20" style={{ color: 'var(--text-faint)' }}>Heat Map</p>
+          <div className="flex-1 h-14 rounded-lg flex items-center justify-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border)' }}>
+            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · —</span>
+          </div>
+        </div>
+      )}
+
+      {(show('keyStrengths') || show('areasForImprovement')) && (
+        <div className="flex items-center gap-6 px-4 py-3 border-t border-white/5" style={{ background: 'var(--subtle-bg)' }}>
+          <p className="text-[10px] uppercase tracking-widest font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Attributes</p>
+          <div className="flex gap-6 flex-1">
+            {show('keyStrengths') && (
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Key Strengths</span>
+                <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+              </div>
+            )}
+            {show('areasForImprovement') && (
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Areas for Improvement</span>
+                <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {show('seasonStats') && (
+      <div className="border-t border-white/5">
+        <div className="px-4 py-2 border-b border-white/5" style={{ background: 'var(--subtle-bg)' }}>
+          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Season Stats</p>
+        </div>
+        <table className="w-full">
+          <thead>
+            <tr style={{ background: 'var(--subtle-bg)' }}>
+              {['Season', 'Club', 'MP', 'MS', 'Goals', 'Assists'].map(h => (
+                <th key={h} className="px-4 py-2 text-left text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-faint)' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/[0.03]">
+            {seasons.map(s => (
+              <tr key={s}>
+                <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>{s}</td>
+                {[...Array(5)].map((_, i) => (
+                  <td key={i} className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-faint)' }}>—</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      )}
+
+    </div>
+  )
+}
+
+// ─── Player Card (populated with search results) ───────────────────────────────
+
+function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams }: {
   player: PlayerResult
   selected: boolean
   onToggleSelect: () => void
+  userName: string
   visibleParams: Set<string>
 }) {
-  const [expanded, setExpanded] = useState(false)
   const show = (key: string) => visibleParams.size === 0 || visibleParams.has(key)
+  const seasons = ['25/26', '24/25', '23/24', '22/23']
+
+  const [transferFeeExpect, setTransferFeeExpect] = useState('')
+  const [transferFeeReal,   setTransferFeeReal]   = useState('')
+  const [salaryExpect,      setSalaryExpect]       = useState('')
+  const [salaryReal,        setSalaryReal]         = useState('')
+
+  // Link inputs — pre-fill from merged source URLs
+  const [tmUrl, setTmUrl] = useState(player.transfermarktUrl ?? '')
+  const [scUrl, setScUrl] = useState(player.sofascoreUrl ?? '')
+  const [igUrl, setIgUrl] = useState('')
+  const [highlights,   setHighlights]   = useState('')
+  const [recentForm,   setRecentForm]   = useState('')
+
+  const dateAdded = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
   const age = player.dateOfBirth
     ? Math.floor((Date.now() - new Date(player.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
@@ -453,99 +617,300 @@ function PlayerCard({ player, selected, onToggleSelect, visibleParams }: {
 
   return (
     <div
-      className="rounded-2xl border overflow-hidden transition-all cursor-pointer"
+      className="rounded-2xl border overflow-hidden transition-all"
       style={{
-        background: 'linear-gradient(135deg, #141720 0%, #111318 100%)',
-        boxShadow: selected ? '0 0 0 2px #00c896' : '0 8px 32px rgba(0,0,0,0.3)',
-        borderColor: selected ? '#00c896' : 'rgba(255,255,255,0.05)',
+        background: 'var(--card-bg)',
+        boxShadow: selected ? '0 0 0 2px #00c896, 0 8px 32px rgba(0,200,150,0.1)' : 'var(--card-shadow)',
+        borderColor: selected ? '#00c896' : 'var(--border)',
       }}
-      onClick={onToggleSelect}
     >
-      <div className="flex items-center gap-5 p-5">
+      {/* Header — click to select */}
+      <div className="flex items-center gap-4 p-5 border-b border-white/5 cursor-pointer" onClick={onToggleSelect}>
         {/* Checkbox */}
         <div
           className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
-          style={{
-            background: selected ? '#00c896' : 'transparent',
-            border: `2px solid ${selected ? '#00c896' : 'rgba(255,255,255,0.2)'}`,
-          }}
+          style={{ background: selected ? '#00c896' : 'transparent', border: `2px solid ${selected ? '#00c896' : 'var(--border-strong)'}` }}
         >
-          {selected && (
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#000">
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-            </svg>
-          )}
+          {selected && <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#000"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>}
         </div>
 
         {/* Photo */}
         {show('photo') && (
           <div
-            className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.05)' }}
+            className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center"
+            style={{ background: 'var(--hover-bg)', border: '1px solid var(--border)' }}
             onClick={e => e.stopPropagation()}
           >
-            {player.photo ? (
-              <img src={player.photo} alt={player.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
-            ) : (
-              <span className="text-2xl font-bold text-white/20">{player.name[0]}</span>
-            )}
+            {player.photo
+              ? <img src={player.photo} alt={player.name} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
+              : <span className="text-xl font-bold" style={{ color: 'var(--text-faint)' }}>{player.name[0]}</span>
+            }
           </div>
         )}
 
-        {/* Info */}
+        {/* Name + tags */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-bold text-white mb-1">{player.name}</h3>
-          <div className="flex items-center gap-3 flex-wrap">
-            {show('team') && player.team && <span className="text-sm text-white/50">{player.team}</span>}
-            {show('position') && player.position && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>
-                {player.position}
-              </span>
+          <h3 className="text-base font-bold text-white leading-tight mb-1.5">{player.name}</h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            {player.position && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{player.position}</span>
             )}
-            {show('nationality') && player.nationality && <span className="text-sm text-white/40">{player.nationality}</span>}
-          </div>
-          <div className="flex items-center gap-4 mt-2 flex-wrap">
-            {show('age') && age && <Stat label="Age" value={`${age}`} />}
-            {show('height') && player.heightCm && <Stat label="Height" value={`${player.heightCm} cm`} />}
-            {show('weight') && player.weightKg && <Stat label="Weight" value={`${player.weightKg} kg`} />}
-            {show('dateOfBirth') && player.dateOfBirth && <Stat label="Born" value={new Date(player.dateOfBirth).toLocaleDateString()} />}
-            {show('marketValue') && player.marketValue && <Stat label="Market Value" value={player.marketValue} />}
-          </div>
-          <div className="flex items-center gap-1 mt-2" onClick={e => e.stopPropagation()}>
-            <span className="text-xs text-white/50">Source:</span>
-            <a href={player.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium hover:text-[#00c896] transition-colors underline underline-offset-2" style={{ color: '#00c896aa' }}>{player.sourceName} ↗</a>
+            {player.team      && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{player.team}</span>}
+            {player.nationality && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{player.nationality}</span>}
+            {age               && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{age} yrs</span>}
           </div>
         </div>
 
-        {/* Expand description button */}
-        {show('description') && player.description && (
-          <button
-            onClick={e => { e.stopPropagation(); setExpanded(v => !v) }}
-            className="text-xs text-white/30 hover:text-white/60 transition-colors flex-shrink-0"
-          >
-            {expanded ? 'Less ↑' : 'More ↓'}
-          </button>
-        )}
+        {/* Source chips — one per contributing scraper */}
+        <div className="flex flex-col gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+          {player.sources.map(src => {
+            const url = src === 'Transfermarkt' ? player.transfermarktUrl
+                      : src === 'Sofascore'     ? player.sofascoreUrl
+                      : src === 'FMInside'      ? player.fmInsideUrl
+                      : null
+            return url ? (
+              <a key={src} href={url} target="_blank" rel="noopener noreferrer"
+                className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded-md transition-colors hover:opacity-80"
+                style={{ background: 'rgba(0,200,150,0.08)', color: '#00c896bb', border: '1px solid rgba(0,200,150,0.2)' }}
+              >
+                {src} ↗
+              </a>
+            ) : (
+              <span key={src} className="text-[10px] px-2 py-0.5 rounded-md"
+                style={{ background: 'var(--hover-bg)', color: 'var(--text-faint)', border: '1px solid var(--border)' }}
+              >
+                {src}
+              </span>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Expanded description */}
-      {show('description') && expanded && player.description && (
-        <div className="px-5 pb-5 border-t border-white/5 pt-4" onClick={e => e.stopPropagation()}>
-          <p className="text-sm text-white/50 leading-relaxed line-clamp-4">{player.description}</p>
-          <a href={player.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs mt-2 inline-block" style={{ color: '#00c896' }}>
-            View full profile →
-          </a>
+      {/* Body — 3 columns */}
+      <div className="grid grid-cols-3 divide-x divide-white/5">
+        {/* Physical */}
+        <div className="p-4">
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Physical</p>
+          <div className="space-y-2.5">
+            {show('position')    && <CardField label="Position"     value={player.position} />}
+            {show('height')      && <CardField label="Height"       value={player.heightCm ? `${player.heightCm} cm` : null} />}
+            {show('weight')      && <CardField label="Weight"       value={player.weightKg ? `${player.weightKg} kg` : null} />}
+            {show('age')         && <CardField label="Age"          value={age ? `${age} yrs` : null} />}
+            {show('dateOfBirth') && <CardField label="Date of Birth" value={player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null} />}
+            {show('preferredFoot') && <CardField label="Foot"       value={null} />}
+            {show('nationality') && <CardField label="Nationality"  value={player.nationality} />}
+            {show('passports')   && <CardField label="Passports"    value={null} />}
+          </div>
+        </div>
+
+        {/* Contract & Value */}
+        <div className="p-4">
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Contract & Value</p>
+          <div className="space-y-2.5">
+            {show('team')              && <CardField label="Club"            value={player.team} />}
+            {show('league')            && <CardField label="League"          value={null} />}
+            {show('joiningDate')       && <CardField label="Joining Date"    value={null} />}
+            {show('contractExpiry')    && <CardField label="Contract Expiry" value={null} />}
+            {show('marketValue')       && <CardField label="Market Value"    value={player.marketValue} highlight />}
+            {show('fmWages')           && <CardField label="FM Wages"        value={null} />}
+            {show('transferFeeExpect') && <EditableCardField label="Fee Expectation"   value={transferFeeExpect} onChange={setTransferFeeExpect} />}
+            {show('transferFeeReal')   && <EditableCardField label="Fee (Real)"         value={transferFeeReal}   onChange={setTransferFeeReal} />}
+            {show('salaryExpect')      && <EditableCardField label="Salary Expectation" value={salaryExpect}      onChange={setSalaryExpect} />}
+            {show('salaryReal')        && <EditableCardField label="Salary (Real)"      value={salaryReal}        onChange={setSalaryReal} />}
+          </div>
+        </div>
+
+        {/* Scout Info */}
+        <div className="p-4">
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Scout Info</p>
+          <div className="space-y-2.5">
+            {/* Added — always visible */}
+            <CardField label="Added" value={dateAdded} />
+            {show('sentBy')            && <CardField label="Sent by / Scout Name" value={userName} />}
+            {show('recentForm')        && <EditableCardField label="Recent Form"  value={recentForm}  onChange={setRecentForm} />}
+            {show('transfermarktLink') && <LinkInputField label="Transfermarkt"   value={tmUrl}       onChange={setTmUrl} />}
+            {show('sofascoreLink')     && <LinkInputField label="Sofascore"       value={scUrl}       onChange={setScUrl} />}
+            {show('instagramLink')     && <LinkInputField label="Instagram"       value={igUrl}       onChange={setIgUrl} />}
+            {show('highlightsLink')    && <EditableCardField label="Highlights"   value={highlights}  onChange={setHighlights} />}
+          </div>
+          {show('description') && player.description && (
+            <div className="mt-4 pt-3 border-t border-white/5">
+              <p className="text-[10px] uppercase tracking-widest mb-1.5 font-medium" style={{ color: 'rgba(255,255,255,0.2)' }}>Bio</p>
+              <p className="text-[11px] leading-relaxed line-clamp-3" style={{ color: 'var(--text-muted)' }}>{player.description}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {show('heatMap') && (
+        <div className="border-t border-white/5 px-4 py-3 flex items-center gap-4" style={{ background: 'var(--subtle-bg)' }}>
+          <p className="text-[10px] uppercase tracking-widest font-medium flex-shrink-0 w-20" style={{ color: 'var(--text-muted)' }}>Heat Map</p>
+          <div className="flex-1 h-14 rounded-lg flex items-center justify-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border)' }}>
+            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
+          </div>
         </div>
       )}
+
+      {(show('keyStrengths') || show('areasForImprovement')) && (
+        <div className="flex items-center gap-6 px-4 py-3 border-t border-white/5" style={{ background: 'var(--subtle-bg)' }}>
+          <p className="text-[10px] uppercase tracking-widest font-medium flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Attributes</p>
+          <div className="flex gap-8 flex-1">
+            {show('keyStrengths')       && <CardField label="Key Strengths"         value={null} inline />}
+            {show('areasForImprovement') && <CardField label="Areas for Improvement" value={null} inline />}
+          </div>
+        </div>
+      )}
+
+      {show('seasonStats') && <div className="border-t border-white/5">
+        <div className="px-4 py-2 border-b border-white/5" style={{ background: 'var(--subtle-bg)' }}>
+          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr style={{ background: 'var(--subtle-bg)' }}>
+                {['Season', 'Club', 'MP', 'MS', 'Goals', 'Assists'].map(h => (
+                  <th key={h} className="px-4 py-2 text-left text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {seasons.map(s => (
+                <tr key={s} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>{s}</td>
+                  {[...Array(5)].map((_, i) => (
+                    <td key={i} className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-faint)' }}>—</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>}
     </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+// ─── Card field helpers ────────────────────────────────────────────────────────
+
+function CardField({ label, value, highlight = false, inline = false }: {
+  label: string
+  value: string | null | undefined
+  highlight?: boolean
+  inline?: boolean
+}) {
+  const hasValue = value != null && value !== ''
+  if (inline) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{label}:</span>
+        <span className="text-[11px] font-medium" style={{ color: hasValue ? (highlight ? '#00c896' : 'var(--text-secondary)') : 'var(--text-faint)' }}>
+          {value ?? '—'}
+        </span>
+      </div>
+    )
+  }
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-[10px] text-white/40 uppercase tracking-wide font-medium">{label}:</span>
-      <span className="text-xs text-white/80 font-semibold">{value}</span>
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <span className="text-[11px] font-medium text-right" style={{ color: hasValue ? (highlight ? '#00c896' : 'var(--text-primary)') : 'var(--text-faint)' }}>
+        {value ?? '—'}
+      </span>
+    </div>
+  )
+}
+
+
+function LinkInputField({ label, value, onChange }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  const isValid = value.startsWith('http')
+  return (
+    <div className="flex items-center gap-3 group/link">
+      {/* Label — becomes a clickable link when a valid URL is set */}
+      {isValid ? (
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] flex-shrink-0 flex items-center gap-0.5 transition-colors hover:underline"
+          style={{ color: '#00c896' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {label}
+          <svg className="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+          </svg>
+        </a>
+      ) : (
+        <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      )}
+
+      {/* Editable URL input — fills remaining space */}
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Paste link…"
+        className="text-[11px] text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5 flex-1 min-w-0"
+        style={{
+          color: isValid ? 'rgba(0,200,150,0.7)' : value ? 'var(--text-secondary)' : 'var(--text-faint)',
+          border: '1px solid var(--border)',
+          caretColor: '#00c896',
+        }}
+        onFocus={e => {
+          e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'
+          e.currentTarget.style.background = 'rgba(0,200,150,0.06)'
+        }}
+        onBlur={e => {
+          e.currentTarget.style.borderColor = 'var(--border)'
+          e.currentTarget.style.background = 'transparent'
+        }}
+        onClick={e => e.stopPropagation()}
+      />
+    </div>
+  )
+}
+
+function EditableCardField({ label, value, onChange }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 group/edit">
+      <span className="text-[11px] flex-shrink-0 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+        {label}
+        <svg className="w-2.5 h-2.5 opacity-0 group-hover/edit:opacity-60 transition-opacity" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+        </svg>
+      </span>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="—"
+        className="text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5"
+        style={{
+          width: 90,
+          color: value ? 'var(--text-primary)' : 'var(--text-faint)',
+          border: '1px solid transparent',
+          caretColor: '#00c896',
+        }}
+        onFocus={e => {
+          e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'
+          e.currentTarget.style.background = 'rgba(0,200,150,0.06)'
+          e.currentTarget.style.color = 'var(--text-primary)'
+        }}
+        onBlur={e => {
+          e.currentTarget.style.borderColor = 'transparent'
+          e.currentTarget.style.background = 'transparent'
+          e.currentTarget.style.color = value ? 'var(--text-primary)' : 'var(--text-faint)'
+        }}
+        onClick={e => e.stopPropagation()}
+      />
     </div>
   )
 }
@@ -567,7 +932,7 @@ function getSources(players: PlayerResult[], getter: (p: PlayerResult) => string
   const out: { sourceName: string; value: string }[] = []
   for (const p of players) {
     const v = getter(p)
-    if (v != null && String(v).trim() !== '') out.push({ sourceName: p.sourceName, value: String(v) })
+    if (v != null && String(v).trim() !== '') out.push({ sourceName: p.sources.join(', '), value: String(v) })
   }
   return out
 }
@@ -581,191 +946,138 @@ function hasConflict(sources: { sourceName: string; value: string }[]) {
   return new Set(sources.map(s => s.value)).size > 1
 }
 
-function MergeModal({ players, databases, onClose }: {
+function ImportModal({ players, databases, onClose }: {
   players: PlayerResult[]
   databases: Database[]
   onClose: () => void
 }) {
   const router = useRouter()
-  const [selectedDb, setSelectedDb] = useState(databases[0]?.id ?? '')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Build source lists per field
-  const nameSources   = getSources(players, p => p.name)
-  const posSources    = getSources(players, p => p.position)
-  const clubSources   = getSources(players, p => p.team)
-  const natSources    = getSources(players, p => p.nationality)
-  const dobSources    = getSources(players, p => p.dateOfBirth)
-  const htSources     = getSources(players, p => p.heightCm?.toString())
-  const wtSources     = getSources(players, p => p.weightKg?.toString())
-  const mvSources     = getSources(players, p => p.marketValue)
+  // Auto-pick best values from sources
+  const nameSources = getSources(players, p => p.name)
+  const posSources  = getSources(players, p => p.position)
+  const clubSources = getSources(players, p => p.team)
+  const natSources  = getSources(players, p => p.nationality)
+  const dobSources  = getSources(players, p => p.dateOfBirth)
+  const htSources   = getSources(players, p => p.heightCm?.toString())
+  const wtSources   = getSources(players, p => p.weightKg?.toString())
+  const mvSources   = getSources(players, p => p.marketValue)
 
-  const bestName = pickBest(nameSources).trim().split(/\s+/)
+  const bestName    = pickBest(nameSources).trim().split(/\s+/)
+  const firstName   = bestName[0] ?? ''
+  const lastName    = bestName.slice(1).join(' ') || '-'
+  const position    = pickBest(posSources) || null
+  const clubName    = pickBest(clubSources) || null
+  const nationality = pickBest(natSources) || null
+  const dateOfBirth = pickBest(dobSources) || null
+  const heightCm    = pickBest(htSources) ? parseInt(pickBest(htSources)) : null
+  const weightKg    = pickBest(wtSources) ? parseInt(pickBest(wtSources)) : null
+  const marketValue = parseMarketValueToNumber(pickBest(mvSources))
+  const sourceName  = [...new Set(players.flatMap(p => p.sources))].join(', ')
+  const sourceUrl   = players[0]?.transfermarktUrl ?? players[0]?.sofascoreUrl ?? players[0]?.fmInsideUrl
 
-  const [form, setForm] = useState({
-    firstName:   bestName[0] ?? '',
-    lastName:    bestName.slice(1).join(' ') || '',
-    position:    pickBest(posSources),
-    clubName:    pickBest(clubSources),
-    nationality: pickBest(natSources),
-    dateOfBirth: pickBest(dobSources),
-    heightCm:    pickBest(htSources),
-    weightKg:    pickBest(wtSources),
-    marketValue: pickBest(mvSources),
-  })
-
-  function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
+  function toggleDb(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   async function handleImport() {
-    if (!selectedDb) return
+    if (selectedIds.size === 0) return
     setLoading(true)
     setError('')
-    const res = await fetch(`/api/databases/${selectedDb}/players`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        firstName:   form.firstName.trim(),
-        lastName:    form.lastName.trim() || '-',
-        position:    form.position    || null,
-        clubName:    form.clubName    || null,
-        nationality: form.nationality || null,
-        dateOfBirth: form.dateOfBirth || null,
-        heightCm:    form.heightCm    ? parseInt(form.heightCm)    : null,
-        weightKg:    form.weightKg    ? parseInt(form.weightKg)    : null,
-        marketValue: parseMarketValueToNumber(form.marketValue),
-        sourceName:  players.map(p => p.sourceName).join(', '),
-        sourceUrl:   players[0]?.sourceUrl,
-      }),
-    })
-    if (res.ok) {
-      const data = await res.json()
-      router.push(`/databases/${selectedDb}/players/${data.id}`)
-    } else {
-      const d = await res.json().catch(() => ({}))
-      setError(d.error || 'Something went wrong')
+    const body = { firstName, lastName, position, clubName, nationality, dateOfBirth, heightCm, weightKg, marketValue, sourceName, sourceUrl }
+    try {
+      const results = await Promise.all(
+        [...selectedIds].map(dbId =>
+          fetch(`/api/databases/${dbId}/players`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }).then(r => r.json().then(d => ({ dbId, ok: r.ok, data: d })))
+        )
+      )
+      const failed = results.filter(r => !r.ok)
+      if (failed.length > 0) {
+        setError(failed[0].data?.error || 'Import failed for one or more databases')
+        setLoading(false)
+        return
+      }
+      // Navigate to the player profile in the first selected database
+      const firstDbId = [...selectedIds][0]
+      const firstResult = results.find(r => r.dbId === firstDbId)
+      if (firstResult?.data?.id) {
+        router.push(`/databases/${firstDbId}/players/${firstResult.data.id}`)
+      } else {
+        onClose()
+      }
+    } catch {
+      setError('Something went wrong')
       setLoading(false)
     }
   }
 
-  const sourceNames = [...new Set(players.map(p => p.sourceName))]
+  const displayName = [firstName, lastName === '-' ? '' : lastName].filter(Boolean).join(' ')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 max-h-[90vh] flex flex-col" style={{ background: '#141720' }} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-2xl border border-white/10 max-h-[90vh] flex flex-col" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-white/5 flex-shrink-0">
-          <h2 className="text-lg font-semibold text-white mb-0.5">Merge & Import Player</h2>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-white/30">Merging {players.length} source{players.length !== 1 ? 's' : ''}:</span>
-            {sourceNames.map(s => (
-              <span key={s} className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.2)' }}>{s}</span>
-            ))}
+          <h2 className="text-lg font-semibold text-white mb-1">Import into database</h2>
+          {/* Player summary */}
+          <div className="flex items-center gap-3 p-3 rounded-xl mt-2" style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)' }}>
+            {players[0]?.photo && (
+              <img src={players[0].photo} alt={displayName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{displayName}</p>
+              <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                {[position, clubName].filter(Boolean).join(' · ') || 'Player'}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <MergeField label="First Name *" value={form.firstName} onChange={v => set('firstName', v)} />
-            <MergeField label="Last Name *" value={form.lastName} onChange={v => set('lastName', v)} />
-          </div>
-          <MergeField label="Position" value={form.position} onChange={v => set('position', v)} sources={posSources} onPick={v => set('position', v)} />
-          <MergeField label="Club" value={form.clubName} onChange={v => set('clubName', v)} sources={clubSources} onPick={v => set('clubName', v)} />
-          <MergeField label="Nationality" value={form.nationality} onChange={v => set('nationality', v)} sources={natSources} onPick={v => set('nationality', v)} />
-          <div className="grid grid-cols-3 gap-3">
-            <MergeField label="Date of Birth" value={form.dateOfBirth} onChange={v => set('dateOfBirth', v)} type="date" sources={dobSources} onPick={v => set('dateOfBirth', v)} />
-            <MergeField label="Height (cm)" value={form.heightCm} onChange={v => set('heightCm', v)} sources={htSources} onPick={v => set('heightCm', v)} />
-            <MergeField label="Weight (kg)" value={form.weightKg} onChange={v => set('weightKg', v)} sources={wtSources} onPick={v => set('weightKg', v)} />
-          </div>
-          <MergeField label="Market Value" value={form.marketValue} onChange={v => set('marketValue', v)} sources={mvSources} onPick={v => set('marketValue', v)} />
-
-          {/* Database selector */}
-          <div className="border-t border-white/5 pt-4">
-            <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Import into database</p>
-            {databases.length === 0 ? (
-              <p className="text-sm text-red-400">You have no databases. Create one first.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {databases.map(db => (
+        {/* Database list */}
+        <div className="overflow-y-auto flex-1 px-6 py-5">
+          <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--text-faint)' }}>Choose databases</p>
+          {databases.length === 0 ? (
+            <p className="text-sm text-red-400">You have no databases. Create one first.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {databases.map(db => {
+                const checked = selectedIds.has(db.id)
+                return (
                   <label key={db.id} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all" style={{
-                    background: selectedDb === db.id ? 'rgba(0,200,150,0.08)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${selectedDb === db.id ? 'rgba(0,200,150,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                    background: checked ? 'rgba(0,200,150,0.08)' : 'var(--subtle-bg)',
+                    border: `1px solid ${checked ? 'rgba(0,200,150,0.3)' : 'var(--border)'}`,
                   }}>
-                    <input type="radio" name="db" value={db.id} checked={selectedDb === db.id} onChange={() => setSelectedDb(db.id)} className="accent-[#00c896]" />
+                    <input type="checkbox" checked={checked} onChange={() => toggleDb(db.id)} className="accent-[#00c896] w-4 h-4 flex-shrink-0" />
                     <span className="text-sm text-white">{db.name}</span>
+                    {checked && <span className="ml-auto text-[10px]" style={{ color: '#00c896' }}>Selected</span>}
                   </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+                )
+              })}
+            </div>
+          )}
+          {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
         </div>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-white/5 flex gap-3 flex-shrink-0">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70 transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>Cancel</button>
-          <button onClick={handleImport} disabled={loading || !form.firstName.trim() || !selectedDb || databases.length === 0} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
-            {loading ? 'Importing...' : 'Import Player'}
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70 transition-colors" style={{ background: 'var(--hover-bg)' }}>Cancel</button>
+          <button onClick={handleImport} disabled={loading || selectedIds.size === 0 || databases.length === 0} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
+            {loading ? 'Importing...' : selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
           </button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function MergeField({ label, value, onChange, type = 'text', sources = [], onPick }: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  type?: string
-  sources?: { sourceName: string; value: string }[]
-  onPick?: (v: string) => void
-}) {
-  const conflict = hasConflict(sources)
-  const agree    = !conflict && sources.length > 1
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <label className="text-xs text-white/40">{label}</label>
-        {agree   && <span className="text-[10px]" style={{ color: '#00c896aa' }}>✓ {sources.length} sources agree</span>}
-        {conflict && <span className="text-[10px]" style={{ color: '#ffaa44' }}>⚠ {sources.length} sources differ</span>}
-      </div>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none transition-colors"
-        style={{
-          background: '#0f1117',
-          border: `1px solid ${conflict ? 'rgba(255,170,68,0.4)' : 'rgba(255,255,255,0.1)'}`,
-        }}
-        onFocus={e => e.currentTarget.style.borderColor = conflict ? 'rgba(255,170,68,0.7)' : '#00c896'}
-        onBlur={e => e.currentTarget.style.borderColor = conflict ? 'rgba(255,170,68,0.4)' : 'rgba(255,255,255,0.1)'}
-      />
-      {/* Source chips — always shown when multiple sources, clickable to set value */}
-      {sources.length > 1 && onPick && (
-        <div className="flex flex-wrap gap-1.5 mt-1.5">
-          {sources.map((s, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onPick(s.value)}
-              className="text-[10px] px-2 py-0.5 rounded-md transition-all"
-              style={{
-                background: value === s.value ? (conflict ? 'rgba(255,170,68,0.15)' : 'rgba(0,200,150,0.12)') : 'rgba(255,255,255,0.04)',
-                color:      value === s.value ? (conflict ? '#ffaa44' : '#00c896') : 'rgba(255,255,255,0.3)',
-                border:     `1px solid ${value === s.value ? (conflict ? 'rgba(255,170,68,0.3)' : 'rgba(0,200,150,0.25)') : 'rgba(255,255,255,0.06)'}`,
-              }}
-            >
-              {s.sourceName}: {s.value}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

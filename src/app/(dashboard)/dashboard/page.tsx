@@ -154,7 +154,7 @@ export default async function DashboardPage() {
   const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'Agent'
 
   return (
-    <div className="min-h-screen text-white flex" style={{ background: 'linear-gradient(135deg, #0a0d14 0%, #0f1117 50%, #0a0f0d 100%)' }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
       <Sidebar
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
@@ -162,12 +162,12 @@ export default async function DashboardPage() {
         userId={user.id}
       />
 
-      <main className="flex-1 p-8 overflow-auto">
+      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-1">
             Welcome Back, <span style={{ color: '#00c896' }}>{firstName}</span>
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.3)' }} className="text-sm">Here's what's happening in your scouting Board.</p>
+          <p style={{ color: 'var(--text-muted)' }} className="text-sm">Here's what's happening in your scouting Board.</p>
         </div>
 
         {/* Stats grid */}
@@ -179,8 +179,8 @@ export default async function DashboardPage() {
         </div>
 
         <div className="rounded-2xl border border-white/5 p-6" style={{
-          background: 'linear-gradient(135deg, #141720 0%, #111318 100%)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+          background: 'var(--card-bg)',
+          boxShadow: 'var(--card-shadow)'
         }}>
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-5">Recent Activity</h2>
 
@@ -223,15 +223,15 @@ export default async function DashboardPage() {
 function StatCard({ label, value, icon, color, href }: { label: string; value: number; icon: React.ReactNode; color: string; href?: string }) {
   const content = (
     <div className="rounded-2xl p-5 border border-white/5 relative overflow-hidden transition-all hover:border-white/10" style={{
-      background: 'linear-gradient(135deg, #141720 0%, #111318 100%)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+      background: 'var(--card-bg)',
+      boxShadow: 'var(--card-shadow)'
     }}>
       <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-10" style={{ background: color }} />
       <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-4" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
         <span className="w-4 h-4" style={{ color }}>{icon}</span>
       </div>
       <p className="text-3xl font-bold text-white mb-1">{value}</p>
-      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{label}</p>
+      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
     </div>
   )
   return href ? <Link href={href}>{content}</Link> : content

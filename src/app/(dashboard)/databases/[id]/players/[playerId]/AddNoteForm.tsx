@@ -39,9 +39,9 @@ export default function AddNoteForm({ databaseId, playerId }: { databaseId: stri
         placeholder="Add a scouting note..."
         rows={3}
         className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none resize-none transition-colors"
-        style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)' }}
+        style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}
         onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-        onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+        onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
       />
       {error && <p className="text-red-400 text-xs">{error}</p>}
       <button

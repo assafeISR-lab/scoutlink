@@ -46,7 +46,7 @@ export default function CreateDatabaseButton() {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md mx-4 rounded-2xl p-6 border border-white/10" style={{ background: '#141720' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md mx-4 rounded-2xl p-6 border border-white/10" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-semibold text-white mb-1">Create Database</h2>
             <p className="text-sm text-white/30 mb-6">Give your scouting database a name</p>
 
@@ -60,14 +60,14 @@ export default function CreateDatabaseButton() {
                   onChange={e => setName(e.target.value)}
                   placeholder="e.g. Premier League 2025"
                   className="w-full px-4 py-3 rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-[#00c896] transition-colors"
-                  style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}
                 />
               </div>
 
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
               <div className="flex gap-3 mt-2">
-                <button type="button" onClick={() => setOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white/50 hover:text-white transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <button type="button" onClick={() => setOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white/50 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
                   Cancel
                 </button>
                 <button type="submit" disabled={loading || !name.trim()} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black transition-all disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>

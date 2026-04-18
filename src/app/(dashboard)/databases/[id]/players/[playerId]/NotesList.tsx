@@ -46,7 +46,7 @@ function NoteItem({ note, isOwn }: { note: Note; isOwn: boolean }) {
   }
 
   return (
-    <div className="rounded-xl p-3 group" style={{ background: 'rgba(255,255,255,0.03)' }}>
+    <div className="rounded-xl p-3 group" style={{ background: 'var(--subtle-bg)' }}>
       {editing ? (
         <div className="flex flex-col gap-2">
           <textarea
@@ -55,7 +55,7 @@ function NoteItem({ note, isOwn }: { note: Note; isOwn: boolean }) {
             onChange={e => setContent(e.target.value)}
             rows={3}
             className="w-full px-3 py-2 rounded-lg text-sm text-white resize-none focus:outline-none"
-            style={{ background: '#0f1117', border: '1px solid #00c896' }}
+            style={{ background: 'var(--input-bg)', border: '1px solid #00c896' }}
           />
           <div className="flex gap-2 justify-end">
             <button onClick={() => { setEditing(false); setContent(note.content) }} className="px-3 py-1 rounded-lg text-xs text-white/40 hover:text-white/70">

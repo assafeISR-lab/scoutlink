@@ -3,38 +3,126 @@
 import { useState, useEffect } from 'react'
 
 export const PARAM_KEYS = [
+  // Identity
   'photo',
   'nationality',
-  'team',
-  'position',
+  'passports',
+  'preferredFoot',
   'age',
   'dateOfBirth',
   'height',
   'weight',
+  // Club / Career
+  'team',
+  'league',
+  'position',
+  'joiningDate',
+  'contractExpiry',
+  'seasonStats',
+  // Financial
   'marketValue',
+  'fmWages',
+  'transferFeeExpect',
+  'transferFeeReal',
+  'salaryExpect',
+  'salaryReal',
+  // Scouting data
+  'heatMap',
+  'keyStrengths',
+  'areasForImprovement',
+  'recentForm',
   'description',
+  // Links & meta
+  'transfermarktLink',
+  'sofascoreLink',
+  'instagramLink',
+  'highlightsLink',
+  'sentBy',
 ] as const
 
 export type ParamKey = typeof PARAM_KEYS[number]
 
-const PARAM_LABELS: Record<ParamKey, string> = {
-  photo:       'Photo',
-  nationality: 'Nationality',
-  team:        'Team / Club',
-  position:    'Position',
-  age:         'Age',
-  dateOfBirth: 'Date of Birth',
-  height:      'Height',
-  weight:      'Weight',
-  marketValue: 'Market Value',
-  description: 'Bio / Description',
+export const PARAM_LABELS: Record<ParamKey, string> = {
+  // Identity
+  photo:                'Photo',
+  nationality:          'Nationality',
+  passports:            'Passports',
+  preferredFoot:        'Preferred Foot',
+  age:                  'Age',
+  dateOfBirth:          'Date of Birth',
+  height:               'Height',
+  weight:               'Weight',
+  // Club / Career
+  team:                 'Team / Club',
+  league:               'League',
+  position:             'Position',
+  joiningDate:          'Joining Date',
+  contractExpiry:       'Contract Expiry',
+  seasonStats:          'Season Stats',
+  // Financial
+  marketValue:          'Market Value',
+  fmWages:              'FM Wages',
+  transferFeeExpect:    'Transfer Fee Expectation',
+  transferFeeReal:      'Transfer Fee (Real)',
+  salaryExpect:         'Salary Expectation',
+  salaryReal:           'Salary (Real)',
+  // Scouting data
+  heatMap:              'Heat Map',
+  keyStrengths:         'Key Strengths',
+  areasForImprovement:  'Areas for Improvement',
+  recentForm:           'Recent Form',
+  description:          'Bio / Description',
+  // Links & meta
+  transfermarktLink:    'Transfermarkt Link',
+  sofascoreLink:        'Sofascore Link',
+  instagramLink:        'Instagram Link',
+  highlightsLink:       'Highlights Link',
+  sentBy:               'Sent By',
 }
 
-const STORAGE_KEY        = 'scoutlink_search_params'
-const CUSTOM_KEYS_KEY    = 'scoutlink_search_custom_keys'
-const CUSTOM_ACTIVE_KEY  = 'scoutlink_search_custom_active'
+export const PARAM_SOURCES: Record<ParamKey, string> = {
+  // Identity
+  photo:                '',
+  nationality:          'Transfermarkt',
+  passports:            'Transfermarkt',
+  preferredFoot:        'Transfermarkt',
+  age:                  'Transfermarkt',
+  dateOfBirth:          'Transfermarkt',
+  height:               'Transfermarkt',
+  weight:               'Transfermarkt',
+  // Club / Career
+  team:                 'Transfermarkt',
+  league:               'Transfermarkt',
+  position:             'Sofascore',
+  joiningDate:          'Transfermarkt',
+  contractExpiry:       'Transfermarkt',
+  seasonStats:          'Transfermarkt',
+  // Financial
+  marketValue:          'Transfermarkt',
+  fmWages:              'FMInside',
+  transferFeeExpect:    '',
+  transferFeeReal:      '',
+  salaryExpect:         '',
+  salaryReal:           '',
+  // Scouting data
+  heatMap:              'Sofascore',
+  keyStrengths:         'Sofascore',
+  areasForImprovement:  'Sofascore',
+  recentForm:           '',
+  description:          '',
+  // Links & meta
+  transfermarktLink:    '',
+  sofascoreLink:        '',
+  instagramLink:        '',
+  highlightsLink:       '',
+  sentBy:               '',
+}
 
-function loadActive(): Set<string> {
+export const STORAGE_KEY        = 'scoutlink_search_params'
+export const CUSTOM_KEYS_KEY    = 'scoutlink_search_custom_keys'
+export const CUSTOM_ACTIVE_KEY  = 'scoutlink_search_custom_active'
+
+export function loadActive(): Set<string> {
   if (typeof window === 'undefined') return new Set(PARAM_KEYS)
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -45,7 +133,7 @@ function loadActive(): Set<string> {
   }
 }
 
-function loadCustomKeys(): string[] {
+export function loadCustomKeys(): string[] {
   if (typeof window === 'undefined') return []
   try {
     const raw = localStorage.getItem(CUSTOM_KEYS_KEY)
@@ -55,7 +143,7 @@ function loadCustomKeys(): string[] {
   }
 }
 
-function loadCustomActive(): Set<string> {
+export function loadCustomActive(): Set<string> {
   if (typeof window === 'undefined') return new Set()
   try {
     const raw = localStorage.getItem(CUSTOM_ACTIVE_KEY)
@@ -66,7 +154,7 @@ function loadCustomActive(): Set<string> {
 }
 
 interface Props {
-  onChange: (active: Set<string>) => void
+  onChange?: (active: Set<string>) => void
 }
 
 export default function SearchParamsPanel({ onChange }: Props) {
@@ -86,7 +174,7 @@ export default function SearchParamsPanel({ onChange }: Props) {
   }, [])
 
   function notify(builtIn: Set<string>, custom: Set<string>) {
-    onChange(new Set([...builtIn, ...custom]))
+    onChange?.(new Set([...builtIn, ...custom]))
   }
 
   function toggle(key: string) {
@@ -155,7 +243,7 @@ export default function SearchParamsPanel({ onChange }: Props) {
   const allChecked = active.size === PARAM_KEYS.length && customActive.size === customKeys.length
 
   return (
-    <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#141720' }}>
+    <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'var(--card-bg)' }}>
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
         <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Search Parameters</p>
@@ -221,7 +309,7 @@ export default function SearchParamsPanel({ onChange }: Props) {
       )}
 
       {/* Add custom parameter input */}
-      <div className="px-4 py-3 border-t border-white/8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+      <div className="px-4 py-3 border-t border-white/8" style={{ background: 'var(--subtle-bg)' }}>
         <div className="flex gap-2">
           <input
             type="text"
@@ -230,9 +318,9 @@ export default function SearchParamsPanel({ onChange }: Props) {
             onKeyDown={e => { if (e.key === 'Enter') addCustomParam() }}
             placeholder="Add parameter…"
             className="flex-1 text-xs px-3 py-1.5 rounded-lg text-white placeholder-white/20 focus:outline-none transition-colors"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: 'var(--hover-bg)', border: '1px solid var(--border)' }}
             onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.4)'}
-            onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
           />
           <button
             onClick={addCustomParam}

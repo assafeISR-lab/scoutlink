@@ -5,7 +5,7 @@ import { transfermarktScraper } from './transfermarkt'
 import { wikipediaScraper } from './wikipedia'
 import { fmInsideScraper } from './fminside'
 
-export { type ScrapedPlayer } from './types'
+export { type ScrapedPlayer, type MergedPlayer } from './types'
 
 const ALL_SCRAPERS: SiteScraper[] = [
   theSportsDbScraper,

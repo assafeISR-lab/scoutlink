@@ -9,17 +9,17 @@ export default async function CalendarPage() {
   if (!user) redirect('/login')
 
   return (
-    <div className="min-h-screen text-white flex" style={{ background: 'linear-gradient(135deg, #0a0d14 0%, #0f1117 50%, #0a0f0d 100%)' }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
       <Sidebar
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
         userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
         userId={user.id}
       />
-      <main className="flex-1 p-8 overflow-auto">
+      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-1">Calendar</h1>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Your scouting schedule and player notes timeline</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your scouting schedule and player notes timeline</p>
         </div>
         <CalendarClient />
       </main>

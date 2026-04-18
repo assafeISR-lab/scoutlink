@@ -36,6 +36,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   })
 
+  // Save custom fields (extended params not in the Player model)
+  const customFields: Record<string, string> = body.customFields ?? {}
+  const cfEntries = Object.entries(customFields)
+    .filter(([, v]) => typeof v === 'string' && v.trim() !== '')
+    .map(([fieldName, value]) => ({ playerId: player.id, fieldName, value: String(value).trim() }))
+  if (cfEntries.length > 0) {
+    await prisma.customField.createMany({ data: cfEntries })
+  }
+
   // If imported from an external source, record field provenance
   if (body.sourceName && body.sourceUrl) {
     const fieldMap: Record<string, string | null> = {

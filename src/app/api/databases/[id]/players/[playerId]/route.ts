@@ -39,6 +39,56 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
   })
 
+  // Mark manually-changed fields in FieldSource
+  const changedFields: string[] = Array.isArray(body.changedFields) ? body.changedFields : []
+  if (changedFields.length > 0) {
+    const fieldValues: Record<string, string | null> = {
+      position:      body.position?.trim()     || null,
+      clubName:      body.clubName?.trim()      || null,
+      nationality:   body.nationality?.trim()   || null,
+      agentName:     body.agentName?.trim()     || null,
+      dateOfBirth:   body.dateOfBirth           || null,
+      heightCm:      body.heightCm !== '' && body.heightCm != null ? String(parseFloat(body.heightCm)) : null,
+      weightKg:      body.weightKg !== '' && body.weightKg != null ? String(parseFloat(body.weightKg)) : null,
+      marketValue:   body.marketValue !== '' && body.marketValue != null ? String(parseFloat(body.marketValue) * 1_000_000) : null,
+      playsNational: String(body.playsNational ?? false),
+      goalsThisYear: body.goalsThisYear !== '' && body.goalsThisYear != null ? body.goalsThisYear : null,
+      totalGoals:    body.totalGoals    !== '' && body.totalGoals    != null ? body.totalGoals    : null,
+      totalGames:    body.totalGames    !== '' && body.totalGames    != null ? body.totalGames    : null,
+      nationalGames: body.nationalGames !== '' && body.nationalGames != null ? body.nationalGames : null,
+      yearsInProClub:body.yearsInProClub!== '' && body.yearsInProClub!= null ? body.yearsInProClub: null,
+    }
+
+    for (const fieldName of changedFields) {
+      const value = fieldValues[fieldName]
+      // Deactivate any existing active sources for this field
+      await prisma.fieldSource.updateMany({
+        where: { playerId, fieldName, isActive: true },
+        data:  { isActive: false },
+      })
+      // Create new manual source if there is a value
+      if (value !== null && value !== '') {
+        await prisma.fieldSource.create({
+          data: { playerId, fieldName, value, sourceName: 'manual', sourceUrl: null, isActive: true },
+        })
+      }
+    }
+  }
+
+  // Handle custom fields (extra fields not in the Player model)
+  const customFieldUpdates: Record<string, string> = body.customFields ?? {}
+  for (const [fieldName, rawValue] of Object.entries(customFieldUpdates)) {
+    const value = String(rawValue ?? '').trim()
+    const existing = await prisma.customField.findFirst({ where: { playerId, fieldName } })
+    if (value === '') {
+      if (existing) await prisma.customField.delete({ where: { id: existing.id } })
+    } else if (existing) {
+      await prisma.customField.update({ where: { id: existing.id }, data: { value } })
+    } else {
+      await prisma.customField.create({ data: { playerId, fieldName, value } })
+    }
+  }
+
   return NextResponse.json(player)
 }
 

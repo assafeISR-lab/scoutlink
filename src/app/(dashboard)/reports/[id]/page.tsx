@@ -15,14 +15,14 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   if (!report || report.agentId !== user.id) notFound()
 
   return (
-    <div className="min-h-screen text-white flex" style={{ background: 'linear-gradient(135deg, #0a0d14 0%, #0f1117 50%, #0a0f0d 100%)' }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
       <Sidebar
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
         userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
         userId={user.id}
       />
-      <main className="flex-1 p-8 overflow-auto">
+      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-white/30 mb-6">
           <Link href="/reports" className="hover:text-white/60 transition-colors">Reports</Link>

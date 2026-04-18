@@ -1,7 +1,92 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { getScraperForUrl, type ScrapedPlayer } from '@/lib/scrapers'
+import { getScraperForUrl, type ScrapedPlayer, type MergedPlayer } from '@/lib/scrapers'
+
+const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+const normName = (n: string) => stripAccents(n.trim().toLowerCase().replace(/\s+/g, ' '))
+
+function buildMerged(group: ScrapedPlayer[]): MergedPlayer {
+  const tm = group.find(p => p.sourceName === 'Transfermarkt')
+  const sc = group.find(p => p.sourceName === 'Sofascore')
+  const fm = group.find(p => p.sourceName === 'FMInside')
+  const first = group[0]
+
+  // DOB: Sofascore has exact ms-precision timestamp, TM has exact from profile page
+  const dob = sc?.dateOfBirth ?? tm?.dateOfBirth ?? null
+  const key = `${normName(first.name)}-${dob ?? 'x'}`
+
+  return {
+    id: key,
+    name: tm?.name ?? sc?.name ?? fm?.name ?? first.name,
+    nationality: tm?.nationality ?? sc?.nationality ?? fm?.nationality ?? null,
+    team: tm?.team ?? sc?.team ?? fm?.team ?? null,
+    // Sofascore is most precise for position; TM position from search list is approximate
+    position: sc?.position ?? tm?.position ?? fm?.position ?? null,
+    dateOfBirth: dob,
+    heightCm: sc?.heightCm ?? tm?.heightCm ?? null,
+    weightKg: sc?.weightKg ?? tm?.weightKg ?? null,
+    photo: tm?.photo ?? sc?.photo ?? fm?.photo ?? null,
+    description: tm?.description ?? sc?.description ?? fm?.description ?? null,
+    marketValue: tm?.marketValue ?? null,
+    transfermarktUrl: tm?.sourceUrl ?? null,
+    sofascoreUrl: sc?.sourceUrl ?? null,
+    fmInsideUrl: fm?.sourceUrl ?? null,
+    sources: [...new Set(group.map(p => p.sourceName))],
+  }
+}
+
+function mergePlayers(allResults: ScrapedPlayer[]): MergedPlayer[] {
+  // Group raw results by normalised name
+  const byName = new Map<string, ScrapedPlayer[]>()
+  for (const p of allResults) {
+    const key = normName(p.name)
+    if (!byName.has(key)) byName.set(key, [])
+    byName.get(key)!.push(p)
+  }
+
+  const merged: MergedPlayer[] = []
+
+  for (const [, group] of byName) {
+    const withDob = group.filter(p => p.dateOfBirth)
+    const noDob   = group.filter(p => !p.dateOfBirth)
+    const uniqueDobs = [...new Set(withDob.map(p => p.dateOfBirth!))]
+
+    if (uniqueDobs.length <= 1) {
+      // All same DOB (or all null) → one merged card
+      merged.push(buildMerged(group))
+    } else {
+      // Multiple DOBs = different players with same name; one card per DOB
+      const assignedNoDob = new Set<ScrapedPlayer>()
+      for (const dob of uniqueDobs) {
+        const dobGroup = withDob.filter(p => p.dateOfBirth === dob)
+        // Assign null-DOB results (FMInside) to this DOB group if team name matches
+        const matched = noDob.filter(p =>
+          !assignedNoDob.has(p) &&
+          p.team &&
+          dobGroup.some(d => d.team?.toLowerCase() === p.team!.toLowerCase())
+        )
+        matched.forEach(p => assignedNoDob.add(p))
+        merged.push(buildMerged([...dobGroup, ...matched]))
+      }
+      // Remaining unassigned null-DOB results → add to first group
+      const unassigned = noDob.filter(p => !assignedNoDob.has(p))
+      if (unassigned.length > 0 && merged.length > 0) {
+        const first = merged[0]
+        const extra = buildMerged([
+          ...withDob.filter(p => p.dateOfBirth === uniqueDobs[0]),
+          ...unassigned,
+        ])
+        // Merge extra into first
+        merged[0] = { ...first, ...Object.fromEntries(
+          Object.entries(extra).filter(([k, v]) => v != null && first[k as keyof MergedPlayer] == null)
+        ) as Partial<MergedPlayer> }
+      }
+    }
+  }
+
+  return merged
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -103,7 +188,7 @@ export async function GET(req: NextRequest) {
     return nameWords.length > 0 && nameWords.every(w => queryNorm.includes(w))
   }
 
-  const players: ScrapedPlayer[] = []
+  const rawPlayers: ScrapedPlayer[] = []
   const siteStats: { name: string; url: string; count: number; error: boolean; noScraper?: boolean }[] = []
 
   // Sites that were scraped
@@ -113,7 +198,7 @@ export async function GET(req: NextRequest) {
     scrapedUrls.add(entry.url)
     if (result.status === 'fulfilled') {
       const filtered = result.value.filter(p => nameMatchesQuery(p.name))
-      players.push(...filtered)
+      rawPlayers.push(...filtered)
       siteStats.push({ name: entry.scraper.name, url: entry.url, count: filtered.length, error: false })
     } else {
       siteStats.push({ name: entry.scraper.name, url: entry.url, count: 0, error: true })
@@ -127,6 +212,9 @@ export async function GET(req: NextRequest) {
       siteStats.push({ name: site.name || hostname, url: site.url, count: 0, error: false, noScraper: true })
     }
   }
+
+  // Merge raw results from all sources into unified player records
+  const players = mergePlayers(rawPlayers)
 
   // Log search activity (fire and forget)
   prisma.activityLog.create({ data: { agentId: user.id, action: 'search', detail: query } }).catch(() => {})

@@ -3,10 +3,9 @@ import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Sidebar from '@/components/Sidebar'
 import Link from 'next/link'
-import EditPlayerButton from './EditPlayerButton'
 import DeletePlayerButton from './DeletePlayerButton'
-import NotesSection from './NotesSection'
 import CreatePlayerReportButton from './CreatePlayerReportButton'
+import PlayerProfileCard from './PlayerProfileCard'
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string; playerId: string }> }) {
   const { id: databaseId, playerId } = await params
@@ -20,6 +19,8 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
       include: {
         notes: { include: { agent: true }, orderBy: { createdAt: 'desc' } },
         fieldSources: { where: { isActive: true } },
+        addedBy: { select: { fullName: true } },
+        customFields: true,
       },
     }),
     prisma.playerDatabase.findUnique({
@@ -32,50 +33,47 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const isOwner = db.ownerId === user.id
   if (!isOwner && db.access.length === 0) redirect('/databases')
 
+  const canWrite = isOwner || db.access[0]?.permission === 'contributor'
+
   const age = player.dateOfBirth
     ? Math.floor((Date.now() - new Date(player.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
 
   return (
-    <div className="min-h-screen text-white flex" style={{ background: 'linear-gradient(135deg, #0a0d14 0%, #0f1117 50%, #0a0f0d 100%)' }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
       <Sidebar
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
         userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
         userId={user.id}
+        playerName={`${player.firstName} ${player.lastName}`}
+        playerDatabaseId={databaseId}
       />
 
-      <main className="flex-1 p-8 overflow-auto">
+      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-white/30 mb-6">
-          <Link href="/databases" className="hover:text-white/60 transition-colors">Players Watch List</Link>
+        <div className="flex items-center gap-2 text-sm mb-6" style={{ color: 'var(--text-faint)' }}>
+          <Link href="/databases" className="hover:text-[#00c896] transition-colors">Players Watch List</Link>
           <span>/</span>
-          <Link href={`/databases/${databaseId}`} className="hover:text-white/60 transition-colors">{db.name}</Link>
+          <Link href={`/databases/${databaseId}`} className="hover:text-[#00c896] transition-colors">{db.name}</Link>
           <span>/</span>
-          <span className="text-white/60">{player.firstName} {player.lastName}</span>
+          <span style={{ color: 'var(--text-muted)' }}>{player.firstName} {player.lastName}</span>
         </div>
 
-        {/* Player header */}
-        <div className="rounded-2xl border border-white/5 p-6 mb-6 flex items-start justify-between gap-4" style={{
-          background: 'linear-gradient(135deg, #141720 0%, #111318 100%)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-        }}>
-          <div className="flex items-start gap-5">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold text-black flex-shrink-0" style={{
-              background: 'linear-gradient(135deg, #00c896, #00a878)',
-              boxShadow: '0 0 20px rgba(0,200,150,0.3)'
-            }}>
-              {player.firstName[0]}{player.lastName[0]}
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-white">{player.firstName} {player.middleName ? `${player.middleName} ` : ''}{player.lastName}</h1>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                {player.position && <span className="text-sm px-2.5 py-0.5 rounded-full" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{player.position}</span>}
-                {player.nationality && <span className="text-sm text-white/40">{player.nationality}</span>}
-                {age && <span className="text-sm text-white/40">{age} years old</span>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
+        {/* Page header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-white mb-1">Player Card</h1>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{player.firstName} {player.lastName} · {db.name}</p>
+        </div>
+
+        <PlayerProfileCard
+          player={player}
+          addedByName={player.addedBy.fullName}
+          currentUserId={user.id}
+          databaseId={databaseId}
+          canWrite={canWrite}
+          actionButtons={
+            <>
               <CreatePlayerReportButton
                 databaseId={databaseId}
                 databaseName={db.name}
@@ -103,94 +101,13 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
                   })),
                 }}
               />
-              {(isOwner || db.access[0]?.permission === 'contributor') && (
-                <>
-                  <EditPlayerButton databaseId={databaseId} playerId={playerId} player={player} />
-                  <DeletePlayerButton databaseId={databaseId} playerId={playerId} playerName={`${player.firstName} ${player.lastName}`} />
-                </>
+              {canWrite && (
+                <DeletePlayerButton databaseId={databaseId} playerId={playerId} playerName={`${player.firstName} ${player.lastName}`} />
               )}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Stats */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic info */}
-            <InfoCard title="Player Information">
-              <div className="grid grid-cols-2 gap-4">
-                <InfoRow label="Club" value={player.clubName} source={player.fieldSources.find(s => s.fieldName === 'clubName')} />
-                <InfoRow label="Agent" value={player.agentName} />
-                <InfoRow label="Date of Birth" value={player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : null} source={player.fieldSources.find(s => s.fieldName === 'dateOfBirth')} />
-                <InfoRow label="Nationality" value={player.nationality} source={player.fieldSources.find(s => s.fieldName === 'nationality')} />
-                <InfoRow label="Height" value={player.heightCm ? `${player.heightCm} cm` : null} source={player.fieldSources.find(s => s.fieldName === 'heightCm')} />
-                <InfoRow label="Weight" value={player.weightKg ? `${player.weightKg} kg` : null} source={player.fieldSources.find(s => s.fieldName === 'weightKg')} />
-                <InfoRow label="Market Value" value={player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(1)}M` : null} />
-                <InfoRow label="Plays National Team" value={player.playsNational ? 'Yes' : 'No'} />
-              </div>
-            </InfoCard>
-
-            {/* Career stats */}
-            <InfoCard title="Career Statistics">
-              <div className="grid grid-cols-2 gap-4">
-                <InfoRow label="Goals This Year" value={player.goalsThisYear?.toString()} />
-                <InfoRow label="Total Goals" value={player.totalGoals?.toString()} />
-                <InfoRow label="Total Games" value={player.totalGames?.toString()} />
-                <InfoRow label="National Team Games" value={player.nationalGames?.toString()} />
-                <InfoRow label="Years in Pro Club" value={player.yearsInProClub?.toString()} />
-              </div>
-            </InfoCard>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <NotesSection
-              notes={player.notes}
-              currentUserId={user.id}
-              databaseId={databaseId}
-              playerId={playerId}
-              canWrite={isOwner || db.access[0]?.permission === 'contributor'}
-            />
-          </div>
-        </div>
+            </>
+          }
+        />
       </main>
-    </div>
-  )
-}
-
-function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-white/5 p-5" style={{
-      background: 'linear-gradient(135deg, #141720 0%, #111318 100%)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-    }}>
-      <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">{title}</h2>
-      {children}
-    </div>
-  )
-}
-
-function InfoRow({ label, value, source }: {
-  label: string
-  value: string | null | undefined
-  source?: { sourceName: string; sourceUrl: string | null } | null
-}) {
-  return (
-    <div>
-      <p className="text-xs text-white/30 mb-0.5">{label}</p>
-      <p className="text-sm text-white">{value ?? <span className="text-white/20">—</span>}</p>
-      {source && value && (
-        <p className="text-[10px] text-white/25 mt-0.5">
-          Source:{' '}
-          {source.sourceUrl ? (
-            <a href={source.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-[#00c896] transition-colors underline underline-offset-2">
-              {source.sourceName} ↗
-            </a>
-          ) : (
-            <span className="text-white/40">{source.sourceName}</span>
-          )}
-        </p>
-      )}
     </div>
   )
 }

@@ -68,7 +68,7 @@ export default function BrowseFootballSites({ onClose, onAdd }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-2xl border border-white/10 flex flex-col" style={{ background: '#141720', maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-2xl rounded-2xl border border-white/10 flex flex-col" style={{ background: 'var(--card-bg)', maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 flex-shrink-0">
@@ -88,7 +88,7 @@ export default function BrowseFootballSites({ onClose, onAdd }: Props) {
               className="px-4 py-2 rounded-xl text-sm font-medium transition-all capitalize"
               style={tab === t
                 ? { background: '#00c896', color: '#000' }
-                : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}
+                : { background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
             >
               {t === 'association' ? '🏛 National Associations' : '⚽ Football Clubs'}
             </button>
@@ -109,9 +109,9 @@ export default function BrowseFootballSites({ onClose, onAdd }: Props) {
                     onChange={e => setCountrySearch(e.target.value)}
                     placeholder="Search country or association..."
                     className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none"
-                    style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}
                     onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-                    onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
                   />
                 </div>
               </div>
@@ -123,7 +123,7 @@ export default function BrowseFootballSites({ onClose, onAdd }: Props) {
                     className="px-3 py-1 rounded-full text-xs font-medium transition-all"
                     style={confFilter === c
                       ? { background: '#6c8fff', color: '#fff' }
-                      : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.35)' }}
+                      : { background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
                   >
                     {c}
                   </button>
@@ -138,7 +138,7 @@ export default function BrowseFootballSites({ onClose, onAdd }: Props) {
                 {filteredAssociations.map(fa => {
                   const added = addedIds.has(fa.url)
                   return (
-                    <div key={fa.url} className="flex items-center gap-3 px-4 py-3 rounded-xl group" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div key={fa.url} className="flex items-center gap-3 px-4 py-3 rounded-xl group" style={{ background: 'var(--subtle-bg)', border: '1px solid var(--border)' }}>
                       <img src={`https://www.google.com/s2/favicons?domain=${new URL(fa.url).hostname}&sz=32`} alt="" className="w-5 h-5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{fa.country}</p>
@@ -170,9 +170,9 @@ export default function BrowseFootballSites({ onClose, onAdd }: Props) {
                   onChange={e => setClubSearch(e.target.value)}
                   placeholder="Type a club name (e.g. Arsenal, Barcelona...)"
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none"
-                  style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}
                   onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-                  onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
                   autoFocus
                 />
               </div>
@@ -194,10 +194,10 @@ export default function BrowseFootballSites({ onClose, onAdd }: Props) {
                 {clubResults.map(club => {
                   const added = addedIds.has(club.id)
                   return (
-                    <div key={club.id} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div key={club.id} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: 'var(--subtle-bg)', border: '1px solid var(--border)' }}>
                       {club.badge
                         ? <img src={club.badge} alt="" className="w-7 h-7 object-contain flex-shrink-0" />
-                        : <div className="w-7 h-7 rounded-full flex-shrink-0" style={{ background: 'rgba(255,255,255,0.05)' }} />
+                        : <div className="w-7 h-7 rounded-full flex-shrink-0" style={{ background: 'var(--hover-bg)' }} />
                       }
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{club.name}</p>

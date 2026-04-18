@@ -34,11 +34,12 @@ model Agent {
 
 // ─── Player Database ─────────────────────────────────────────────────────────
 model PlayerDatabase {
-  id        String   @id @default(cuid())
-  name      String
-  ownerId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  ownerId      String
+  columnConfig Json?    // string[] of visible column keys; null = use global settings
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   owner     Agent            @relation("DatabaseOwner", fields: [ownerId], references: [id])
   access    DatabaseAccess[]

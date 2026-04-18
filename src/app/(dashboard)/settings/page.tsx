@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Sidebar from '@/components/Sidebar'
-import WebsitesManager from './WebsitesManager'
+import SettingsClient from './SettingsClient'
 
 const DEFAULT_WEBSITES = [
   { name: 'Transfermarkt', url: 'https://www.transfermarkt.com', requiresLogin: false },
@@ -44,7 +44,7 @@ export default async function SettingsPage() {
   })
 
   return (
-    <div className="min-h-screen text-white flex" style={{ background: 'linear-gradient(135deg, #0a0d14 0%, #0f1117 50%, #0a0f0d 100%)' }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
       <Sidebar
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
@@ -52,15 +52,13 @@ export default async function SettingsPage() {
         userId={user.id}
       />
 
-      <main className="flex-1 p-8 overflow-auto">
+      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-1">Settings</h1>
-          <p style={{ color: 'rgba(255,255,255,0.3)' }} className="text-sm">Manage your scouting preferences</p>
+          <p style={{ color: 'var(--text-muted)' }} className="text-sm">Manage your scouting preferences</p>
         </div>
 
-        <div className="w-full">
-          <WebsitesManager websites={websites} />
-        </div>
+        <SettingsClient websites={websites} />
       </main>
     </div>
   )

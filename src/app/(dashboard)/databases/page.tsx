@@ -23,7 +23,7 @@ export default async function DatabasesPage() {
   ])
 
   return (
-    <div className="min-h-screen text-white flex" style={{ background: 'linear-gradient(135deg, #0a0d14 0%, #0f1117 50%, #0a0f0d 100%)' }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
       <Sidebar
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
@@ -31,11 +31,11 @@ export default async function DatabasesPage() {
         userId={user.id}
       />
 
-      <main className="flex-1 p-8 overflow-auto">
+      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white mb-1">My Players Watch List</h1>
-            <p style={{ color: 'rgba(255,255,255,0.3)' }} className="text-sm">Manage your scouting Lists</p>
+            <p style={{ color: 'var(--text-muted)' }} className="text-sm">Manage your scouting Lists</p>
           </div>
           <CreateDatabaseButton />
         </div>
@@ -101,8 +101,8 @@ function DatabaseCard({ id, name, playerCount, sharedWith, permission, ownerName
 
   return (
     <a href={`/databases/${id}`} className="block rounded-2xl border border-white/5 p-5 transition-all duration-200 hover:border-white/10 hover:scale-[1.01]" style={{
-      background: 'linear-gradient(135deg, #141720 0%, #111318 100%)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      background: 'var(--card-bg)',
+      boxShadow: 'var(--card-shadow)',
     }}>
       <div className="flex items-start justify-between mb-4">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>

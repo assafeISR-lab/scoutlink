@@ -14,7 +14,10 @@ export default async function DatabaseDetailPage({ params }: { params: Promise<{
     where: { id },
     include: {
       owner: true,
-      players: { orderBy: { createdAt: 'desc' } },
+      players: {
+        orderBy: { createdAt: 'desc' },
+        include: { customFields: { select: { fieldName: true, value: true } } },
+      },
       access: { where: { agentId: user.id } },
     },
   })
@@ -31,17 +34,18 @@ export default async function DatabaseDetailPage({ params }: { params: Promise<{
     ...p,
     dateOfBirth: p.dateOfBirth?.toISOString() ?? null,
     createdAt: p.createdAt.toISOString(),
+    customFields: p.customFields.map(cf => ({ fieldName: cf.fieldName, value: cf.value })),
   }))
 
   return (
-    <div className="min-h-screen text-white flex" style={{ background: 'linear-gradient(135deg, #0a0d14 0%, #0f1117 50%, #0a0f0d 100%)' }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
       <Sidebar
         userName={user.user_metadata?.full_name || 'Agent'}
         userEmail={user.email || ''}
         userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
         userId={user.id}
       />
-      <main className="flex-1 p-8 overflow-auto">
+      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
         <DatabasePageClient
           players={players}
           databaseId={id}
@@ -49,6 +53,7 @@ export default async function DatabaseDetailPage({ params }: { params: Promise<{
           ownerName={db.owner.fullName ?? ''}
           isOwner={isOwner}
           canEdit={canEdit}
+          columnConfig={Array.isArray(db.columnConfig) ? db.columnConfig as string[] : null}
         />
       </main>
     </div>

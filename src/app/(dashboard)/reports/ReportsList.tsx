@@ -28,7 +28,7 @@ export default function ReportsList({ reports: initial }: { reports: Report[] })
 
   if (reports.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center" style={{ background: 'rgba(255,255,255,0.01)' }}>
+      <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center" style={{ background: 'var(--subtle-bg)' }}>
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#00c89615', border: '1px solid #00c89630' }}>
           <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#00c896">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
@@ -46,7 +46,7 @@ export default function ReportsList({ reports: initial }: { reports: Report[] })
         <div
           key={report.id}
           className="rounded-2xl border border-white/8 flex items-center justify-between px-6 py-4 group"
-          style={{ background: 'rgba(255,255,255,0.03)' }}
+          style={{ background: 'var(--card-bg)' }}
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#00c89615', border: '1px solid #00c89630' }}>

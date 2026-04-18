@@ -133,14 +133,14 @@ export default function CalendarClient() {
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <button onClick={goToday} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <button onClick={goToday} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors text-white/50" style={{ background: 'var(--hover-bg)', border: '1px solid var(--border)' }}>
               Today
             </button>
             <div className="flex items-center gap-1">
-              <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
               </button>
-              <button onClick={() => navigate(1)} className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <button onClick={() => navigate(1)} className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
               </button>
             </div>
@@ -152,8 +152,8 @@ export default function CalendarClient() {
             <div className="flex items-center rounded-xl overflow-hidden border border-white/8 text-xs">
               {(['day', 'week', 'month', 'year'] as ViewMode[]).map(v => (
                 <button key={v} onClick={() => setView(v)}
-                  className="px-3 py-1.5 font-medium capitalize transition-colors"
-                  style={{ background: view === v ? '#00c896' : 'rgba(255,255,255,0.04)', color: view === v ? '#000' : 'rgba(255,255,255,0.4)' }}>
+                  className={`px-3 py-1.5 font-medium capitalize transition-colors ${view === v ? 'text-black' : 'text-white/40'}`}
+                  style={{ background: view === v ? '#00c896' : 'var(--hover-bg)' }}>
                   {v}
                 </button>
               ))}
@@ -223,7 +223,7 @@ function MonthView({ current, selected, onSelect, dayMap }: {
   while (cells.length % 7 !== 0) cells.push(null)
 
   return (
-    <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: 'linear-gradient(135deg, #141720 0%, #111318 100%)' }}>
+    <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: 'var(--card-bg)' }}>
       {/* Day headers */}
       <div className="grid grid-cols-7 border-b border-white/5">
         {DAYS.map(d => (
@@ -251,12 +251,12 @@ function MonthView({ current, selected, onSelect, dayMap }: {
               }}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium"
-                  style={{
-                    background: isToday ? '#00c896' : 'transparent',
-                    color: isToday ? '#000' : isSelected ? '#00c896' : 'rgba(255,255,255,0.6)',
-                    fontWeight: isToday || isSelected ? 700 : 400,
-                  }}>
+                <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${
+                  isToday ? 'text-black font-bold' :
+                  isSelected ? 'text-[#00c896] font-bold' :
+                  'text-white/60 font-medium'
+                }`}
+                  style={{ background: isToday ? '#00c896' : 'transparent' }}>
                   {date.getDate()}
                 </span>
               </div>
@@ -271,7 +271,7 @@ function MonthView({ current, selected, onSelect, dayMap }: {
                     )
                   })}
                   {data.notes.slice(0, 1).map(n => (
-                    <div key={n.id} className="text-[10px] px-1.5 py-0.5 rounded truncate" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>
+                    <div key={n.id} className="text-[10px] px-1.5 py-0.5 rounded truncate" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
                       📝 {n.player.firstName} {n.player.lastName}
                     </div>
                   ))}
@@ -306,7 +306,7 @@ function WeekView({ current, selected, onSelect, dayMap }: {
   })
 
   return (
-    <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: 'linear-gradient(135deg, #141720 0%, #111318 100%)' }}>
+    <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: 'var(--card-bg)' }}>
       <div className="grid grid-cols-7 border-b border-white/5">
         {days.map((date, i) => {
           const isToday = isSameDay(date, today)
@@ -315,8 +315,12 @@ function WeekView({ current, selected, onSelect, dayMap }: {
             <div key={i} onClick={() => onSelect(date)} className="p-3 text-center cursor-pointer border-r border-white/5 last:border-r-0 transition-colors"
               style={{ background: isSelected ? 'rgba(0,200,150,0.06)' : undefined }}>
               <p className="text-xs text-white/30 mb-1">{DAYS[date.getDay()]}</p>
-              <div className="w-8 h-8 mx-auto flex items-center justify-center rounded-full text-sm font-bold"
-                style={{ background: isToday ? '#00c896' : 'transparent', color: isToday ? '#000' : isSelected ? '#00c896' : 'rgba(255,255,255,0.8)' }}>
+              <div className={`w-8 h-8 mx-auto flex items-center justify-center rounded-full text-sm font-bold ${
+                isToday ? 'text-black' :
+                isSelected ? 'text-[#00c896]' :
+                'text-white/80'
+              }`}
+                style={{ background: isToday ? '#00c896' : 'transparent' }}>
                 {date.getDate()}
               </div>
             </div>
@@ -340,7 +344,7 @@ function WeekView({ current, selected, onSelect, dayMap }: {
                 )
               })}
               {data?.notes.map(n => (
-                <div key={n.id} className="text-[10px] px-1.5 py-1 rounded mb-1 truncate" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)' }}>
+                <div key={n.id} className="text-[10px] px-1.5 py-1 rounded mb-1 truncate" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
                   📝 {n.player.firstName} {n.player.lastName[0]}.
                 </div>
               ))}
@@ -359,7 +363,7 @@ function DayView({ date, events, notes, onDeleteEvent }: {
   onDeleteEvent: () => void
 }) {
   return (
-    <div className="rounded-2xl border border-white/5 p-6" style={{ background: 'linear-gradient(135deg, #141720 0%, #111318 100%)' }}>
+    <div className="rounded-2xl border border-white/5 p-6" style={{ background: 'var(--card-bg)' }}>
       {events.length === 0 && notes.length === 0 ? (
         <p className="text-white/20 text-sm text-center py-12">No events or notes for this day</p>
       ) : (
@@ -383,7 +387,7 @@ function DaySidebar({ date, events, notes, onAdd, onDeleteEvent }: {
   const total = events.length + notes.length
 
   return (
-    <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: 'linear-gradient(135deg, #141720 0%, #111318 100%)' }}>
+    <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: 'var(--card-bg)' }}>
       <div className="p-4 border-b border-white/5">
         <div className="flex items-center justify-between mb-1">
           <p className="text-sm font-semibold text-white">
@@ -444,8 +448,8 @@ function YearView({ current, onSelectMonth, dayMap }: {
         return (
           <div key={mi} onClick={() => onSelectMonth(new Date(current.getFullYear(), mi, 1))}
             className="rounded-2xl border border-white/5 p-3 cursor-pointer transition-all hover:border-white/10"
-            style={{ background: isCurrentMonth ? 'rgba(0,200,150,0.04)' : 'rgba(255,255,255,0.02)', borderColor: isCurrentMonth ? 'rgba(0,200,150,0.2)' : undefined }}>
-            <p className="text-xs font-semibold mb-2" style={{ color: isCurrentMonth ? '#00c896' : 'rgba(255,255,255,0.5)' }}>{month}</p>
+            style={{ background: isCurrentMonth ? 'rgba(0,200,150,0.04)' : 'var(--subtle-bg)', borderColor: isCurrentMonth ? 'rgba(0,200,150,0.2)' : undefined }}>
+            <p className={`text-xs font-semibold mb-2 ${isCurrentMonth ? 'text-[#00c896]' : 'text-white/50'}`}>{month}</p>
             <div className="grid grid-cols-7 gap-px">
               {['S','M','T','W','T','F','S'].map((d, i) => (
                 <div key={i} className="text-[8px] text-center text-white/20">{d}</div>
@@ -457,8 +461,8 @@ function YearView({ current, onSelectMonth, dayMap }: {
                 const isToday = today.getFullYear() === current.getFullYear() && today.getMonth() === mi && today.getDate() === d
                 return (
                   <div key={i} className="relative flex items-center justify-center">
-                    <span className="text-[9px] w-4 h-4 flex items-center justify-center rounded-full"
-                      style={{ background: isToday ? '#00c896' : 'transparent', color: isToday ? '#000' : 'rgba(255,255,255,0.4)', fontWeight: isToday ? 700 : 400 }}>
+                    <span className={`text-[9px] w-4 h-4 flex items-center justify-center rounded-full ${isToday ? 'text-black font-bold' : 'text-white/40'}`}
+                      style={{ background: isToday ? '#00c896' : 'transparent' }}>
                       {d}
                     </span>
                     {hasData && !isToday && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#00c896]" />}
@@ -492,8 +496,8 @@ function EventItem({ event, onDelete, compact }: { event: CalendarEvent; onDelet
       <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: et.color }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: et.color }}>{et.label}</span>
-          <span className="text-[10px] text-white/30">{time}</span>
+          <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: et.color }}>{et.label}</div>
+          <div className="text-[10px] text-white/30">{time}</div>
         </div>
         <p className={`font-medium text-white ${compact ? 'text-xs' : 'text-sm'} truncate`}>{event.title}</p>
         {event.notes && !compact && <p className="text-xs text-white/40 mt-0.5 line-clamp-2">{event.notes}</p>}
@@ -512,7 +516,7 @@ function NoteItem({ note, compact }: { note: PlayerNote; compact?: boolean }) {
   return (
     <Link href={`/databases/${note.player.databaseId}/players/${note.player.id}`}
       className="flex items-start gap-2.5 p-2.5 rounded-xl transition-colors"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      style={{ background: 'var(--hover-bg)', border: '1px solid var(--border)' }}>
       <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-black flex-shrink-0 mt-0.5"
         style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
         {note.player.firstName[0]}{note.player.lastName[0]}
@@ -563,7 +567,7 @@ function AddEventModal({ defaultDate, onClose, onSave }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl p-6 border border-white/10" style={{ background: '#141720' }} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-2xl p-6 border border-white/10" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-semibold text-white mb-5">Add Event</h2>
 
         <div className="flex flex-col gap-3">
@@ -571,9 +575,9 @@ function AddEventModal({ defaultDate, onClose, onSave }: {
             <label className="block text-xs text-white/40 mb-1">Title *</label>
             <input autoFocus value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Meeting with agent"
               className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none"
-              style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)' }}
+              style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}
               onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
             />
           </div>
 
@@ -585,9 +589,9 @@ function AddEventModal({ defaultDate, onClose, onSave }: {
                 <button key={t.value} onClick={() => set('type', t.value)}
                   className="py-1.5 rounded-lg text-[10px] font-semibold transition-all"
                   style={{
-                    background: form.type === t.value ? t.bg : 'rgba(255,255,255,0.04)',
-                    color: form.type === t.value ? t.color : 'rgba(255,255,255,0.3)',
-                    border: `1px solid ${form.type === t.value ? t.color + '40' : 'rgba(255,255,255,0.06)'}`,
+                    background: form.type === t.value ? t.bg : 'var(--hover-bg)',
+                    color: form.type === t.value ? t.color : 'var(--text-faint)',
+                    border: `1px solid ${form.type === t.value ? t.color + '40' : 'var(--border)'}`,
                   }}>
                   {t.label}
                 </button>
@@ -599,9 +603,9 @@ function AddEventModal({ defaultDate, onClose, onSave }: {
             <label className="block text-xs text-white/40 mb-1">Date & Time</label>
             <input type="datetime-local" value={form.startAt} onChange={e => set('startAt', e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl text-sm text-white focus:outline-none"
-              style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)', colorScheme: 'dark' }}
+              style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', colorScheme: 'dark' }}
               onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
             />
           </div>
 
@@ -609,16 +613,16 @@ function AddEventModal({ defaultDate, onClose, onSave }: {
             <label className="block text-xs text-white/40 mb-1">Notes (optional)</label>
             <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} placeholder="Any additional notes..."
               className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder-white/20 focus:outline-none resize-none"
-              style={{ background: '#0f1117', border: '1px solid rgba(255,255,255,0.1)' }}
+              style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}
               onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
             />
           </div>
 
           {error && <p className="text-red-400 text-xs">{error}</p>}
 
           <div className="flex gap-3 mt-1">
-            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/40" style={{ background: 'rgba(255,255,255,0.05)' }}>Cancel</button>
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/40" style={{ background: 'var(--hover-bg)' }}>Cancel</button>
             <button onClick={handleSave} disabled={loading || !form.title.trim()} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
               {loading ? 'Saving...' : 'Add Event'}
             </button>

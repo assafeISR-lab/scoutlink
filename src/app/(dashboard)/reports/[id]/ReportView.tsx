@@ -122,7 +122,7 @@ export default function ReportView({ report }: { report: ReportData }) {
       <div className="flex items-start justify-between mb-8 print:hidden">
         <div>
           <h1 className="text-3xl font-bold text-white mb-1">{report.name}</h1>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p className="text-sm" style={{ color: 'var(--text-faint)' }}>
             {report.databaseName} · {report.playerCount} player{report.playerCount !== 1 ? 's' : ''} · Created {new Date(report.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
@@ -130,7 +130,7 @@ export default function ReportView({ report }: { report: ReportData }) {
           <button
             onClick={handleDownloadCSV}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
+            style={{ background: 'var(--hover-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
@@ -181,7 +181,7 @@ export default function ReportView({ report }: { report: ReportData }) {
         <div className="rounded-2xl border border-white/8 overflow-hidden print:border print:border-gray-300">
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.07)' }} className="print:bg-gray-100">
+              <tr style={{ background: 'var(--hover-bg)', borderBottom: '1px solid var(--border)' }} className="print:bg-gray-100">
                 {activeCols.map(col => (
                   <th key={col.key} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white/40 print:text-gray-600">
                     {col.label}
@@ -193,7 +193,7 @@ export default function ReportView({ report }: { report: ReportData }) {
               {report.players.map((player, i) => (
                 <tr
                   key={player.id ?? i}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  style={{ borderBottom: '1px solid var(--border)' }}
                   className="hover:bg-white/[0.02] transition-colors print:border-b print:border-gray-200"
                 >
                   {activeCols.map(col => {
@@ -223,7 +223,7 @@ export default function ReportView({ report }: { report: ReportData }) {
           <h2 className="text-sm font-semibold text-white/40 uppercase tracking-widest mb-4">Scouting Notes</h2>
           <div className="space-y-3">
             {allNotes.map((note, i) => (
-              <div key={i} className="rounded-xl border border-white/8 p-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <div key={i} className="rounded-xl border border-white/8 p-4" style={{ background: 'var(--subtle-bg)' }}>
                 {report.playerCount > 1 && (
                   <p className="text-xs font-semibold text-white/40 mb-1">{note.playerName}</p>
                 )}

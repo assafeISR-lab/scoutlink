@@ -1,8 +1,42 @@
 @import "tailwindcss";
 
+/* ── Light mode (default) ─────────────────────────────────────── */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  --page-bg: linear-gradient(135deg, #f0f4f8 0%, #e8edf5 50%, #f0f5f2 100%);
+  --card-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  --card-solid: #ffffff;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --text-primary: #0f172a;
+  --text-secondary: rgba(15, 23, 42, 0.65);
+  --text-muted: rgba(15, 23, 42, 0.45);
+  --text-faint: rgba(15, 23, 42, 0.28);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: #e2e8f0;
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --subtle-bg: rgba(0, 0, 0, 0.025);
+  --input-bg: #f8fafc;
+  --input-border: #e2e8f0;
+}
+
+/* ── Dark mode ────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --page-bg: linear-gradient(135deg, #0a0d14 0%, #0f1117 50%, #0a0f0d 100%);
+  --card-bg: linear-gradient(135deg, #141720 0%, #111318 100%);
+  --card-solid: #1a1d27;
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --text-faint: rgba(255, 255, 255, 0.22);
+  --border: rgba(255, 255, 255, 0.05);
+  --border-strong: #2a2d3a;
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --subtle-bg: rgba(255, 255, 255, 0.02);
+  --input-bg: #0f1117;
+  --input-border: #2a2d3a;
 }
 
 @theme inline {
@@ -12,11 +46,18 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Tailwind color token override for themed main content ────── */
+/*
+  In light mode, override Tailwind's --color-white so that:
+    text-white        → var(--text-primary)   dark navy
+    text-white/60     → 60% dark navy          medium gray
+    text-white/30     → 30% dark navy          muted gray
+    border-white/5    → 5%  dark navy          subtle border
+    hover:bg-white/5  → 5%  dark navy          gentle hover
+  The sidebar is NOT inside .main-content so it stays white always.
+*/
+[data-theme="light"] .main-content {
+  --color-white: var(--text-primary);
 }
 
 body {
