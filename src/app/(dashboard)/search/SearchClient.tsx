@@ -253,7 +253,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
                   </div>
                 ) : site.noScraper ? (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" className="opacity-20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    <svg className="w-3 h-3 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                   </div>
                 ) : site.count > 0 ? (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
@@ -261,7 +261,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
                   </div>
                 ) : (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" className="opacity-20"><path d="M19 13H5v-2h14v2z"/></svg>
+                    <svg className="w-3 h-3 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
                   </div>
                 )}
                 {/* Site info */}
@@ -400,7 +400,7 @@ function ParameterCoveragePanel({ results, searched, loading, visibleParams, cus
                   </div>
                 ) : (
                   <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
-                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor" className="opacity-20"><path d="M19 13H5v-2h14v2z"/></svg>
+                    <svg className="w-2.5 h-2.5 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
                   </div>
                 )}
                 <span className="text-xs flex-1" style={{ color: found ? 'var(--text-secondary)' : 'var(--text-faint)' }}>
