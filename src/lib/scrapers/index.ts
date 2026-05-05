@@ -1,17 +1,13 @@
 import type { SiteScraper } from './types'
-import { theSportsDbScraper } from './thesportsdb'
 import { sofascoreScraper } from './sofascore'
 import { transfermarktScraper } from './transfermarkt'
-import { wikipediaScraper } from './wikipedia'
 import { fmInsideScraper } from './fminside'
 
 export { type ScrapedPlayer, type MergedPlayer } from './types'
 
 const ALL_SCRAPERS: SiteScraper[] = [
-  theSportsDbScraper,
   sofascoreScraper,
   transfermarktScraper,
-  wikipediaScraper,
   fmInsideScraper,
 ]
 

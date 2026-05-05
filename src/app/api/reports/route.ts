@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   if (!body.name?.trim()) return NextResponse.json({ error: 'Report name is required' }, { status: 400 })
+  if (!body.databaseId?.trim()) return NextResponse.json({ error: 'databaseId is required' }, { status: 400 })
   if (!Array.isArray(body.players)) return NextResponse.json({ error: 'Invalid players data' }, { status: 400 })
 
   try {
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       data: {
         agentId: user.id,
         name: body.name.trim(),
-        databaseId: body.databaseId ?? '',
+        databaseId: body.databaseId.trim(),
         databaseName: body.databaseName ?? '',
         playerCount: body.players.length,
         players: body.players,

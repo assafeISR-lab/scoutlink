@@ -86,14 +86,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (row.customFields && Object.keys(row.customFields).length > 0) {
           for (const [fieldName, value] of Object.entries(row.customFields)) {
             if (!value?.trim()) continue
-            await prisma.customField.upsert({
-              where: { playerId_fieldName: { playerId: existingId, fieldName } } as never,
-              create: { playerId: existingId, fieldName, value: value.trim() },
-              update: { value: value.trim() },
-            }).catch(async () => {
-              await prisma.customField.deleteMany({ where: { playerId: existingId, fieldName } })
+            const existingCf = await prisma.customField.findFirst({ where: { playerId: existingId, fieldName } })
+            if (existingCf) {
+              await prisma.customField.update({ where: { id: existingCf.id }, data: { value: value.trim() } })
+            } else {
               await prisma.customField.create({ data: { playerId: existingId, fieldName, value: value.trim() } })
-            })
+            }
           }
         }
         overwritten++

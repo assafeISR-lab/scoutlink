@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { encrypt } from '@/lib/encryption'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ websiteId: string }> }) {
   const { websiteId } = await params
@@ -22,11 +23,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ we
         loginStatus: body.loginStatus ?? undefined,
         useForSearch: body.useForSearch ?? undefined,
         username: body.username?.trim() || null,
-        password: body.password?.trim() || null,
+        password: body.password?.trim() ? encrypt(body.password.trim()) : null,
         isActive: body.isActive ?? undefined,
       },
     })
-    return NextResponse.json(updated)
+    return NextResponse.json({ ...updated, password: body.password?.trim() || null })
   } catch (err: any) {
     console.error('[PATCH /api/websites]', err)
     return NextResponse.json({ error: err?.message ?? 'Unknown error' }, { status: 500 })

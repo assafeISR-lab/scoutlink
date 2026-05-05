@@ -35,9 +35,16 @@ export default function SearchParametersTab({ websites }: Props) {
   const [newSource, setNewSource]       = useState('')
 
   useEffect(() => {
+    const builtInLabels = new Set(Object.values(PARAM_LABELS).map(l => l.toLowerCase()))
+    const cleanCustomK = loadCustomKeys().filter(
+      k => !(PARAM_KEYS as readonly string[]).includes(k) && !builtInLabels.has(k.toLowerCase())
+    )
+    const cleanCustomA = new Set([...loadCustomActive()].filter(k => cleanCustomK.includes(k)))
+    localStorage.setItem(CUSTOM_KEYS_KEY,   JSON.stringify(cleanCustomK))
+    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...cleanCustomA]))
     setActive(loadActive())
-    setCustomKeys(loadCustomKeys())
-    setCustomActive(loadCustomActive())
+    setCustomKeys(cleanCustomK)
+    setCustomActive(cleanCustomA)
     setSources(loadStoredSources())
     setHidden(loadHidden())
   }, [])
@@ -326,6 +333,7 @@ function Row({ label, checked, source, sourceOptions, onToggle, onSourceChange, 
           cursor: checked ? 'pointer' : 'not-allowed',
         }}
       >
+        <option value="" style={{ color: 'black' }}>— none —</option>
         {sourceOptions.map(s => (
           <option key={s} value={s} style={{ color: 'black' }}>{s}</option>
         ))}

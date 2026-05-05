@@ -40,6 +40,8 @@ export const theSportsDbScraper: SiteScraper = {
             photo: p.strThumb ?? p.strCutout ?? null,
             description: p.strDescriptionEN ? p.strDescriptionEN.slice(0, 400) + (p.strDescriptionEN.length > 400 ? '...' : '') : null,
             marketValue: null,
+            fmWages: null,
+            fmAttributes: null,
             sourceUrl: `https://www.thesportsdb.com/player/${p.idPlayer}`,
             sourceName: 'TheSportsDB',
           }

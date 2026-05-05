@@ -35,8 +35,9 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
 
   const canWrite = isOwner || db.access[0]?.permission === 'contributor'
 
-  const age = player.dateOfBirth
-    ? Math.floor((Date.now() - new Date(player.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+  const dobDate = player.dateOfBirth ? new Date(player.dateOfBirth) : null
+  const age = dobDate && !isNaN(dobDate.getTime())
+    ? Math.floor((Date.now() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
 
   return (

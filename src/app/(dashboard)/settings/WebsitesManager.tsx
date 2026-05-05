@@ -5,7 +5,8 @@ const SCRAPERS = [
     name: 'Transfermarkt',
     url: 'https://www.transfermarkt.com',
     domain: 'transfermarkt.com',
-    fields: ['Nationality', 'Passports', 'Preferred Foot', 'Age', 'Date of Birth', 'Height', 'Weight', 'Team / Club', 'League', 'Joining Date', 'Contract Expiry', 'Season Stats', 'Market Value'],
+    fields: ['Nationality', 'Passports', 'Age', 'Date of Birth', 'Height', 'Weight', 'Team / Club', 'Joining Date', 'Market Value'],
+    comingSoon: ['Season Stats'],
     color: '#1a6b3c',
     accent: '#2db570',
   },
@@ -13,7 +14,8 @@ const SCRAPERS = [
     name: 'Sofascore',
     url: 'https://www.sofascore.com',
     domain: 'sofascore.com',
-    fields: ['Position', 'Heat Map', 'Key Strengths', 'Areas for Improvement'],
+    fields: ['Position', 'Preferred Foot', 'League', 'Contract Expiry'],
+    comingSoon: ['Heat Map', 'Key Strengths', 'Areas for Improvement'],
     color: '#1a3a6b',
     accent: '#3a7bd5',
   },
@@ -21,7 +23,8 @@ const SCRAPERS = [
     name: 'FMInside',
     url: 'https://www.fminside.net',
     domain: 'fminside.net',
-    fields: ['FM Wages', 'Key Strengths', 'Areas for Improvement'],
+    fields: ['FM Wages', 'Attributes Top3 / Low3'],
+    comingSoon: [],
     color: '#3a1a6b',
     accent: '#7b3ad5',
   },
@@ -72,6 +75,15 @@ export default function WebsitesManager() {
                     style={{ color: s.accent, background: `${s.accent}18`, border: `1px solid ${s.accent}30` }}
                   >
                     {f}
+                  </span>
+                ))}
+                {s.comingSoon.map(f => (
+                  <span
+                    key={f}
+                    className="text-[10px] px-2 py-0.5 rounded-md"
+                    style={{ color: '#888', background: 'transparent', border: '1px solid #888' }}
+                  >
+                    {f} · soon
                   </span>
                 ))}
               </div>

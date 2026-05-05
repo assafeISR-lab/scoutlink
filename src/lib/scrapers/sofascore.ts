@@ -1,4 +1,5 @@
 import type { SiteScraper, ScrapedPlayer } from './types'
+import { sbFetch } from './scrapingbee'
 
 const POSITION_MAP: Record<string, string> = {
   F: 'Forward', M: 'Midfielder', D: 'Defender', G: 'Goalkeeper',
@@ -8,96 +9,123 @@ export const sofascoreScraper: SiteScraper = {
   domains: ['sofascore.com', 'www.sofascore.com'],
   name: 'Sofascore',
   async search(query: string): Promise<ScrapedPlayer[]> {
-    const baseHeaders = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Referer': 'https://www.sofascore.com/',
-      'Origin': 'https://www.sofascore.com',
-      'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-      'sec-ch-ua-mobile': '?0',
-      'sec-ch-ua-platform': '"Windows"',
-      'sec-fetch-dest': 'empty',
-      'sec-fetch-mode': 'cors',
-      'sec-fetch-site': 'same-site',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
-    }
+    const searchRes = await sbFetch(
+      `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`
+    )
+    if (!searchRes.ok) throw new Error(`Sofascore search HTTP ${searchRes.status}`)
 
-    // Step 1: Visit main site to pick up cookies
-    let cookieStr = ''
+    let data: Record<string, unknown>
     try {
-      const pageRes = await fetch('https://www.sofascore.com/', {
-        headers: { ...baseHeaders, 'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8', 'sec-fetch-dest': 'document', 'sec-fetch-mode': 'navigate', 'sec-fetch-site': 'none' },
-      })
-      const setCookies = (pageRes.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.()
-      if (setCookies?.length) {
-        cookieStr = setCookies.map(c => c.split(';')[0]).join('; ')
-      } else {
-        const raw = pageRes.headers.get('set-cookie') ?? ''
-        cookieStr = raw.split(',').map(c => c.trim().split(';')[0]).join('; ')
-      }
+      data = await searchRes.json() as Record<string, unknown>
     } catch {
-      // Continue without cookies
+      throw new Error('Sofascore search returned non-JSON response')
     }
+    const entries = Array.isArray(data.results) ? data.results as Record<string, unknown>[] : []
 
-    const apiHeaders = {
-      ...baseHeaders,
-      'Accept': 'application/json',
-      ...(cookieStr ? { 'Cookie': cookieStr } : {}),
-    }
+    // Keep only player entries; sport field is absent in search results so skip that check
+    const footballPlayers = entries.filter(entry => {
+      const type = (entry.type as string | undefined)?.toLowerCase()
+      return type === 'player'
+    })
 
-    // Step 2: Try api.sofascore.com first, then www.sofascore.com as fallback
-    const endpoints = [
-      `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`,
-      `https://www.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`,
-    ]
+    // Enrich top 3 results with player profile (height, DOB, market value, foot, contract, league)
+    const top = footballPlayers.slice(0, 3)
+    const enriched = await Promise.allSettled(top.map(async (entry) => {
+      const p = (entry.entity ?? entry) as Record<string, unknown>
+      const playerId = p.id as number
+      const teamBasic = p.team as Record<string, unknown> | null
 
-    let data: Record<string, unknown> | null = null
-    for (const url of endpoints) {
+      let heightCm: number | null = null
+      let weightKg: number | null = null
+      let dateOfBirth: string | null = null
+      let marketValue: string | null = null
+      let preferredFoot: string | null = null
+      let contractUntil: string | null = null
+      let league: string | null = null
+      let position = POSITION_MAP[p.position as string] ?? p.position as string ?? null
+
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 6000)
       try {
-        const res = await fetch(url, { headers: apiHeaders })
-        if (!res.ok) continue
-        data = await res.json()
-        break
-      } catch (err) {
-        console.log('[Sofascore] fetch error:', err)
-        continue
+        const profileRes = await sbFetch(`https://api.sofascore.com/api/v1/player/${playerId}`, false, controller.signal)
+        if (profileRes.ok) {
+          const profileData = await profileRes.json() as Record<string, unknown>
+          const pl = (profileData.player ?? profileData) as Record<string, unknown>
+
+          heightCm = pl.height as number ?? null
+          weightKg = pl.weight as number ?? null
+
+          if (typeof pl.dateOfBirthTimestamp === 'number') {
+            dateOfBirth = new Date((pl.dateOfBirthTimestamp as number) * 1000).toISOString().split('T')[0]
+          }
+
+          marketValue = formatMarketValue(pl.proposedMarketValue as number | null | undefined)
+          preferredFoot = pl.preferredFoot as string ?? null
+
+          if (typeof pl.contractUntilTimestamp === 'number') {
+            contractUntil = new Date((pl.contractUntilTimestamp as number) * 1000).toISOString().split('T')[0]
+          }
+
+          // League: prefer primaryUniqueTournament, fall back to team.tournament.uniqueTournament
+          const primary = pl.primaryUniqueTournament as Record<string, unknown> | null
+          const teamData = pl.team as Record<string, unknown> | null
+          const tournament = teamData?.tournament as Record<string, unknown> | null
+          const uniqueTournament = tournament?.uniqueTournament as Record<string, unknown> | null
+          league = (primary?.name ?? uniqueTournament?.name) as string | null ?? null
+
+          // Use detailed position if available (e.g. "RW" instead of generic "M")
+          const detailed = pl.positionsDetailed as string[] | null
+          if (detailed?.length) {
+            position = DETAILED_POSITION_MAP[detailed[0]] ?? detailed[0]
+          }
+        }
+      } catch { /* use basic data only */ } finally {
+        clearTimeout(timer)
       }
-    }
 
-    if (!data) return []
-
-    // API returns { results: [{ entity: { id, name, ... }, type: 'player' }, ...] }
-    const entries = (data.results ?? data.players ?? []) as Record<string, unknown>[]
-
-    const players: ScrapedPlayer[] = []
-    for (const entry of entries) {
-      // Only process player entries
-      if (entry.type && entry.type !== 'player') continue
-      const p = (entry.entity ?? entry.player ?? entry) as Record<string, unknown>
-      if (!p?.id || !p?.name) continue
-
-      const team = (p.team ?? entry.team) as Record<string, unknown> | null
-      const dob = typeof p.dateOfBirthTimestamp === 'number'
-        ? new Date(p.dateOfBirthTimestamp * 1000).toISOString().split('T')[0]
-        : null
-
-      players.push({
-        id: `sofascore-${p.id}`,
-        name: (p.name ?? p.shortName) as string,
+      return {
+        id: `sofascore-${playerId}`,
+        name: p.name as string,
         nationality: (p.country as Record<string, unknown> | null)?.name as string ?? null,
-        team: team?.name as string ?? null,
-        position: POSITION_MAP[p.position as string] ?? p.position as string ?? null,
-        dateOfBirth: dob,
-        heightCm: p.height as number ?? null,
-        weightKg: p.weight as number ?? null,
-        photo: `https://api.sofascore.com/api/v1/player/${p.id}/image`,
+        team: teamBasic?.name as string ?? null,
+        league,
+        position,
+        dateOfBirth,
+        heightCm,
+        weightKg,
+        preferredFoot,
+        contractUntil,
+        passports: null,
+        joiningDate: null,
+        photo: `https://api.sofascore.com/api/v1/player/${playerId}/image`,
         description: null,
-        marketValue: null,
-        sourceUrl: `https://www.sofascore.com/player/${p.slug ?? (p.name as string)?.toLowerCase().replace(/\s+/g, '-')}/${p.id}`,
+        marketValue,
+        fmWages: null,
+        fmAttributes: null,
+        sourceUrl: `https://www.sofascore.com/player/${p.slug ?? (p.name as string)?.toLowerCase().replace(/\s+/g, '-')}/${playerId}`,
         sourceName: 'Sofascore',
-      })
-    }
-    return players
+      } as ScrapedPlayer
+    }))
+
+    return enriched
+      .filter(r => r.status === 'fulfilled')
+      .map(r => (r as PromiseFulfilledResult<ScrapedPlayer>).value)
   },
+}
+
+const DETAILED_POSITION_MAP: Record<string, string> = {
+  GK: 'Goalkeeper',
+  CB: 'Centre-Back', RB: 'Right-Back', LB: 'Left-Back',
+  RWB: 'Right Wing-Back', LWB: 'Left Wing-Back',
+  CDM: 'Defensive Midfielder', CM: 'Central Midfielder',
+  CAM: 'Attacking Midfielder', RM: 'Right Midfielder', LM: 'Left Midfielder',
+  RW: 'Right Winger', LW: 'Left Winger',
+  SS: 'Second Striker', CF: 'Centre-Forward', ST: 'Striker',
+}
+
+function formatMarketValue(value: number | null | undefined): string | null {
+  if (!value || value <= 0) return null
+  if (value >= 1_000_000) return `€${(value / 1_000_000).toFixed(2)}m`
+  if (value >= 1_000) return `€${Math.round(value / 1_000)}k`
+  return `€${value}`
 }

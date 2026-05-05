@@ -1,18 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { decrypt } from '@/lib/encryption'
 import Sidebar from '@/components/Sidebar'
 import SettingsClient from './SettingsClient'
 
 const DEFAULT_WEBSITES = [
-  { name: 'Transfermarkt', url: 'https://www.transfermarkt.com', requiresLogin: false },
-  { name: 'Sofascore', url: 'https://www.sofascore.com', requiresLogin: false },
-  { name: 'Wikipedia', url: 'https://www.wikipedia.org', requiresLogin: false },
-]
-
-// Always ensured for every user — powers the Search Players feature
-const SYSTEM_WEBSITES = [
-  { name: 'TheSportsDB', url: 'https://www.thesportsdb.com', requiresLogin: false, category: 'stats' },
+  { name: 'Transfermarkt', url: 'https://www.transfermarkt.com', requiresLogin: false, loginStatus: 'free' },
+  { name: 'Sofascore', url: 'https://www.sofascore.com', requiresLogin: false, loginStatus: 'free' },
+  { name: 'FMInside', url: 'https://www.fminside.net', requiresLogin: false, loginStatus: 'free' },
 ]
 
 export default async function SettingsPage() {
@@ -20,28 +16,23 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Seed default websites if agent has none
-  const existingCount = await prisma.agentWebsite.count({ where: { agentId: user.id } })
-  if (existingCount === 0) {
-    await prisma.agentWebsite.createMany({
-      data: DEFAULT_WEBSITES.map(w => ({ ...w, agentId: user.id })),
-      skipDuplicates: true,
-    })
-  }
-
-  // Always ensure system websites exist (upsert so existing users get them too)
-  for (const w of SYSTEM_WEBSITES) {
+  // Ensure every default website exists for this agent (upsert so new sites get added automatically)
+  for (const w of DEFAULT_WEBSITES) {
     await prisma.agentWebsite.upsert({
       where: { agentId_url: { agentId: user.id, url: w.url } },
-      update: {},
       create: { ...w, agentId: user.id },
+      update: { loginStatus: w.loginStatus }, // fix 'pending' → 'free' if needed
     })
   }
 
-  const websites = await prisma.agentWebsite.findMany({
+  const rawWebsites = await prisma.agentWebsite.findMany({
     where: { agentId: user.id },
     orderBy: { createdAt: 'asc' },
   })
+  const websites = rawWebsites.map(w => ({
+    ...w,
+    password: w.password ? decrypt(w.password) : null,
+  }))
 
   return (
     <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>

@@ -31,7 +31,12 @@ export default function RegisterPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      await fetch('/api/agent/create', { method: 'POST' })
+      const res = await fetch('/api/agent/create', { method: 'POST' })
+      if (!res.ok) {
+        setError('Account setup failed. Please try signing in or contact support.')
+        setLoading(false)
+        return
+      }
       router.push('/dashboard')
       router.refresh()
     }

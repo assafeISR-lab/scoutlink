@@ -71,6 +71,8 @@ export const wikipediaScraper: SiteScraper = {
         photo: s.thumbnail?.source ?? null,
         description: s.extract ? s.extract.slice(0, 400) + (s.extract.length > 400 ? '...' : '') : null,
         marketValue: null,
+        fmWages: null,
+        fmAttributes: null,
         sourceUrl: s.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(s.title)}`,
         sourceName: 'Wikipedia',
       })

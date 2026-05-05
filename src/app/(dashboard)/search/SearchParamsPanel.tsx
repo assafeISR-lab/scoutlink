@@ -30,6 +30,7 @@ export const PARAM_KEYS = [
   'heatMap',
   'keyStrengths',
   'areasForImprovement',
+  'fmAttributes',
   'recentForm',
   'description',
   // Links & meta
@@ -70,6 +71,7 @@ export const PARAM_LABELS: Record<ParamKey, string> = {
   heatMap:              'Heat Map',
   keyStrengths:         'Key Strengths',
   areasForImprovement:  'Areas for Improvement',
+  fmAttributes:         'Attributes Top3 / Low3',
   recentForm:           'Recent Form',
   description:          'Bio / Description',
   // Links & meta
@@ -85,17 +87,17 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   photo:                '',
   nationality:          'Transfermarkt',
   passports:            'Transfermarkt',
-  preferredFoot:        'Transfermarkt',
+  preferredFoot:        'Sofascore',
   age:                  'Transfermarkt',
   dateOfBirth:          'Transfermarkt',
   height:               'Transfermarkt',
   weight:               'Transfermarkt',
   // Club / Career
   team:                 'Transfermarkt',
-  league:               'Transfermarkt',
+  league:               'Sofascore',
   position:             'Sofascore',
   joiningDate:          'Transfermarkt',
-  contractExpiry:       'Transfermarkt',
+  contractExpiry:       'Sofascore',
   seasonStats:          'Transfermarkt',
   // Financial
   marketValue:          'Transfermarkt',
@@ -108,6 +110,7 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   heatMap:              'Sofascore',
   keyStrengths:         'Sofascore',
   areasForImprovement:  'Sofascore',
+  fmAttributes:         'FMInside',
   recentForm:           '',
   description:          '',
   // Links & meta
@@ -122,12 +125,24 @@ export const STORAGE_KEY        = 'scoutlink_search_params'
 export const CUSTOM_KEYS_KEY    = 'scoutlink_search_custom_keys'
 export const CUSTOM_ACTIVE_KEY  = 'scoutlink_search_custom_active'
 
+const SEEN_KEYS_KEY = 'scoutlink_seen_param_keys'
+
 export function loadActive(): Set<string> {
   if (typeof window === 'undefined') return new Set(PARAM_KEYS)
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return new Set(PARAM_KEYS)
-    return new Set(JSON.parse(raw) as string[])
+    const saved = new Set(JSON.parse(raw) as string[])
+    // Auto-activate any built-in key not seen before (newly added params)
+    const seenRaw = localStorage.getItem(SEEN_KEYS_KEY)
+    const seen: Set<string> = seenRaw ? new Set(JSON.parse(seenRaw)) : new Set([...saved])
+    let updated = false
+    for (const k of PARAM_KEYS) {
+      if (!seen.has(k)) { saved.add(k); updated = true }
+    }
+    localStorage.setItem(SEEN_KEYS_KEY, JSON.stringify([...PARAM_KEYS]))
+    if (updated) localStorage.setItem(STORAGE_KEY, JSON.stringify([...saved]))
+    return saved
   } catch {
     return new Set(PARAM_KEYS)
   }
@@ -165,8 +180,13 @@ export default function SearchParamsPanel({ onChange }: Props) {
 
   useEffect(() => {
     const savedActive  = loadActive()
-    const savedCustomK = loadCustomKeys()
-    const savedCustomA = loadCustomActive()
+    const builtInLabels = new Set(Object.values(PARAM_LABELS).map(l => l.toLowerCase()))
+    const savedCustomK = loadCustomKeys().filter(
+      k => !(PARAM_KEYS as readonly string[]).includes(k) && !builtInLabels.has(k.toLowerCase())
+    )
+    const savedCustomA = new Set([...loadCustomActive()].filter(k => savedCustomK.includes(k)))
+    localStorage.setItem(CUSTOM_KEYS_KEY,   JSON.stringify(savedCustomK))
+    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...savedCustomA]))
     setActive(savedActive)
     setCustomKeys(savedCustomK)
     setCustomActive(savedCustomA)

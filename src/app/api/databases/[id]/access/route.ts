@@ -9,9 +9,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId } })
-  if (!db) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (db.ownerId !== user.id) return NextResponse.json({ error: 'Only the owner can share this database' }, { status: 403 })
+  const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId, ownerId: user.id } })
+  if (!db) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { email, permission } = await req.json()
   if (!email?.trim()) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
@@ -38,8 +37,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId } })
-  if (!db || db.ownerId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId, ownerId: user.id } })
+  if (!db) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const access = await prisma.databaseAccess.findMany({
     where: { databaseId },
@@ -56,8 +55,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId } })
-  if (!db || db.ownerId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId, ownerId: user.id } })
+  if (!db) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { agentId } = await req.json()
   await prisma.databaseAccess.deleteMany({ where: { databaseId, agentId } })

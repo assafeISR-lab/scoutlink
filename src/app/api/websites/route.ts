@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { encrypt } from '@/lib/encryption'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -18,11 +19,11 @@ export async function POST(req: NextRequest) {
       requiresLogin: requiresLogin ?? false,
       loginStatus: loginStatus ?? 'pending',
       username: username?.trim() || null,
-      password: password?.trim() || null,
+      password: password?.trim() ? encrypt(password.trim()) : null,
       country: country?.trim() || null,
       category: category?.trim() || null,
     },
   })
 
-  return NextResponse.json(website)
+  return NextResponse.json({ ...website, password: password?.trim() || null })
 }

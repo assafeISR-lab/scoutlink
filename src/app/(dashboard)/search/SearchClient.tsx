@@ -9,13 +9,20 @@ interface PlayerResult {
   name: string
   nationality: string | null
   team: string | null
+  league: string | null
   position: string | null
   dateOfBirth: string | null
   heightCm: number | null
   weightKg: number | null
+  preferredFoot: string | null
+  contractUntil: string | null
+  passports: string | null
+  joiningDate: string | null
   photo: string | null
   description: string | null
   marketValue: string | null
+  fmWages: string | null
+  fmAttributes: string | null
   transfermarktUrl: string | null
   sofascoreUrl: string | null
   fmInsideUrl: string | null
@@ -73,12 +80,18 @@ export default function SearchClient({ databases, userName }: { databases: Datab
     setNoSitesSelected(false)
     setSiteStats([])
     setSelectedIds(new Set())
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
-    const data = await res.json()
-    setResults(data.players || [])
-    setSiteStats(data.siteStats || [])
-    setNoSitesSelected(!!data.noSitesSelected)
-    setLoading(false)
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+      const data = res.ok ? await res.json() : {}
+      setResults(data.players || [])
+      setSiteStats(data.siteStats || [])
+      setNoSitesSelected(!!data.noSitesSelected)
+    } catch {
+      setResults([])
+      setSiteStats([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -245,7 +258,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
                 return rank(a) - rank(b) || b.count - a.count
               })
               .map(site => (
-              <div key={site.name} className="flex items-center gap-3 px-4 py-2.5">
+              <div key={site.url} className="flex items-center gap-3 px-4 py-2.5">
                 {/* Status icon */}
                 {site.error ? (
                   <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,100,100,0.12)' }}>
@@ -331,17 +344,20 @@ function isFound(results: PlayerResult[], key: string): boolean {
     case 'transfermarktLink':return results.some(p => !!p.transfermarktUrl)
     case 'sofascoreLink':    return results.some(p => !!p.sofascoreUrl)
     case 'fmInsideUrl':      return results.some(p => !!p.fmInsideUrl)
+    case 'preferredFoot':   return results.some(p => !!p.preferredFoot)
+    case 'league':          return results.some(p => !!p.league)
+    case 'contractExpiry':  return results.some(p => !!p.contractUntil)
     // Fields not yet returned by any scraper (always not found from search)
-    case 'passports':
-    case 'preferredFoot':
-    case 'league':
-    case 'joiningDate':
-    case 'contractExpiry':
-    case 'seasonStats':
-    case 'fmWages':
-    case 'heatMap':
+    case 'passports':   return results.some(p => !!p.passports)
+    case 'joiningDate': return results.some(p => !!p.joiningDate)
+    case 'fmWages':      return results.some(p => !!p.fmWages)
+    case 'fmAttributes':
     case 'keyStrengths':
     case 'areasForImprovement':
+      return results.some(p => !!p.fmAttributes)
+    // Fields not yet returned by any scraper
+    case 'seasonStats':
+    case 'heatMap':
     // Manual-only fields (filled by user in the card, not from scrapers)
     case 'transferFeeExpect':
     case 'transferFeeReal':
@@ -456,6 +472,11 @@ const FIELD_PARAM_KEY: Record<string, string> = {
   'Highlights':             'highlightsLink',
 }
 
+function formatContractDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
+
 // ─── Player Card (populated with search results) ───────────────────────────────
 
 function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams }: {
@@ -466,7 +487,6 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
   visibleParams: Set<string>
 }) {
   const show = (key: string) => visibleParams.size === 0 || visibleParams.has(key)
-  const seasons = ['25/26', '24/25', '23/24', '22/23']
 
   const [transferFeeExpect, setTransferFeeExpect] = useState('')
   const [transferFeeReal,   setTransferFeeReal]   = useState('')
@@ -568,9 +588,9 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
             {show('weight')      && <CardField label="Weight"       value={player.weightKg ? `${player.weightKg} kg` : null} />}
             {show('age')         && <CardField label="Age"          value={age ? `${age} yrs` : null} />}
             {show('dateOfBirth') && <CardField label="Date of Birth" value={player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null} />}
-            {show('preferredFoot') && <CardField label="Foot"       value={null} />}
+            {show('preferredFoot') && <CardField label="Foot"       value={player.preferredFoot} />}
             {show('nationality') && <CardField label="Nationality"  value={player.nationality} />}
-            {show('passports')   && <CardField label="Passports"    value={null} />}
+            {show('passports')   && <CardField label="Passports"    value={player.passports} />}
           </div>
         </div>
 
@@ -579,11 +599,11 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Contract & Value</p>
           <div className="space-y-2.5">
             {show('team')              && <CardField label="Club"            value={player.team} />}
-            {show('league')            && <CardField label="League"          value={null} />}
-            {show('joiningDate')       && <CardField label="Joining Date"    value={null} />}
-            {show('contractExpiry')    && <CardField label="Contract Expiry" value={null} />}
+            {show('league')            && <CardField label="League"          value={player.league} />}
+            {show('joiningDate')       && <CardField label="Joining Date"    value={player.joiningDate ? new Date(player.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null} />}
+            {show('contractExpiry')    && <CardField label="Contract Expiry" value={player.contractUntil ? formatContractDate(player.contractUntil) : null} />}
             {show('marketValue')       && <CardField label="Market Value"    value={player.marketValue} highlight />}
-            {show('fmWages')           && <CardField label="FM Wages"        value={null} />}
+            {show('fmWages')           && <CardField label="FM Wages"        value={player.fmWages} />}
             {show('transferFeeExpect') && <EditableCardField label="Fee Expectation"   value={transferFeeExpect} onChange={setTransferFeeExpect} />}
             {show('transferFeeReal')   && <EditableCardField label="Fee (Real)"         value={transferFeeReal}   onChange={setTransferFeeReal} />}
             {show('salaryExpect')      && <EditableCardField label="Salary Expectation" value={salaryExpect}      onChange={setSalaryExpect} />}
@@ -613,51 +633,95 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
         </div>
       </div>
 
-      {show('heatMap') && (
-        <div className="border-t border-white/5 px-4 py-3 flex items-center gap-4" style={{ background: 'var(--subtle-bg)' }}>
-          <p className="text-[10px] uppercase tracking-widest font-medium flex-shrink-0 w-20" style={{ color: 'var(--text-muted)' }}>Heat Map</p>
-          <div className="flex-1 h-14 rounded-lg flex items-center justify-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border)' }}>
-            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
+      {/* Bottom section — 3 columns aligned with body */}
+      {(show('heatMap') || show('seasonStats') || show('keyStrengths') || show('areasForImprovement') || show('fmAttributes')) && (
+        <div className="border-t border-white/5 grid grid-cols-3 divide-x divide-white/5" style={{ background: 'var(--subtle-bg)' }}>
+
+          {/* Col 1: Heat Map */}
+          <div className="p-4 flex flex-col gap-2">
+            {show('heatMap') && (
+              <>
+                <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Heat Map</p>
+                <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+                  <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Col 2: Season Stats */}
+          <div className="p-4 flex flex-col gap-2">
+            {show('seasonStats') && (
+              <>
+                <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Season Stats</p>
+                <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+                  <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Transfermarkt · coming soon</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Col 3: FM Attributes radar (aligns with Physical column) */}
+          {(show('keyStrengths') || show('areasForImprovement') || show('fmAttributes')) && (
+            <div className="p-4 flex flex-col gap-2">
+              <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>FM Attributes</p>
+              {player.fmAttributes
+                ? <FMRadarChart fmAttributes={player.fmAttributes} />
+                : <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+                    <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>FMInside · no data</span>
+                  </div>
+              }
+            </div>
+          )}
         </div>
       )}
 
-      {(show('keyStrengths') || show('areasForImprovement')) && (
-        <div className="flex items-center gap-6 px-4 py-3 border-t border-white/5" style={{ background: 'var(--subtle-bg)' }}>
-          <p className="text-[10px] uppercase tracking-widest font-medium flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Attributes</p>
-          <div className="flex gap-8 flex-1">
-            {show('keyStrengths')       && <CardField label="Key Strengths"         value={null} inline />}
-            {show('areasForImprovement') && <CardField label="Areas for Improvement" value={null} inline />}
-          </div>
-        </div>
-      )}
+    </div>
+  )
+}
 
-      {show('seasonStats') && <div className="border-t border-white/5">
-        <div className="px-4 py-2 border-b border-white/5" style={{ background: 'var(--subtle-bg)' }}>
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
+// ─── FM Attributes Table ──────────────────────────────────────────────────────
+
+function FMRadarChart({ fmAttributes }: { fmAttributes: string }) {
+  const parts = fmAttributes.split(' / ')
+  const parseSection = (s: string) =>
+    (s ?? '').split(', ').map(item => {
+      const i = item.lastIndexOf(' ')
+      return { name: item.slice(0, i).trim(), value: parseInt(item.slice(i + 1)) || 0 }
+    }).filter(a => a.name)
+
+  const top = parseSection(parts[0])
+  const bot = parseSection(parts[1])
+
+  const AttrRow = ({ name, value, isTop }: { name: string; value: number; isTop: boolean }) => {
+    const pct = Math.round((value / 99) * 100)
+    const color = isTop ? '#00c896' : 'rgba(255,90,90,0.9)'
+    const barBg = isTop ? 'rgba(0,200,150,0.12)' : 'rgba(255,90,90,0.1)'
+    const barFill = isTop ? 'rgba(0,200,150,0.55)' : 'rgba(255,90,90,0.5)'
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] flex-1 truncate" style={{ color }}>{name}</span>
+        <div className="w-14 h-1.5 rounded-full flex-shrink-0" style={{ background: barBg }}>
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barFill }} />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr style={{ background: 'var(--subtle-bg)' }}>
-                {['Season', 'Club', 'MP', 'MS', 'Goals', 'Assists'].map(h => (
-                  <th key={h} className="px-4 py-2 text-left text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.04]">
-              {seasons.map(s => (
-                <tr key={s} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>{s}</td>
-                  {[...Array(5)].map((_, i) => (
-                    <td key={i} className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-faint)' }}>—</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>}
+        <span className="text-[10px] font-bold tabular-nums w-5 text-right flex-shrink-0" style={{ color }}>
+          {value}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full flex flex-col gap-2.5">
+      <div className="flex flex-col gap-1">
+        <p className="text-[9px] uppercase tracking-widest font-semibold mb-0.5" style={{ color: 'rgba(0,200,150,0.5)' }}>Key Strengths</p>
+        {top.map((a, i) => <AttrRow key={i} name={a.name} value={a.value} isTop={true} />)}
+      </div>
+      <div className="h-px w-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
+      <div className="flex flex-col gap-1">
+        <p className="text-[9px] uppercase tracking-widest font-semibold mb-0.5" style={{ color: 'rgba(255,90,90,0.5)' }}>Areas for Improvement</p>
+        {bot.map((a, i) => <AttrRow key={i} name={a.name} value={a.value} isTop={false} />)}
+      </div>
     </div>
   )
 }

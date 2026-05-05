@@ -362,16 +362,31 @@ function DayView({ date, events, notes, onDeleteEvent }: {
   date: Date; events: CalendarEvent[]; notes: PlayerNote[]
   onDeleteEvent: () => void
 }) {
+  const today = new Date()
+  const isToday = isSameDay(date, today)
+  const total = events.length + notes.length
+
   return (
-    <div className="rounded-2xl border border-white/5 p-6" style={{ background: 'var(--card-bg)' }}>
-      {events.length === 0 && notes.length === 0 ? (
-        <p className="text-white/20 text-sm text-center py-12">No events or notes for this day</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {events.map(e => <EventItem key={e.id} event={e} onDelete={onDeleteEvent} />)}
-          {notes.map(n => <NoteItem key={n.id} note={n} />)}
+    <div className="rounded-2xl border border-white/5 overflow-hidden" style={{ background: 'var(--card-bg)' }}>
+      <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-white">
+            {date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          </p>
+          <p className="text-xs text-white/30 mt-0.5">{total === 0 ? 'Nothing scheduled' : `${total} item${total !== 1 ? 's' : ''}`}</p>
         </div>
-      )}
+        {isToday && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896' }}>Today</span>}
+      </div>
+      <div className="p-6">
+        {total === 0 ? (
+          <p className="text-white/20 text-sm text-center py-8">No events or notes for this day</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {events.map(e => <EventItem key={e.id} event={e} onDelete={onDeleteEvent} />)}
+            {notes.map(n => <NoteItem key={n.id} note={n} />)}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -485,8 +500,12 @@ function EventItem({ event, onDelete, compact }: { event: CalendarEvent; onDelet
 
   async function handleDelete() {
     setDeleting(true)
-    await fetch(`/api/calendar/events/${event.id}`, { method: 'DELETE' })
-    onDelete()
+    const res = await fetch(`/api/calendar/events/${event.id}`, { method: 'DELETE' })
+    if (res.ok) {
+      onDelete()
+    } else {
+      setDeleting(false)
+    }
   }
 
   const time = new Date(event.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })

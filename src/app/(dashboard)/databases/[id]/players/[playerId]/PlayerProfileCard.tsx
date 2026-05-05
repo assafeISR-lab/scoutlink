@@ -189,8 +189,9 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   }
 
   // ── Display helpers ───────────────────────────────────────────────────────
-  const age = player.dateOfBirth
-    ? ((Date.now() - new Date(player.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)).toFixed(1)
+  const dobDate = player.dateOfBirth ? new Date(player.dateOfBirth) : null
+  const age = dobDate && !isNaN(dobDate.getTime())
+    ? ((Date.now() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)).toFixed(1)
     : null
 
   const dateAdded = new Date(player.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })

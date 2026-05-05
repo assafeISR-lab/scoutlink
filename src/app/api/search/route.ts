@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getScraperForUrl, type ScrapedPlayer, type MergedPlayer } from '@/lib/scrapers'
@@ -21,14 +21,21 @@ function buildMerged(group: ScrapedPlayer[]): MergedPlayer {
     name: tm?.name ?? sc?.name ?? fm?.name ?? first.name,
     nationality: tm?.nationality ?? sc?.nationality ?? fm?.nationality ?? null,
     team: tm?.team ?? sc?.team ?? fm?.team ?? null,
+    league: sc?.league ?? tm?.league ?? null,
     // Sofascore is most precise for position; TM position from search list is approximate
     position: sc?.position ?? tm?.position ?? fm?.position ?? null,
     dateOfBirth: dob,
     heightCm: sc?.heightCm ?? tm?.heightCm ?? null,
     weightKg: sc?.weightKg ?? tm?.weightKg ?? null,
+    preferredFoot: sc?.preferredFoot ?? tm?.preferredFoot ?? null,
+    contractUntil: sc?.contractUntil ?? tm?.contractUntil ?? null,
+    passports: tm?.passports ?? null,
+    joiningDate: tm?.joiningDate ?? null,
     photo: tm?.photo ?? sc?.photo ?? fm?.photo ?? null,
     description: tm?.description ?? sc?.description ?? fm?.description ?? null,
-    marketValue: tm?.marketValue ?? null,
+    marketValue: tm?.marketValue ?? sc?.marketValue ?? null,
+    fmWages: fm?.fmWages ?? null,
+    fmAttributes: fm?.fmAttributes ?? null,
     transfermarktUrl: tm?.sourceUrl ?? null,
     sofascoreUrl: sc?.sourceUrl ?? null,
     fmInsideUrl: fm?.sourceUrl ?? null,
@@ -112,7 +119,7 @@ export async function GET(req: NextRequest) {
 
   // Only search free/active sites (skip login_required without verified credentials)
   const searchableSites = websites.filter(w =>
-    w.loginStatus === 'free' || w.loginStatus === 'active' || w.loginStatus === 'pending'
+    w.loginStatus === 'free' || w.loginStatus === 'active'
   )
 
   // Find scrapers for each site
@@ -128,8 +135,6 @@ export async function GET(req: NextRequest) {
     return true
   })
 
-  // Strip diacritics/accents — e.g. "Martín" → "Martin", "Páez" → "Paez"
-  const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
   // Build query variations — for 3+ word names, also try first+last (skipping middle names)
   // Also add accent-stripped versions so scrapers can match "Martin" as well as "Martín"
@@ -205,12 +210,13 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  // Sites that are selected but have no scraper — include them so user knows they were skipped
+  // Sites that are selected but have no scraper — include them so user knows they were skipped.
+  // Skip sites whose scraper was already counted under a different URL (DB may have www/non-www duplicates).
   for (const site of searchableSites) {
-    if (!scrapedUrls.has(site.url)) {
-      const hostname = (() => { try { return new URL(site.url).hostname.replace(/^www\./, '') } catch { return site.url } })()
-      siteStats.push({ name: site.name || hostname, url: site.url, count: 0, error: false, noScraper: true })
-    }
+    if (scrapedUrls.has(site.url)) continue
+    if (getScraperForUrl(site.url) !== null) continue  // same scraper, different URL — already counted
+    const hostname = (() => { try { return new URL(site.url).hostname.replace(/^www\./, '') } catch { return site.url } })()
+    siteStats.push({ name: site.name || hostname, url: site.url, count: 0, error: false, noScraper: true })
   }
 
   // Merge raw results from all sources into unified player records

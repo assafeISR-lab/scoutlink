@@ -16,6 +16,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const body = await req.json()
 
+  const playerCheck = await prisma.player.findUnique({ where: { id: playerId }, select: { databaseId: true } })
+  if (!playerCheck || playerCheck.databaseId !== databaseId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
   const player = await prisma.player.update({
     where: { id: playerId },
     data: {
@@ -103,6 +106,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const isOwner = db.ownerId === user.id
   const isContributor = db.access[0]?.permission === 'contributor'
   if (!isOwner && !isContributor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const playerToDelete = await prisma.player.findUnique({ where: { id: playerId }, select: { databaseId: true } })
+  if (!playerToDelete || playerToDelete.databaseId !== databaseId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   await prisma.player.delete({ where: { id: playerId } })
 
