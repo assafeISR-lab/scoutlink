@@ -6,23 +6,25 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('q') ?? 'Reggie Walsh'
 
-  // Test ScrapingBee POST to AJAX endpoint
+  // Test GET search page with JS rendering + wait
   let rawStatus = 0
   let rawHtml = ''
   try {
-    const postBody = new URLSearchParams({ search_phrase: query, database_id: '7' }).toString()
-    const res = await sbFetch('https://fminside.net/resources/inc/ajax/search.php', false, undefined, undefined, postBody)
+    const url = `https://fminside.net/players/7-fm-26?search=${encodeURIComponent(query)}`
+    const res = await sbFetch(url, true, undefined, 3000)
     rawStatus = res.status
     rawHtml = await res.text()
   } catch (e) {
     rawHtml = `fetch error: ${e}`
   }
 
-  const playerSection = rawHtml.indexOf('class="player"')
-  const htmlSnippet = playerSection >= 0
-    ? rawHtml.slice(Math.max(0, playerSection - 100), playerSection + 1500)
-    : rawHtml.slice(0, 1500)
+  // Check if any result matches the query
+  const queryLower = query.toLowerCase()
+  const nameIdx = rawHtml.toLowerCase().indexOf(queryLower.split(' ')[1] ?? queryLower.split(' ')[0])
+  const htmlSnippet = nameIdx >= 0
+    ? rawHtml.slice(Math.max(0, nameIdx - 500), nameIdx + 1000)
+    : rawHtml.slice(10000, 12000)
 
   const players = await fmInsideScraper.search(query)
-  return NextResponse.json({ query, count: players.length, players, rawStatus, htmlLength: rawHtml.length, playerSectionFound: playerSection >= 0, htmlSnippet })
+  return NextResponse.json({ query, count: players.length, players, rawStatus, htmlLength: rawHtml.length, queryFoundInHtml: nameIdx >= 0, htmlSnippet })
 }
