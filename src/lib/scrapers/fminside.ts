@@ -1,12 +1,5 @@
 import type { SiteScraper, ScrapedPlayer } from './types'
-
-const SEARCH_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Content-Type': 'application/x-www-form-urlencoded',
-  'X-Requested-With': 'XMLHttpRequest',
-  'Referer': 'https://fminside.net/',
-  'Origin': 'https://fminside.net',
-}
+import { sbFetch } from './scrapingbee'
 
 const PROFILE_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -18,20 +11,21 @@ export const fmInsideScraper: SiteScraper = {
   domains: ['fminside.net', 'www.fminside.net'],
   name: 'FMInside',
   async search(query: string): Promise<ScrapedPlayer[]> {
-    // FMInside search uses a plain jQuery POST to /resources/inc/ajax/search.php.
-    // No ScrapingBee needed — the endpoint returns HTML player blocks directly.
+    // FMInside search uses a POST to /resources/inc/ajax/search.php.
+    // Now routed through ScrapingBee since Cloudflare blocks direct server requests.
     let html = ''
     try {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 10000)
       try {
-        const body = new URLSearchParams({ search_phrase: query, database_id: '7' })
-        const res = await fetch('https://fminside.net/resources/inc/ajax/search.php', {
-          method: 'POST',
-          headers: SEARCH_HEADERS,
-          body: body.toString(),
-          signal: controller.signal,
-        })
+        const postBody = new URLSearchParams({ search_phrase: query, database_id: '7' }).toString()
+        const res = await sbFetch(
+          'https://fminside.net/resources/inc/ajax/search.php',
+          false,
+          controller.signal,
+          undefined,
+          postBody,
+        )
         if (!res.ok) return []
         html = await res.text()
       } finally {
