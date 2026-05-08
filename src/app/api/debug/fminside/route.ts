@@ -18,6 +18,12 @@ export async function GET(request: Request) {
     rawHtml = `fetch error: ${e}`
   }
 
+  // Find the player list section
+  const playerSection = rawHtml.indexOf('class="player"')
+  const htmlSnippet = playerSection >= 0
+    ? rawHtml.slice(Math.max(0, playerSection - 200), playerSection + 2000)
+    : rawHtml.slice(10000, 14000) // skip CSS, grab body content
+
   const players = await fmInsideScraper.search(query)
-  return NextResponse.json({ query, count: players.length, players, rawStatus, rawHtmlSample: rawHtml.slice(0, 3000) })
+  return NextResponse.json({ query, count: players.length, players, rawStatus, htmlLength: rawHtml.length, playerSectionFound: playerSection >= 0, htmlSnippet })
 }
