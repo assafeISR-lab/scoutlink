@@ -27,31 +27,20 @@ function timeAgo(date: Date) {
   return `${years} year${years !== 1 ? 's' : ''} ago`
 }
 
-export default function NotesSection({ notes, currentUserId, databaseId, playerId, canWrite }: {
+export default function NotesSection({ notes, currentUserId, databaseId, playerId, canWrite, adding, noteContent, onStartAdding, onCancelAdding, onNoteContentChange }: {
   notes: Note[]
   currentUserId: string
   databaseId: string
   playerId: string
   canWrite: boolean
+  adding: boolean
+  noteContent: string
+  onStartAdding: () => void
+  onCancelAdding: () => void
+  onNoteContentChange: (v: string) => void
 }) {
   const [view, setView] = useState<'notes' | 'timeline'>('notes')
-  const [content, setContent] = useState('')
-  const [loading, setLoading] = useState(false)
   const router = useRouter()
-
-  async function handleAddNote(e: React.FormEvent) {
-    e.preventDefault()
-    if (!content.trim()) return
-    setLoading(true)
-    await fetch(`/api/databases/${databaseId}/players/${playerId}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    })
-    setContent('')
-    setLoading(false)
-    router.refresh()
-  }
 
   return (
     <div>
@@ -120,28 +109,43 @@ export default function NotesSection({ notes, currentUserId, databaseId, playerI
         </div>
       )}
 
-      {/* Add note form */}
+      {/* Add note */}
       {canWrite && (
-        <form onSubmit={handleAddNote} className="flex flex-col gap-2 pt-3" style={{ borderTop: notes.length > 0 ? '1px solid var(--border)' : 'none' }}>
-          <textarea
-            value={content}
-            onChange={e => setContent(e.target.value)}
-            placeholder="Add a scouting note..."
-            rows={3}
-            className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none resize-none"
-            style={{ color: 'var(--text-primary)', background: 'var(--input-bg)', border: '1px solid var(--border)' }}
-            onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
-          />
-          <button
-            type="submit"
-            disabled={loading || !content.trim()}
-            className="self-end px-4 py-2 rounded-xl text-sm font-semibold text-black disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
-          >
-            {loading ? 'Saving...' : 'Add Note'}
-          </button>
-        </form>
+        <div style={{ borderTop: notes.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: notes.length > 0 ? 12 : 0 }}>
+          {!adding ? (
+            <button
+              onClick={onStartAdding}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              Add Note
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <textarea
+                autoFocus
+                value={noteContent}
+                onChange={e => onNoteContentChange(e.target.value)}
+                placeholder="Add a scouting note..."
+                rows={3}
+                className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none resize-none"
+                style={{ color: 'var(--text-primary)', background: 'var(--input-bg)', border: '1px solid var(--border)' }}
+                onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+                onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+              />
+              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Click "Save Changes" above to save the note.</p>
+              <button
+                type="button"
+                onClick={onCancelAdding}
+                className="self-start px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

@@ -73,6 +73,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   const [saving,    setSaving]      = useState(false)
   const [saveError, setSaveError]   = useState('')
   const [changedFields, setChangedFields] = useState<Set<string>>(new Set())
+  const [noteAdding,  setNoteAdding]  = useState(false)
+  const [noteContent, setNoteContent] = useState('')
 
   const initialForm = () => ({
     // DB fields
@@ -127,6 +129,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     setIsEditing(false)
     setChangedFields(new Set())
     setSaveError('')
+    setNoteAdding(false)
+    setNoteContent('')
   }
 
   async function handleSave() {
@@ -148,23 +152,40 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
       }
     }
 
-    const res = await fetch(`/api/databases/${databaseId}/players/${player.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form,
-        changedFields: changedDbFields,
-        customFields: customFieldsPayload,
-      }),
-    })
+    const saves: Promise<Response>[] = []
+
+    if (changedDbFields.length > 0 || Object.keys(customFieldsPayload).length > 0) {
+      saves.push(fetch(`/api/databases/${databaseId}/players/${player.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          changedFields: changedDbFields,
+          customFields: customFieldsPayload,
+        }),
+      }))
+    }
+
+    if (noteContent.trim()) {
+      saves.push(fetch(`/api/databases/${databaseId}/players/${player.id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: noteContent.trim() }),
+      }))
+    }
+
+    const results = await Promise.all(saves)
     setSaving(false)
-    if (res.ok) {
+
+    const failed = results.find(r => !r.ok)
+    if (!failed) {
       setIsEditing(false)
       setChangedFields(new Set())
+      setNoteAdding(false)
+      setNoteContent('')
       router.refresh()
     } else {
-      const d = await res.json().catch(() => ({}))
-      setSaveError(d.error || 'Failed to save')
+      setSaveError('Failed to save')
     }
   }
 
@@ -247,7 +268,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
                 style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                 Cancel
               </button>
-              <button onClick={handleSave} disabled={saving || changedFields.size === 0}
+              <button onClick={handleSave} disabled={saving || (changedFields.size === 0 && !noteContent.trim())}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-black disabled:opacity-50 transition-all"
                 style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
@@ -368,7 +389,18 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
           <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Scout Notes</p>
         </div>
         <div className="p-5">
-          <NotesSection notes={player.notes} currentUserId={currentUserId} databaseId={databaseId} playerId={player.id} canWrite={canWrite} />
+          <NotesSection
+          notes={player.notes}
+          currentUserId={currentUserId}
+          databaseId={databaseId}
+          playerId={player.id}
+          canWrite={canWrite}
+          adding={noteAdding}
+          noteContent={noteContent}
+          onStartAdding={() => { setNoteAdding(true); setIsEditing(true) }}
+          onCancelAdding={() => { setNoteAdding(false); setNoteContent('') }}
+          onNoteContentChange={setNoteContent}
+        />
         </div>
       </div>
     </div>
