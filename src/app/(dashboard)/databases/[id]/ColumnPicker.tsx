@@ -34,7 +34,7 @@ const GROUPS: { label: string; keys: string[] }[] = [
   },
   {
     label: 'Scouting',
-    keys: ['heatMap', 'keyStrengths', 'areasForImprovement', 'recentForm', 'description'],
+    keys: ['heatMap', 'fmAttributes', 'recentForm', 'description'],
   },
   {
     label: 'Links & Meta',

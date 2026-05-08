@@ -4,7 +4,7 @@ const SEARCH_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Content-Type': 'application/x-www-form-urlencoded',
   'X-Requested-With': 'XMLHttpRequest',
-  'Referer': 'https://fminside.net/players',
+  'Referer': 'https://fminside.net/',
   'Origin': 'https://fminside.net',
 }
 
@@ -25,7 +25,7 @@ export const fmInsideScraper: SiteScraper = {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 10000)
       try {
-        const body = new URLSearchParams({ name: query, gender: '0' })
+        const body = new URLSearchParams({ search_phrase: query, database_id: '7' })
         const res = await fetch('https://fminside.net/resources/inc/ajax/search.php', {
           method: 'POST',
           headers: SEARCH_HEADERS,

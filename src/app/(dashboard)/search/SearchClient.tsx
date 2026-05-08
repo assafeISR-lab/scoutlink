@@ -2,7 +2,21 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { PARAM_KEYS, PARAM_LABELS, loadActive, loadCustomActive, loadCustomKeys } from './SearchParamsPanel'
+import { PARAM_KEYS, PARAM_LABELS, PARAM_SOURCES, type ParamKey, loadActive, loadCustomActive } from './SearchParamsPanel'
+import FMRadarChart from '@/components/FMRadarChart'
+
+// Params that are planned but not yet scraped — always shown as "coming soon"
+const COMING_SOON = new Set<string>(['heatMap', 'seasonStats'])
+
+// Group PARAM_KEYS by their scraper source (computed once at module level)
+const PARAMS_BY_SOURCE: Record<string, ParamKey[]> = {}
+for (const key of PARAM_KEYS) {
+  const src = PARAM_SOURCES[key]
+  if (src) {
+    if (!PARAMS_BY_SOURCE[src]) PARAMS_BY_SOURCE[src] = []
+    PARAMS_BY_SOURCE[src].push(key)
+  }
+}
 
 interface PlayerResult {
   id: string
@@ -53,15 +67,12 @@ export default function SearchClient({ databases, userName }: { databases: Datab
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [merging, setMerging] = useState(false)
   const [visibleParams, setVisibleParams] = useState<Set<string>>(new Set())
-  const [customKeys, setCustomKeys] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const active = loadActive()
     const customActive = loadCustomActive()
-    const customK = loadCustomKeys()
     setVisibleParams(new Set([...active, ...customActive]))
-    setCustomKeys(customK)
   }, [])
 
   function toggleSelect(id: string) {
@@ -146,177 +157,99 @@ export default function SearchClient({ databases, userName }: { databases: Datab
 
           {/* Results area — only shown after a search */}
           {searched && (
-          <div className="flex gap-6 items-stretch">
-            <div className="flex-1 min-w-0">
+          <>
+            {/* Cards + Coverage */}
+            <div className="flex gap-6 items-start">
+              <div className="flex-1 min-w-0">
 
-              {/* Loading */}
-              {loading && (
-                <div className="text-center py-16">
-                  <div className="w-10 h-10 rounded-full border-2 border-[#00c896] border-t-transparent animate-spin mx-auto mb-4" />
-                  <p className="text-white/30 text-sm">Searching player database...</p>
-                </div>
-              )}
-
-              {/* No sites selected */}
-              {!loading && noSitesSelected && (
-                <div className="rounded-2xl border border-dashed p-16 text-center" style={{ borderColor: 'rgba(255,159,67,0.3)', background: 'rgba(255,159,67,0.03)' }}>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(255,159,67,0.1)', border: '1px solid rgba(255,159,67,0.25)' }}>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ff9f43"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                  </div>
-                  <p className="text-sm font-medium mb-1" style={{ color: '#ff9f43' }}>No scouting sites selected</p>
-                  <p className="text-white/30 text-xs">Check the boxes next to the sites you want to search in below</p>
-                </div>
-              )}
-
-              {/* No results */}
-              {!loading && !noSitesSelected && results.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center">
-                  <p className="text-white/40 text-sm mb-1">No players found for "{query}"</p>
-                  <p className="text-white/20 text-xs">Try a different name or check the spelling</p>
-                </div>
-              )}
-
-      {/* Results */}
-      {!loading && results.length > 0 && (
-        <div>
-          {/* Action bar */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-xs text-white/30 uppercase tracking-widest">{results.length} player{results.length !== 1 ? 's' : ''} found</p>
-            {selectedIds.size > 0 ? (
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-white/50">{selectedIds.size} selected</span>
-                <button
-                  onClick={() => setSelectedIds(new Set())}
-                  className="text-xs text-white/30 hover:text-white/60 transition-colors"
-                >
-                  Clear
-                </button>
-                <button
-                  onClick={() => setMerging(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-black"
-                  style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                  Import Selected
-                </button>
-              </div>
-            ) : (
-              <p className="text-xs text-white/20">Select players to import</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-4">
-            {results.map(player => (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                selected={selectedIds.has(player.id)}
-                onToggleSelect={() => toggleSelect(player.id)}
-                userName={userName}
-                visibleParams={visibleParams}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-              {/* Import modal */}
-              {merging && (
-                <ImportModal
-                  players={results.filter(p => selectedIds.has(p.id))}
-                  databases={databases}
-                  onClose={() => setMerging(false)}
-                />
-              )}
-            </div>{/* end left column */}
-
-            {/* Right column: Search Coverage + Parameter Coverage */}
-            <div className="w-64 flex-shrink-0 flex flex-col gap-4">
-              <div className="rounded-2xl border border-white/8 overflow-hidden flex flex-col" style={{ background: 'var(--card-bg)' }}>
-                <div className="px-4 py-3 border-b border-white/8 flex-shrink-0">
-                  <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Search Coverage</p>
-                </div>
-                {loading ? (
-          <div className="px-4 py-5 flex flex-col gap-2">
-            {[1,2,3].map(i => (
-              <div key={i} className="h-8 rounded-lg animate-pulse" style={{ background: 'var(--hover-bg)' }} />
-            ))}
-          </div>
-        ) : noSitesSelected ? (
-          <div className="px-4 py-5">
-            <p className="text-xs text-white/25 text-center">No sites selected for search</p>
-          </div>
-        ) : siteStats.length === 0 ? (
-          <div className="px-4 py-5">
-            <p className="text-xs text-white/25 text-center">No sites with scrapers were searched</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {siteStats
-              .sort((a, b) => {
-                // Results first, then no-results, then errors, then no-scraper
-                const rank = (s: SiteStat) => s.count > 0 ? 0 : s.error ? 2 : s.noScraper ? 3 : 1
-                return rank(a) - rank(b) || b.count - a.count
-              })
-              .map(site => (
-              <div key={site.url} className="flex items-center gap-3 px-4 py-2.5">
-                {/* Status icon */}
-                {site.error ? (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,100,100,0.12)' }}>
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#ff6464"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                  </div>
-                ) : site.noScraper ? (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
-                    <svg className="w-3 h-3 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                  </div>
-                ) : site.count > 0 ? (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                  </div>
-                ) : (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
-                    <svg className="w-3 h-3 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
+                {/* Action bar — above player cards only */}
+                {!loading && results.length > 0 && (
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs text-white/30 uppercase tracking-widest">{results.length} player{results.length !== 1 ? 's' : ''} found</p>
+                    {selectedIds.size > 0 ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-white/50">{selectedIds.size} selected</span>
+                        <button
+                          onClick={() => setSelectedIds(new Set())}
+                          className="text-xs text-white/30 hover:text-white/60 transition-colors"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          onClick={() => setMerging(true)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-black"
+                          style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                          Import Selected
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-white/20">Select players to import</p>
+                    )}
                   </div>
                 )}
-                {/* Site info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: site.count > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                    {site.name}
-                  </p>
-                  {site.error ? (
-                    <p className="text-[10px]" style={{ color: '#ff6464aa' }}>Did not succeed to scrape</p>
-                  ) : site.noScraper ? (
-                    <p className="text-[10px]" style={{ color: 'var(--text-faint)' }}>No scraper available</p>
-                  ) : (
-                    <p className="text-[10px]" style={{ color: site.count > 0 ? '#00c896aa' : 'rgba(255,255,255,0.2)' }}>
-                      {site.count > 0 ? `${site.count} result${site.count !== 1 ? 's' : ''}` : 'No results'}
-                    </p>
-                  )}
-                </div>
-                {/* Count badge */}
-                {site.count > 0 && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896' }}>
-                    {site.count}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-                {/* Summary footer */}
-                {!loading && siteStats.length > 0 && (
-                  <div className="px-4 py-2.5 border-t border-white/8" style={{ background: 'var(--subtle-bg)' }}>
-                    <p className="text-[10px] text-white/30">
-                      {siteStats.filter(s => s.count > 0).length} of {siteStats.filter(s => !s.noScraper).length} scraped sites found results
-                    </p>
+
+                {/* Loading */}
+                {loading && (
+                  <div className="text-center py-16">
+                    <div className="w-10 h-10 rounded-full border-2 border-[#00c896] border-t-transparent animate-spin mx-auto mb-4" />
+                    <p className="text-white/30 text-sm">Searching player database...</p>
                   </div>
                 )}
-              </div>
 
-              {/* Parameter Coverage Panel */}
-              <ParameterCoveragePanel results={results} searched={searched} loading={loading} visibleParams={visibleParams} customKeys={customKeys} />
-            </div>{/* end right column */}
+                {/* No sites selected */}
+                {!loading && noSitesSelected && (
+                  <div className="rounded-2xl border border-dashed p-16 text-center" style={{ borderColor: 'rgba(255,159,67,0.3)', background: 'rgba(255,159,67,0.03)' }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(255,159,67,0.1)', border: '1px solid rgba(255,159,67,0.25)' }}>
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ff9f43"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
+                    <p className="text-sm font-medium mb-1" style={{ color: '#ff9f43' }}>No scouting sites selected</p>
+                    <p className="text-white/30 text-xs">Check the boxes next to the sites you want to search in below</p>
+                  </div>
+                )}
 
-          </div>
+                {/* No results */}
+                {!loading && !noSitesSelected && results.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center">
+                    <p className="text-white/40 text-sm mb-1">No players found for "{query}"</p>
+                    <p className="text-white/20 text-xs">Try a different name or check the spelling</p>
+                  </div>
+                )}
+
+                {/* Player cards */}
+                {!loading && results.length > 0 && (
+                  <div className="flex flex-col gap-4">
+                    {results.map(player => (
+                      <PlayerCard
+                        key={player.id}
+                        player={player}
+                        selected={selectedIds.has(player.id)}
+                        onToggleSelect={() => toggleSelect(player.id)}
+                        userName={userName}
+                        visibleParams={visibleParams}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Import modal */}
+                {merging && (
+                  <ImportModal
+                    players={results.filter(p => selectedIds.has(p.id))}
+                    databases={databases}
+                    onClose={() => setMerging(false)}
+                  />
+                )}
+              </div>{/* end left column */}
+
+              {/* Right column: Combined Coverage */}
+              <div className="w-64 flex-shrink-0 self-start sticky top-4">
+                <CoveragePanel siteStats={siteStats} results={results} loading={loading} noSitesSelected={noSitesSelected} />
+              </div>{/* end right column */}
+
+            </div>{/* end flex row */}
+          </>
           )}{/* end searched condition */}
         </div>{/* end p-6 */}
       </div>{/* end top zone */}
@@ -325,105 +258,212 @@ export default function SearchClient({ databases, userName }: { databases: Datab
   )
 }
 
-// ─── Parameter Coverage Panel ─────────────────────────────────────────────────
+// ─── Coverage Panel (Search Coverage + Parameter Coverage combined) ──────────
 
-/** Map every param key to whether it was found in any merged player result */
 function isFound(results: PlayerResult[], key: string): boolean {
   if (results.length === 0) return false
   switch (key) {
-    case 'photo':            return results.some(p => !!p.photo)
-    case 'nationality':      return results.some(p => !!p.nationality)
+    case 'photo':             return results.some(p => !!p.photo)
+    case 'nationality':       return results.some(p => !!p.nationality)
     case 'age':
-    case 'dateOfBirth':      return results.some(p => !!p.dateOfBirth)
-    case 'height':           return results.some(p => p.heightCm != null)
-    case 'weight':           return results.some(p => p.weightKg != null)
-    case 'team':             return results.some(p => !!p.team)
-    case 'position':         return results.some(p => !!p.position)
-    case 'marketValue':      return results.some(p => !!p.marketValue)
-    case 'description':      return results.some(p => !!p.description)
-    case 'transfermarktLink':return results.some(p => !!p.transfermarktUrl)
-    case 'sofascoreLink':    return results.some(p => !!p.sofascoreUrl)
-    case 'fmInsideUrl':      return results.some(p => !!p.fmInsideUrl)
-    case 'preferredFoot':   return results.some(p => !!p.preferredFoot)
-    case 'league':          return results.some(p => !!p.league)
-    case 'contractExpiry':  return results.some(p => !!p.contractUntil)
-    // Fields not yet returned by any scraper (always not found from search)
-    case 'passports':   return results.some(p => !!p.passports)
-    case 'joiningDate': return results.some(p => !!p.joiningDate)
-    case 'fmWages':      return results.some(p => !!p.fmWages)
+    case 'dateOfBirth':       return results.some(p => !!p.dateOfBirth)
+    case 'height':            return results.some(p => p.heightCm != null)
+    case 'weight':            return results.some(p => p.weightKg != null)
+    case 'team':              return results.some(p => !!p.team)
+    case 'position':          return results.some(p => !!p.position)
+    case 'marketValue':       return results.some(p => !!p.marketValue)
+    case 'description':       return results.some(p => !!p.description)
+    case 'transfermarktLink': return results.some(p => !!p.transfermarktUrl)
+    case 'sofascoreLink':     return results.some(p => !!p.sofascoreUrl)
+    case 'preferredFoot':     return results.some(p => !!p.preferredFoot)
+    case 'league':            return results.some(p => !!p.league)
+    case 'contractExpiry':    return results.some(p => !!p.contractUntil)
+    case 'passports':         return results.some(p => !!p.passports)
+    case 'joiningDate':       return results.some(p => !!p.joiningDate)
+    case 'fmWages':           return results.some(p => !!p.fmWages)
     case 'fmAttributes':
-    case 'keyStrengths':
-    case 'areasForImprovement':
       return results.some(p => !!p.fmAttributes)
-    // Fields not yet returned by any scraper
-    case 'seasonStats':
-    case 'heatMap':
-    // Manual-only fields (filled by user in the card, not from scrapers)
-    case 'transferFeeExpect':
-    case 'transferFeeReal':
-    case 'salaryExpect':
-    case 'salaryReal':
-    case 'recentForm':
-    case 'instagramLink':
-    case 'highlightsLink':
-    case 'sentBy':
-      return false
     default:
       return false
   }
 }
 
-function ParameterCoveragePanel({ results, searched, loading, visibleParams, customKeys }: {
+function CoveragePanel({ siteStats, results, loading, noSitesSelected }: {
+  siteStats: SiteStat[]
   results: PlayerResult[]
-  searched: boolean
   loading: boolean
-  visibleParams: Set<string>
-  customKeys: string[]
+  noSitesSelected: boolean
 }) {
-  // Build the ordered list of active keys: built-in first, then custom
-  const activeBuiltin = PARAM_KEYS.filter(k => visibleParams.has(k))
-  const activeCustom  = customKeys.filter(k => visibleParams.has(k))
-  const allActive     = [...activeBuiltin, ...activeCustom]
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const foundCount = allActive.filter(k => isFound(results, k)).length
+  // Collapse all sites whenever new search results arrive
+  useEffect(() => {
+    setExpanded(new Set())
+  }, [siteStats])
+
+  const scraperSitesAll = siteStats.filter(s => !s.noScraper)
+  const expandableSites = scraperSitesAll.map(s => s.name)
+  const allExpanded     = expandableSites.length > 0 && expandableSites.every(n => expanded.has(n))
+
+  function toggle(name: string) {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name); else next.add(name)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    if (allExpanded) {
+      setExpanded(new Set())
+    } else {
+      setExpanded(new Set(expandableSites))
+    }
+  }
+
+  // Scrapers first (have param mappings), then no-scraper sites
+  const noScraperSites = siteStats.filter(s => s.noScraper)
+  const orderedSites   = [...scraperSitesAll, ...noScraperSites]
 
   return (
     <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'var(--card-bg)' }}>
-      <div className="px-4 py-3 border-b border-white/8">
-        <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Parameter Coverage</p>
+      <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
+        <p className="text-xs font-semibold text-white/60 uppercase tracking-widest">Coverage</p>
+        {!loading && expandableSites.length > 0 && (
+          <button
+            onClick={toggleAll}
+            className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md transition-colors"
+            style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)' }}
+          >
+            {allExpanded ? (
+              <>
+                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14l5-5 5 5z"/></svg>
+                Collapse all
+              </>
+            ) : (
+              <>
+                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+                Expand all
+              </>
+            )}
+          </button>
+        )}
       </div>
 
-      {!searched ? (
-        <div className="flex items-center justify-center px-4 py-6">
-          <p className="text-xs text-white/25 text-center leading-relaxed">Run a search to see<br/>which parameters were found</p>
+      {noSitesSelected ? (
+        <div className="px-4 py-5">
+          <p className="text-xs text-white/25 text-center">No sites selected for search</p>
         </div>
       ) : loading ? (
         <div className="px-4 py-4 flex flex-col gap-2">
-          {[1,2,3,4,5,6].map(i => (
-            <div key={i} className="h-6 rounded-lg animate-pulse" style={{ background: 'var(--hover-bg)' }} />
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-8 rounded-lg animate-pulse" style={{ background: 'var(--hover-bg)' }} />
           ))}
         </div>
+      ) : orderedSites.length === 0 ? (
+        <div className="px-4 py-5">
+          <p className="text-xs text-white/25 text-center">No sites with scrapers were searched</p>
+        </div>
       ) : (
-        <div className="divide-y divide-white/5 max-h-[480px] overflow-y-auto">
-          {allActive.map(key => {
-            const found = isFound(results, key)
-            const label = PARAM_LABELS[key as keyof typeof PARAM_LABELS] ?? key
+        <div className="divide-y divide-white/5">
+          {orderedSites.map(site => {
+            const siteParams = PARAMS_BY_SOURCE[site.name] ?? []
+            const hasParams  = siteParams.length > 0 && !site.noScraper
+            const isOpen     = expanded.has(site.name)
+            const realParams = siteParams.filter(k => !COMING_SOON.has(k))
+            const foundCount = realParams.filter(k => isFound(results, k)).length
+
             return (
-              <div key={key} className="flex items-center gap-3 px-4 py-2">
-                {found ? (
-                  <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
-                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              <div key={site.url}>
+                {/* Site header row */}
+                <div
+                  className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${hasParams ? 'cursor-pointer hover:bg-white/3' : ''}`}
+                  onClick={() => hasParams && toggle(site.name)}
+                >
+                  {/* Status icon */}
+                  {site.error ? (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,100,100,0.12)' }}>
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#ff6464"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </div>
+                  ) : site.noScraper ? (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
+                      <svg className="w-3 h-3 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
+                  ) : site.count > 0 ? (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
+                      <svg className="w-3 h-3 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
+                    </div>
+                  )}
+
+                  {/* Site name + result subtitle */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate" style={{ color: site.count > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      {site.name}
+                    </p>
+                    <p className="text-[10px]" style={{ color: site.error ? '#ff6464aa' : site.noScraper ? 'var(--text-faint)' : site.count > 0 ? '#00c896aa' : 'rgba(255,255,255,0.2)' }}>
+                      {site.error ? 'Scrape failed' : site.noScraper ? 'No scraper' : site.count > 0 ? `${site.count} result${site.count !== 1 ? 's' : ''}` : 'No results'}
+                    </p>
                   </div>
-                ) : (
-                  <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
-                    <svg className="w-2.5 h-2.5 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
+
+                  {/* Param score badge */}
+                  {hasParams && realParams.length > 0 && (
+                    <span className="text-[10px] tabular-nums flex-shrink-0" style={{ color: foundCount > 0 ? '#00c896' : 'rgba(255,255,255,0.2)' }}>
+                      {foundCount}/{realParams.length}
+                    </span>
+                  )}
+
+                  {/* Chevron */}
+                  {hasParams && (
+                    <svg
+                      className="w-3 h-3 flex-shrink-0 transition-transform duration-150"
+                      style={{ color: 'rgba(0,0,0,0.5)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                      viewBox="0 0 24 24" fill="currentColor"
+                    >
+                      <path d="M7 10l5 5 5-5z"/>
+                    </svg>
+                  )}
+                </div>
+
+                {/* Collapsible parameter list */}
+                {isOpen && hasParams && (
+                  <div className="pb-1.5" style={{ background: 'rgba(0,0,0,0.12)' }}>
+                    {siteParams.map(key => {
+                      const isComing = COMING_SOON.has(key)
+                      const found    = !isComing && isFound(results, key)
+                      return (
+                        <div key={key} className="flex items-center gap-2.5 pl-9 pr-4 py-[5px]">
+                          {isComing ? (
+                            <div className="w-3 h-3 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(96,165,250,0.12)' }}>
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(96,165,250,0.6)' }} />
+                            </div>
+                          ) : found ? (
+                            <div className="w-3 h-3 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(0,200,150,0.15)' }}>
+                              <svg className="w-2 h-2" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                            </div>
+                          ) : (
+                            <div className="w-3 h-3 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: 'rgba(220,50,50,0.12)', border: '1px solid rgba(220,50,50,0.35)' }}>
+                              <svg className="w-2 h-2" viewBox="0 0 24 24" fill="rgba(220,50,50,0.8)"><path d="M19 13H5v-2h14v2z"/></svg>
+                            </div>
+                          )}
+                          <span className="text-[11px] flex-1 truncate" style={{ color: isComing ? 'rgba(96,165,250,0.6)' : found ? 'rgba(0,0,0,0.75)' : 'rgba(220,50,50,0.75)' }}>
+                            {PARAM_LABELS[key]}
+                          </span>
+                          {isComing && (
+                            <span className="text-[9px] px-1 py-px rounded flex-shrink-0" style={{ background: 'rgba(96,165,250,0.12)', color: 'rgba(96,165,250,0.8)' }}>
+                              soon
+                            </span>
+                          )}
+                          {!isComing && !found && (
+                            <span className="text-[9px] flex-shrink-0" style={{ color: 'rgba(220,50,50,0.4)' }}>—</span>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                )}
-                <span className="text-xs flex-1" style={{ color: found ? 'var(--text-secondary)' : 'var(--text-faint)' }}>
-                  {label}
-                </span>
-                {found && (
-                  <svg className="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                 )}
               </div>
             )
@@ -432,10 +472,10 @@ function ParameterCoveragePanel({ results, searched, loading, visibleParams, cus
       )}
 
       {/* Footer */}
-      {searched && !loading && allActive.length > 0 && (
+      {!loading && orderedSites.length > 0 && (
         <div className="px-4 py-2 border-t border-white/8" style={{ background: 'var(--subtle-bg)' }}>
           <p className="text-[10px] text-white/30">
-            {foundCount} of {allActive.length} parameters found
+            {siteStats.filter(s => s.count > 0).length} of {scraperSitesAll.length} sites found results
           </p>
         </div>
       )}
@@ -634,7 +674,7 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
       </div>
 
       {/* Bottom section — 3 columns aligned with body */}
-      {(show('heatMap') || show('seasonStats') || show('keyStrengths') || show('areasForImprovement') || show('fmAttributes')) && (
+      {(show('heatMap') || show('seasonStats') || show('fmAttributes')) && (
         <div className="border-t border-white/5 grid grid-cols-3 divide-x divide-white/5" style={{ background: 'var(--subtle-bg)' }}>
 
           {/* Col 1: Heat Map */}
@@ -662,7 +702,7 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
           </div>
 
           {/* Col 3: FM Attributes radar (aligns with Physical column) */}
-          {(show('keyStrengths') || show('areasForImprovement') || show('fmAttributes')) && (
+          {show('fmAttributes') && (
             <div className="p-4 flex flex-col gap-2">
               <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>FM Attributes</p>
               {player.fmAttributes
@@ -680,51 +720,6 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
   )
 }
 
-// ─── FM Attributes Table ──────────────────────────────────────────────────────
-
-function FMRadarChart({ fmAttributes }: { fmAttributes: string }) {
-  const parts = fmAttributes.split(' / ')
-  const parseSection = (s: string) =>
-    (s ?? '').split(', ').map(item => {
-      const i = item.lastIndexOf(' ')
-      return { name: item.slice(0, i).trim(), value: parseInt(item.slice(i + 1)) || 0 }
-    }).filter(a => a.name)
-
-  const top = parseSection(parts[0])
-  const bot = parseSection(parts[1])
-
-  const AttrRow = ({ name, value, isTop }: { name: string; value: number; isTop: boolean }) => {
-    const pct = Math.round((value / 99) * 100)
-    const color = isTop ? '#00c896' : 'rgba(255,90,90,0.9)'
-    const barBg = isTop ? 'rgba(0,200,150,0.12)' : 'rgba(255,90,90,0.1)'
-    const barFill = isTop ? 'rgba(0,200,150,0.55)' : 'rgba(255,90,90,0.5)'
-    return (
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] flex-1 truncate" style={{ color }}>{name}</span>
-        <div className="w-14 h-1.5 rounded-full flex-shrink-0" style={{ background: barBg }}>
-          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barFill }} />
-        </div>
-        <span className="text-[10px] font-bold tabular-nums w-5 text-right flex-shrink-0" style={{ color }}>
-          {value}
-        </span>
-      </div>
-    )
-  }
-
-  return (
-    <div className="w-full flex flex-col gap-2.5">
-      <div className="flex flex-col gap-1">
-        <p className="text-[9px] uppercase tracking-widest font-semibold mb-0.5" style={{ color: 'rgba(0,200,150,0.5)' }}>Key Strengths</p>
-        {top.map((a, i) => <AttrRow key={i} name={a.name} value={a.value} isTop={true} />)}
-      </div>
-      <div className="h-px w-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
-      <div className="flex flex-col gap-1">
-        <p className="text-[9px] uppercase tracking-widest font-semibold mb-0.5" style={{ color: 'rgba(255,90,90,0.5)' }}>Areas for Improvement</p>
-        {bot.map((a, i) => <AttrRow key={i} name={a.name} value={a.value} isTop={false} />)}
-      </div>
-    </div>
-  )
-}
 
 // ─── Card field helpers ────────────────────────────────────────────────────────
 
@@ -926,7 +921,27 @@ function ImportModal({ players, databases, onClose }: {
     if (selectedIds.size === 0) return
     setLoading(true)
     setError('')
-    const body = { firstName, lastName, position, clubName, nationality, dateOfBirth, heightCm, weightKg, marketValue, sourceName, sourceUrl }
+
+    // Build custom fields from all scraped data
+    const addCf = (key: string, getter: (p: PlayerResult) => string | null | undefined) => {
+      const v = pickBest(getSources(players, getter))
+      return v ? { [key]: v } : {}
+    }
+    const customFields = {
+      ...addCf('foot',          p => p.preferredFoot),
+      ...addCf('passports',     p => p.passports),
+      ...addCf('league',        p => p.league),
+      ...addCf('joiningDate',   p => p.joiningDate),
+      ...addCf('contractExpiry',p => p.contractUntil),
+      ...addCf('fmWages',       p => p.fmWages),
+      ...addCf('fmAttributes',  p => p.fmAttributes),
+      ...addCf('transfermarktUrl', p => p.transfermarktUrl),
+      ...addCf('sofascoreUrl',     p => p.sofascoreUrl),
+      ...addCf('fmInsideUrl',      p => p.fmInsideUrl),
+      ...addCf('photo',            p => p.photo),
+    }
+
+    const body = { firstName, lastName, position, clubName, nationality, dateOfBirth, heightCm, weightKg, marketValue, sourceName, sourceUrl, customFields }
     try {
       const results = await Promise.all(
         [...selectedIds].map(dbId =>

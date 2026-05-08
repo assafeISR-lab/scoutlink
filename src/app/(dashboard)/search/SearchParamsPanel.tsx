@@ -28,8 +28,6 @@ export const PARAM_KEYS = [
   'salaryReal',
   // Scouting data
   'heatMap',
-  'keyStrengths',
-  'areasForImprovement',
   'fmAttributes',
   'recentForm',
   'description',
@@ -69,8 +67,6 @@ export const PARAM_LABELS: Record<ParamKey, string> = {
   salaryReal:           'Salary (Real)',
   // Scouting data
   heatMap:              'Heat Map',
-  keyStrengths:         'Key Strengths',
-  areasForImprovement:  'Areas for Improvement',
   fmAttributes:         'Attributes Top3 / Low3',
   recentForm:           'Recent Form',
   description:          'Bio / Description',
@@ -108,8 +104,6 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   salaryReal:           '',
   // Scouting data
   heatMap:              'Sofascore',
-  keyStrengths:         'Sofascore',
-  areasForImprovement:  'Sofascore',
   fmAttributes:         'FMInside',
   recentForm:           '',
   description:          '',

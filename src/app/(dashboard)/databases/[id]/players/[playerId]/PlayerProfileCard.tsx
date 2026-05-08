@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import NotesSection from './NotesSection'
+import FMRadarChart from '@/components/FMRadarChart'
 
 interface FieldSource {
   id: string
@@ -59,13 +60,6 @@ interface Props {
   actionButtons: React.ReactNode
 }
 
-const seasons = ['25/26', '24/25', '23/24', '22/23']
-const statCols = ['club', 'mp', 'ms', 'goals', 'assists'] as const
-type StatCol = typeof statCols[number]
-type SeasonRow = Record<StatCol, string>
-type SeasonStats = Record<string, SeasonRow>
-const emptyRow = (): SeasonRow => ({ club: '', mp: '', ms: '', goals: '', assists: '' })
-
 const toDateStr = (d: Date | null) => d ? new Date(d).toISOString().split('T')[0] : ''
 
 export default function PlayerProfileCard({ player, addedByName, currentUserId, databaseId, canWrite, actionButtons }: Props) {
@@ -74,18 +68,11 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   // Helper to get custom field value
   const cf = (name: string) => player.customFields.find(f => f.fieldName === name)?.value ?? ''
 
-  const parseSeasonStats = (): SeasonStats => {
-    const raw = cf('seasonStats')
-    if (!raw) return {}
-    try { return JSON.parse(raw) } catch { return {} }
-  }
-
   // ── Edit state ────────────────────────────────────────────────────────────
   const [isEditing, setIsEditing]   = useState(false)
   const [saving,    setSaving]      = useState(false)
   const [saveError, setSaveError]   = useState('')
   const [changedFields, setChangedFields] = useState<Set<string>>(new Set())
-  const [seasonStatsForm, setSeasonStatsForm] = useState<SeasonStats>(parseSeasonStats)
 
   const initialForm = () => ({
     // DB fields
@@ -119,8 +106,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     sofascoreUrl:      cf('sofascoreUrl')     || player.fieldSources.find(s => s.sourceName === 'Sofascore'     && s.isActive)?.sourceUrl || '',
     instagram:         cf('instagram'),
     highlights:        cf('highlights'),
-    keyStrengths:      cf('keyStrengths'),
-    areasForImprovement: cf('areasForImprovement'),
+    fmAttributes:        cf('fmAttributes'),
   })
 
   const [form, setForm] = useState(initialForm)
@@ -132,7 +118,6 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
   function handleEdit() {
     setForm(initialForm())
-    setSeasonStatsForm(parseSeasonStats())
     setChangedFields(new Set())
     setSaveError('')
     setIsEditing(true)
@@ -142,7 +127,6 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     setIsEditing(false)
     setChangedFields(new Set())
     setSaveError('')
-    setSeasonStatsForm(parseSeasonStats())
   }
 
   async function handleSave() {
@@ -151,7 +135,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
     // Split changed fields into DB fields and custom fields
     const dbFields = new Set(['position','heightCm','weightKg','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','goalsThisYear','totalGoals','totalGames','nationalGames','yearsInProClub'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','instagram','highlights','keyStrengths','areasForImprovement']
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','instagram','highlights','fmAttributes']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -162,10 +146,6 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
       if (changedCustomFields.includes(key)) {
         customFieldsPayload[key] = String((form as any)[key] ?? '')
       }
-    }
-
-    if (changedFields.has('seasonStats')) {
-      customFieldsPayload['seasonStats'] = JSON.stringify(seasonStatsForm)
     }
 
     const res = await fetch(`/api/databases/${databaseId}/players/${player.id}`, {
@@ -199,10 +179,12 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   // Source chips: custom field URLs take priority over FieldSource URLs
   const tmUrl = cf('transfermarktUrl') || player.fieldSources.find(s => s.sourceName === 'Transfermarkt' && s.isActive)?.sourceUrl || ''
   const scUrl = cf('sofascoreUrl')     || player.fieldSources.find(s => s.sourceName === 'Sofascore'     && s.isActive)?.sourceUrl || ''
+  const fmUrl = cf('fmInsideUrl')      || ''
 
   const sourceChips: { name: string; url: string }[] = [
     tmUrl ? { name: 'Transfermarkt', url: tmUrl } : null,
     scUrl ? { name: 'Sofascore',     url: scUrl } : null,
+    fmUrl ? { name: 'FMInside',      url: fmUrl } : null,
   ].filter(Boolean) as { name: string; url: string }[]
 
   function isManual(fieldName: string) {
@@ -226,11 +208,14 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
       {/* ── Header ── */}
       <div className="flex items-center gap-4 p-5" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold text-black flex-shrink-0" style={{
-          background: 'linear-gradient(135deg, #00c896, #00a878)',
-          boxShadow: '0 0 16px rgba(0,200,150,0.3)',
-        }}>
-          {player.firstName[0]}{player.lastName[0]}
+        <div
+          className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center text-lg font-bold text-black flex-shrink-0"
+          style={cf('photo') ? { border: '1px solid var(--border)' } : { background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 0 16px rgba(0,200,150,0.3)' }}
+        >
+          {cf('photo')
+            ? <img src={cf('photo')} alt={fullName} className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+            : <>{player.firstName[0]}{player.lastName[0]}</>
+          }
         </div>
 
         <div className="flex-1 min-w-0">
@@ -336,99 +321,44 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         </div>
       </div>
 
-      {/* ── Heat Map ── */}
-      <div className="flex items-center gap-4 px-4 py-3" style={{ borderTop: '1px solid var(--border)', background: 'var(--subtle-bg)' }}>
-        <p className="text-[10px] uppercase tracking-widest font-medium flex-shrink-0 w-20" style={{ color: 'var(--text-muted)' }}>Heat Map</p>
-        <div className="flex-1 h-14 rounded-lg flex items-center justify-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border)' }}>
-          <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
-        </div>
-      </div>
+      {/* ── Bottom section — 3 columns matching search result card ── */}
+      <div className="border-t border-white/5 grid grid-cols-3 divide-x divide-white/5" style={{ background: 'var(--subtle-bg)' }}>
 
-      {/* ── Attributes ── */}
-      <div className="flex items-start gap-6 px-4 py-3" style={{ borderTop: '1px solid var(--border)', background: 'var(--subtle-bg)' }}>
-        <p className="text-[10px] uppercase tracking-widest font-medium flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }}>Attributes</p>
-        <div className="flex gap-8 flex-1">
+        {/* Col 1: Heat Map */}
+        <div className="p-4 flex flex-col gap-2">
+          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Heat Map</p>
+          <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
+          </div>
+        </div>
+
+        {/* Col 2: Season Stats */}
+        <div className="p-4 flex flex-col gap-2">
+          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Season Stats</p>
+          <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Transfermarkt · coming soon</span>
+          </div>
+        </div>
+
+        {/* Col 3: FM Attributes */}
+        <div className="p-4 flex flex-col gap-2">
+          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>FM Attributes</p>
           {isEditing ? (
-            <>
-              <div className="flex-1">
-                <p className="text-[10px] mb-1" style={{ color: 'var(--text-faint)' }}>Key Strengths</p>
-                <textarea value={form.keyStrengths} onChange={e => setField('keyStrengths', e.target.value)} placeholder="e.g. Pace, Dribbling…" rows={2}
-                  className="w-full text-[11px] px-2 py-1.5 rounded-lg resize-none focus:outline-none"
-                  style={{ color: 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }} />
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] mb-1" style={{ color: 'var(--text-faint)' }}>Areas for Improvement</p>
-                <textarea value={form.areasForImprovement} onChange={e => setField('areasForImprovement', e.target.value)} placeholder="e.g. Aerial duels…" rows={2}
-                  className="w-full text-[11px] px-2 py-1.5 rounded-lg resize-none focus:outline-none"
-                  style={{ color: 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }} />
-              </div>
-            </>
+            <textarea
+              value={form.fmAttributes}
+              onChange={e => setField('fmAttributes', e.target.value)}
+              placeholder={'e.g. Speed 80, Technique 75, Vision 72 / Jumping 45, Strength 42, Heading 38'}
+              rows={4}
+              className="text-[11px] px-2 py-1.5 rounded-lg resize-none focus:outline-none"
+              style={{ color: 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }}
+            />
+          ) : cf('fmAttributes') ? (
+            <FMRadarChart fmAttributes={cf('fmAttributes')} />
           ) : (
-            <div className="flex gap-8 flex-1">
-              <InlineAttr label="Key Strengths"         value={cf('keyStrengths') || null}         green={cfGreen('keyStrengths')} />
-              <InlineAttr label="Areas for Improvement" value={cf('areasForImprovement') || null}  green={cfGreen('areasForImprovement')} />
+            <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>FMInside · no data</span>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* ── Season Stats ── */}
-      <div style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="px-4 py-2" style={{ background: 'var(--subtle-bg)', borderBottom: '1px solid var(--border)' }}>
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr style={{ background: 'var(--subtle-bg)' }}>
-                {['Season', 'Club', 'MP', 'MS', 'Goals', 'Assists'].map(h => (
-                  <th key={h} className="px-4 py-2 text-left text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {isEditing ? seasons.map(s => {
-                const row = seasonStatsForm[s] ?? emptyRow()
-                return (
-                  <tr key={s} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td className="px-4 py-2 text-xs font-medium" style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{s}</td>
-                    {statCols.map(col => (
-                      <td key={col} className="px-2 py-1.5">
-                        <input
-                          type={col === 'club' ? 'text' : 'number'}
-                          value={row[col]}
-                          onChange={e => {
-                            setSeasonStatsForm(prev => ({
-                              ...prev,
-                              [s]: { ...(prev[s] ?? emptyRow()), [col]: e.target.value },
-                            }))
-                            setChangedFields(prev => new Set([...prev, 'seasonStats']))
-                          }}
-                          placeholder="—"
-                          className="w-full text-[11px] text-center focus:outline-none rounded px-1.5 py-1 transition-all"
-                          style={{ color: 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896', minWidth: col === 'club' ? 90 : 50 }}
-                          onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-                          onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                )
-              }) : seasons.map(s => {
-                const row = parseSeasonStats()[s]
-                return (
-                  <tr key={s} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>{s}</td>
-                    {statCols.map(col => (
-                      <td key={col} className="px-4 py-2.5 text-xs" style={{ color: row?.[col] ? '#00c896' : 'var(--text-faint)' }}>
-                        {row?.[col] || '—'}
-                      </td>
-                    ))}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
         </div>
       </div>
 
@@ -525,14 +455,3 @@ function LinkRow({ label, display, isEditing, inputValue, onChange }: {
   )
 }
 
-// ── Inline attribute display ───────────────────────────────────────────────────
-
-function InlineAttr({ label, value, green }: { label: string; value: string | null | undefined; green?: boolean }) {
-  const hasValue = value != null && value !== ''
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{label}:</span>
-      <span className="text-[11px] font-medium" style={{ color: hasValue ? (green ? '#00c896' : 'var(--text-secondary)') : 'var(--text-faint)' }}>{value ?? '—'}</span>
-    </div>
-  )
-}
