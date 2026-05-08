@@ -10,8 +10,8 @@ export async function GET(request: Request) {
   let rawStatus = 0
   let rawHtml = ''
   try {
-    const url = `https://fminside.net/players/7-fm-26?search=${encodeURIComponent(query)}`
-    const res = await sbFetch(url, true, undefined, 3000)
+    const url = `https://fminside.net/players/26?search=${encodeURIComponent(query)}`
+    const res = await sbFetch(url, true, undefined, 4000)
     rawStatus = res.status
     rawHtml = await res.text()
   } catch (e) {
