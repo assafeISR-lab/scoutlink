@@ -1,21 +1,25 @@
 import type { SiteScraper, ScrapedPlayer } from './types'
-import { sbFetch } from './scrapingbee'
+import { sbFetch, sbInteract } from './scrapingbee'
 
 export const fmInsideScraper: SiteScraper = {
   domains: ['fminside.net', 'www.fminside.net'],
   name: 'FMInside',
   async search(query: string): Promise<ScrapedPlayer[]> {
-    // Fetch the FMInside players page via ScrapingBee (Cloudflare blocks direct requests).
-    // The page is server-rendered so renderJs=false is sufficient and faster.
-    // ?search= param is ignored server-side; we filter by name after parsing.
+    // Use ScrapingBee JS interaction: load the page, fill the name search input,
+    // trigger the live filter, wait for results to render.
     let html = ''
     try {
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 15000)
+      const timer = setTimeout(() => controller.abort(), 20000)
       try {
-        const res = await sbFetch(
-          `https://fminside.net/players/26?search=${encodeURIComponent(query)}`,
-          false,
+        const ajaxBody = `search_phrase=${encodeURIComponent(query)}&database_id=7`
+        const res = await sbInteract(
+          'https://fminside.net/players/26',
+          [
+            { wait_for: "div.players" },
+            { evaluate: `fetch('/resources/inc/ajax/search.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},body:'${ajaxBody}'}).then(r=>r.text()).then(h=>{document.querySelector('div.players').innerHTML=h})` },
+            { wait: 4000 },
+          ],
           controller.signal,
         )
         if (!res.ok) return []
