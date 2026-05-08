@@ -1,30 +1,22 @@
 import type { SiteScraper, ScrapedPlayer } from './types'
 import { sbFetch } from './scrapingbee'
 
-const PROFILE_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,*/*',
-  'Referer': 'https://fminside.net/players',
-}
-
 export const fmInsideScraper: SiteScraper = {
   domains: ['fminside.net', 'www.fminside.net'],
   name: 'FMInside',
   async search(query: string): Promise<ScrapedPlayer[]> {
-    // FMInside search uses a POST to /resources/inc/ajax/search.php.
-    // Now routed through ScrapingBee since Cloudflare blocks direct server requests.
+    // Fetch the FMInside players page via ScrapingBee (Cloudflare blocks direct requests).
+    // The page is server-rendered so renderJs=false is sufficient and faster.
+    // ?search= param is ignored server-side; we filter by name after parsing.
     let html = ''
     try {
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 10000)
+      const timer = setTimeout(() => controller.abort(), 15000)
       try {
-        const postBody = new URLSearchParams({ search_phrase: query, database_id: '7' }).toString()
         const res = await sbFetch(
-          'https://fminside.net/resources/inc/ajax/search.php',
+          `https://fminside.net/players/26?search=${encodeURIComponent(query)}`,
           false,
           controller.signal,
-          undefined,
-          postBody,
         )
         if (!res.ok) return []
         html = await res.text()
@@ -33,6 +25,13 @@ export const fmInsideScraper: SiteScraper = {
       }
     } catch {
       return []
+    }
+
+    // Filter: keep only players whose name matches at least 2 query words
+    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 1)
+    const nameMatches = (name: string) => {
+      const lower = name.toLowerCase()
+      return queryWords.filter(w => lower.includes(w)).length >= Math.min(2, queryWords.length)
     }
 
     const players: ScrapedPlayer[] = []
@@ -54,6 +53,7 @@ export const fmInsideScraper: SiteScraper = {
       const playerId = hrefMatch[3]
       const name     = nameMatch?.[1]?.trim() ?? ''
       if (!name || name.length < 2 || seen.has(playerId)) continue
+      if (!nameMatches(name)) continue
       seen.add(playerId)
 
       const natMatch   = block.match(/class="flag"[^>]*code="([^"]+)"/)
@@ -91,13 +91,13 @@ export const fmInsideScraper: SiteScraper = {
       if (players.length >= 10) break
     }
 
-    // Fetch profiles for top 3 in parallel to get attributes (5s timeout each)
+    // Fetch profiles for top 3 in parallel to get attributes (6s timeout each)
     await Promise.allSettled(
       players.slice(0, 3).map(async player => {
         const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 5000)
+        const timer = setTimeout(() => controller.abort(), 6000)
         try {
-          const res = await fetch(player.sourceUrl, { headers: PROFILE_HEADERS, signal: controller.signal })
+          const res = await sbFetch(player.sourceUrl, false, controller.signal)
           if (!res.ok) return
           player.fmAttributes = parseAttributes(await res.text())
         } catch {
