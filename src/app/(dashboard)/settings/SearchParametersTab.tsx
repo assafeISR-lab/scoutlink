@@ -333,7 +333,7 @@ function Row({ label, checked, source, sourceOptions, onToggle, onSourceChange, 
           cursor: checked ? 'pointer' : 'not-allowed',
         }}
       >
-        <option value="" style={{ color: 'black' }}>— none —</option>
+        <option value="" style={{ color: 'black' }}>— manual —</option>
         {sourceOptions.map(s => (
           <option key={s} value={s} style={{ color: 'black' }}>{s}</option>
         ))}
