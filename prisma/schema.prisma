@@ -44,6 +44,8 @@ model PlayerDatabase {
   owner     Agent            @relation("DatabaseOwner", fields: [ownerId], references: [id])
   access    DatabaseAccess[]
   players   Player[]
+
+  @@index([ownerId])
 }
 
 // ─── Database Access (permissions) ───────────────────────────────────────────
@@ -58,6 +60,7 @@ model DatabaseAccess {
   agent      Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@unique([databaseId, agentId])
+  @@index([agentId])
 }
 
 // ─── Player ───────────────────────────────────────────────────────────────────
@@ -96,6 +99,9 @@ model Player {
   notes        PlayerNote[]
   timeline     TimelineEvent[]
   conflicts    DataConflict[]
+
+  @@index([databaseId])
+  @@index([addedById])
 }
 
 // ─── Field Source ─────────────────────────────────────────────────────────────
@@ -111,6 +117,8 @@ model FieldSource {
   isActive   Boolean  @default(true) // false = deleted/overridden
 
   player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
 }
 
 // ─── Custom Field ─────────────────────────────────────────────────────────────
@@ -122,6 +130,8 @@ model CustomField {
   createdAt DateTime @default(now())
 
   player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
 }
 
 // ─── Data Conflict ────────────────────────────────────────────────────────────
@@ -138,6 +148,8 @@ model DataConflict {
   createdAt   DateTime @default(now())
 
   player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
 }
 
 // ─── Player Note ──────────────────────────────────────────────────────────────
@@ -150,6 +162,8 @@ model PlayerNote {
 
   player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
   agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
 }
 
 // ─── Timeline Event ───────────────────────────────────────────────────────────
@@ -162,6 +176,8 @@ model TimelineEvent {
   createdAt DateTime @default(now())
 
   player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
 }
 
 // ─── Agent Website ────────────────────────────────────────────────────────────
@@ -198,6 +214,9 @@ model Report {
   createdAt    DateTime @default(now())
 
   agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([databaseId])
 }
 
 // ─── Activity Log ─────────────────────────────────────────────────────────────
@@ -209,6 +228,8 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
 }
 
 // ─── Calendar Event ───────────────────────────────────────────────────────────
@@ -223,4 +244,6 @@ model CalendarEvent {
   createdAt   DateTime @default(now())
 
   agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
 }
