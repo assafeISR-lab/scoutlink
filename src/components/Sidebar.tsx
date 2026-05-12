@@ -117,7 +117,7 @@ export default function Sidebar({ userName, userEmail, userInitial, userId, play
 
         {/* Players Watch List accordion */}
         <button
-          onClick={() => setExpanded(e => !e)}
+          onClick={() => { setExpanded(e => !e); router.push('/databases') }}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full text-left"
           style={onDatabases ? {
             background: 'linear-gradient(135deg, #00c89618, #00c89606)',
