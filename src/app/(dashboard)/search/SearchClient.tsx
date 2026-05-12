@@ -57,6 +57,35 @@ interface SiteStat {
   noScraper?: boolean
 }
 
+interface PlayerEditData {
+  // Core fields (pre-filled from scraped data, editable)
+  position: string
+  nationality: string
+  clubName: string
+  league: string
+  dateOfBirth: string
+  preferredFoot: string
+  heightCm: string
+  weightKg: string
+  passports: string
+  marketValue: string
+  fmWages: string
+  joiningDate: string
+  contractExpiry: string
+  fmAttributes: string
+  // Scout-added fields
+  transferFeeExpect: string
+  transferFeeReal: string
+  salaryExpect: string
+  salaryReal: string
+  recentForm: string
+  highlights: string
+  tmUrl: string
+  scUrl: string
+  igUrl: string
+  customExtras: { key: string; value: string }[]
+}
+
 export default function SearchClient({ databases, userName }: { databases: Database[]; userName: string }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PlayerResult[]>([])
@@ -66,7 +95,12 @@ export default function SearchClient({ databases, userName }: { databases: Datab
   const [noSitesSelected, setNoSitesSelected] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [merging, setMerging] = useState(false)
+  const [editedData, setEditedData] = useState<Record<string, PlayerEditData>>({})
   const [visibleParams, setVisibleParams] = useState<Set<string>>(new Set())
+
+  function handleDataChange(playerId: string, data: PlayerEditData) {
+    setEditedData(prev => ({ ...prev, [playerId]: data }))
+  }
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -226,6 +260,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
                         player={player}
                         selected={selectedIds.has(player.id)}
                         onToggleSelect={() => toggleSelect(player.id)}
+                        onDataChange={(data) => handleDataChange(player.id, data)}
                         userName={userName}
                         visibleParams={visibleParams}
                       />
@@ -238,6 +273,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
                   <ImportModal
                     players={results.filter(p => selectedIds.has(p.id))}
                     databases={databases}
+                    editedData={editedData}
                     onClose={() => setMerging(false)}
                   />
                 )}
@@ -517,33 +553,81 @@ function formatContractDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 }
 
+function formatDateStr(val: string | null | undefined): string | null {
+  if (!val) return null
+  const d = new Date(val)
+  if (isNaN(d.getTime())) return val
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 // ─── Player Card (populated with search results) ───────────────────────────────
 
-function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams }: {
+function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, visibleParams }: {
   player: PlayerResult
   selected: boolean
   onToggleSelect: () => void
+  onDataChange: (data: PlayerEditData) => void
   userName: string
   visibleParams: Set<string>
 }) {
   const show = (key: string) => visibleParams.size === 0 || visibleParams.has(key)
 
-  const [transferFeeExpect, setTransferFeeExpect] = useState('')
-  const [transferFeeReal,   setTransferFeeReal]   = useState('')
-  const [salaryExpect,      setSalaryExpect]       = useState('')
-  const [salaryReal,        setSalaryReal]         = useState('')
+  const [editMode, setEditMode] = useState(false)
+  const [editData, setEditData] = useState<PlayerEditData>({
+    position: player.position ?? '',
+    nationality: player.nationality ?? '',
+    clubName: player.team ?? '',
+    league: player.league ?? '',
+    dateOfBirth: player.dateOfBirth ?? '',
+    preferredFoot: player.preferredFoot ?? '',
+    heightCm: player.heightCm?.toString() ?? '',
+    weightKg: player.weightKg?.toString() ?? '',
+    passports: player.passports ?? '',
+    marketValue: player.marketValue ?? '',
+    fmWages: player.fmWages ?? '',
+    joiningDate: player.joiningDate ?? '',
+    contractExpiry: player.contractUntil ?? '',
+    fmAttributes: player.fmAttributes ?? '',
+    transferFeeExpect: '',
+    transferFeeReal: '',
+    salaryExpect: '',
+    salaryReal: '',
+    recentForm: '',
+    highlights: '',
+    tmUrl: player.transfermarktUrl ?? '',
+    scUrl: player.sofascoreUrl ?? '',
+    igUrl: '',
+    customExtras: [],
+  })
 
-  // Link inputs — pre-fill from merged source URLs
-  const [tmUrl, setTmUrl] = useState(player.transfermarktUrl ?? '')
-  const [scUrl, setScUrl] = useState(player.sofascoreUrl ?? '')
-  const [igUrl, setIgUrl] = useState('')
-  const [highlights,   setHighlights]   = useState('')
-  const [recentForm,   setRecentForm]   = useState('')
+  useEffect(() => { if (!selected) setEditMode(false) }, [selected])
+
+  function updateField(key: keyof Omit<PlayerEditData, 'customExtras'>, val: string) {
+    const next = { ...editData, [key]: val }
+    setEditData(next)
+    onDataChange(next)
+  }
+  function addExtra() {
+    const next = { ...editData, customExtras: [...editData.customExtras, { key: '', value: '' }] }
+    setEditData(next); onDataChange(next)
+  }
+  function updateExtra(i: number, field: 'key' | 'value', val: string) {
+    const extras = editData.customExtras.map((e, idx) => idx === i ? { ...e, [field]: val } : e)
+    const next = { ...editData, customExtras: extras }
+    setEditData(next); onDataChange(next)
+  }
+  function removeExtra(i: number) {
+    const extras = editData.customExtras.filter((_, idx) => idx !== i)
+    const next = { ...editData, customExtras: extras }
+    setEditData(next); onDataChange(next)
+  }
 
   const dateAdded = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  const age = player.dateOfBirth
-    ? Math.floor((Date.now() - new Date(player.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+  const dobStr = editData.dateOfBirth || player.dateOfBirth
+  const dobDate = dobStr ? new Date(dobStr) : null
+  const age = dobDate && !isNaN(dobDate.getTime())
+    ? Math.floor((Date.now() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
 
   return (
@@ -583,12 +667,12 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
         <div className="flex-1 min-w-0">
           <h3 className="text-base font-bold text-white leading-tight mb-1.5">{player.name}</h3>
           <div className="flex items-center gap-2 flex-wrap">
-            {player.position && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{player.position}</span>
+            {(editData.position || player.position) && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{editData.position || player.position}</span>
             )}
-            {player.team      && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{player.team}</span>}
-            {player.nationality && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{player.nationality}</span>}
-            {age               && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{age} yrs</span>}
+            {(editData.clubName || player.team)         && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{editData.clubName || player.team}</span>}
+            {(editData.nationality || player.nationality) && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{editData.nationality || player.nationality}</span>}
+            {age                                          && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{age} yrs</span>}
           </div>
         </div>
 
@@ -615,6 +699,23 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
             )
           })}
         </div>
+
+        {/* Edit button — only visible when selected */}
+        {selected && (
+          <button
+            onClick={e => { e.stopPropagation(); setEditMode(m => !m) }}
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            style={editMode
+              ? { background: 'rgba(0,200,150,0.15)', color: '#00c896', border: '1px solid rgba(0,200,150,0.4)' }
+              : { background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }
+            }
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            </svg>
+            Edit Player
+          </button>
+        )}
       </div>
 
       {/* Body — 3 columns */}
@@ -623,14 +724,14 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
         <div className="p-4">
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Physical</p>
           <div className="space-y-2.5">
-            {show('position')    && <CardField label="Position"     value={player.position} />}
-            {show('height')      && <CardField label="Height"       value={player.heightCm ? `${player.heightCm} cm` : null} />}
-            {show('weight')      && <CardField label="Weight"       value={player.weightKg ? `${player.weightKg} kg` : null} />}
-            {show('age')         && <CardField label="Age"          value={age ? `${age} yrs` : null} />}
-            {show('dateOfBirth') && <CardField label="Date of Birth" value={player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null} />}
-            {show('preferredFoot') && <CardField label="Foot"       value={player.preferredFoot} />}
-            {show('nationality') && <CardField label="Nationality"  value={player.nationality} />}
-            {show('passports')   && <CardField label="Passports"    value={player.passports} />}
+            {show('position')      && <EditableField label="Position"     editMode={editMode} displayValue={editData.position || null}      editValue={editData.position}     onChange={v => updateField('position', v)} />}
+            {show('height')        && <EditableField label="Height"       editMode={editMode} displayValue={editData.heightCm ? `${editData.heightCm} cm` : null} editValue={editData.heightCm} onChange={v => updateField('heightCm', v)} />}
+            {show('weight')        && <EditableField label="Weight"       editMode={editMode} displayValue={editData.weightKg ? `${editData.weightKg} kg` : null} editValue={editData.weightKg} onChange={v => updateField('weightKg', v)} />}
+            {show('age')           && <CardField label="Age"              value={age ? `${age} yrs` : null} />}
+            {show('dateOfBirth')   && <EditableField label="Date of Birth" editMode={editMode} displayValue={formatDateStr(editData.dateOfBirth)} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} />}
+            {show('preferredFoot') && <EditableField label="Foot"         editMode={editMode} displayValue={editData.preferredFoot || null} editValue={editData.preferredFoot} onChange={v => updateField('preferredFoot', v)} />}
+            {show('nationality')   && <EditableField label="Nationality"  editMode={editMode} displayValue={editData.nationality || null}   editValue={editData.nationality}  onChange={v => updateField('nationality', v)} />}
+            {show('passports')     && <EditableField label="Passports"    editMode={editMode} displayValue={editData.passports || null}     editValue={editData.passports}    onChange={v => updateField('passports', v)} />}
           </div>
         </div>
 
@@ -638,16 +739,16 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
         <div className="p-4">
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Contract & Value</p>
           <div className="space-y-2.5">
-            {show('team')              && <CardField label="Club"            value={player.team} />}
-            {show('league')            && <CardField label="League"          value={player.league} />}
-            {show('joiningDate')       && <CardField label="Joining Date"    value={player.joiningDate ? new Date(player.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null} />}
-            {show('contractExpiry')    && <CardField label="Contract Expiry" value={player.contractUntil ? formatContractDate(player.contractUntil) : null} />}
-            {show('marketValue')       && <CardField label="Market Value"    value={player.marketValue} highlight />}
-            {show('fmWages')           && <CardField label="FM Wages"        value={player.fmWages} />}
-            {show('transferFeeExpect') && <EditableCardField label="Fee Expectation"   value={transferFeeExpect} onChange={setTransferFeeExpect} />}
-            {show('transferFeeReal')   && <EditableCardField label="Fee (Real)"         value={transferFeeReal}   onChange={setTransferFeeReal} />}
-            {show('salaryExpect')      && <EditableCardField label="Salary Expectation" value={salaryExpect}      onChange={setSalaryExpect} />}
-            {show('salaryReal')        && <EditableCardField label="Salary (Real)"      value={salaryReal}        onChange={setSalaryReal} />}
+            {show('team')              && <EditableField label="Club"            editMode={editMode} displayValue={editData.clubName || null}       editValue={editData.clubName}       onChange={v => updateField('clubName', v)} />}
+            {show('league')            && <EditableField label="League"          editMode={editMode} displayValue={editData.league || null}         editValue={editData.league}         onChange={v => updateField('league', v)} />}
+            {show('joiningDate')       && <EditableField label="Joining Date"    editMode={editMode} displayValue={formatDateStr(editData.joiningDate)}    editValue={editData.joiningDate}    onChange={v => updateField('joiningDate', v)} />}
+            {show('contractExpiry')    && <EditableField label="Contract Expiry" editMode={editMode} displayValue={formatDateStr(editData.contractExpiry)}  editValue={editData.contractExpiry} onChange={v => updateField('contractExpiry', v)} />}
+            {show('marketValue')       && <EditableField label="Market Value"    editMode={editMode} displayValue={editData.marketValue || null}    editValue={editData.marketValue}    onChange={v => updateField('marketValue', v)} highlight />}
+            {show('fmWages')           && <EditableField label="FM Wages"        editMode={editMode} displayValue={editData.fmWages || null}        editValue={editData.fmWages}        onChange={v => updateField('fmWages', v)} />}
+            {show('transferFeeExpect') && <EditableField label="Fee Expectation"   editMode={editMode} displayValue={editData.transferFeeExpect || null} editValue={editData.transferFeeExpect} onChange={v => updateField('transferFeeExpect', v)} />}
+            {show('transferFeeReal')   && <EditableField label="Fee (Real)"         editMode={editMode} displayValue={editData.transferFeeReal || null}   editValue={editData.transferFeeReal}   onChange={v => updateField('transferFeeReal', v)} />}
+            {show('salaryExpect')      && <EditableField label="Salary Expectation" editMode={editMode} displayValue={editData.salaryExpect || null}      editValue={editData.salaryExpect}      onChange={v => updateField('salaryExpect', v)} />}
+            {show('salaryReal')        && <EditableField label="Salary (Real)"      editMode={editMode} displayValue={editData.salaryReal || null}        editValue={editData.salaryReal}        onChange={v => updateField('salaryReal', v)} />}
           </div>
         </div>
 
@@ -658,12 +759,48 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
             {/* Added — always visible */}
             <CardField label="Added" value={dateAdded} />
             {show('sentBy')            && <CardField label="Sent by / Scout Name" value={userName} />}
-            {show('recentForm')        && <EditableCardField label="Recent Form"  value={recentForm}  onChange={setRecentForm} />}
-            {show('transfermarktLink') && <LinkInputField label="Transfermarkt"   value={tmUrl}       onChange={setTmUrl} />}
-            {show('sofascoreLink')     && <LinkInputField label="Sofascore"       value={scUrl}       onChange={setScUrl} />}
-            {show('instagramLink')     && <LinkInputField label="Instagram"       value={igUrl}       onChange={setIgUrl} />}
-            {show('highlightsLink')    && <EditableCardField label="Highlights"   value={highlights}  onChange={setHighlights} />}
+            {show('recentForm')        && <EditableField label="Recent Form"   editMode={editMode} displayValue={editData.recentForm || null}  editValue={editData.recentForm}  onChange={v => updateField('recentForm', v)} />}
+            {show('transfermarktLink') && <EditableField label="Transfermarkt" editMode={editMode} displayValue={editData.tmUrl || null}      editValue={editData.tmUrl}      onChange={v => updateField('tmUrl', v)} isLink />}
+            {show('sofascoreLink')     && <EditableField label="Sofascore"     editMode={editMode} displayValue={editData.scUrl || null}      editValue={editData.scUrl}      onChange={v => updateField('scUrl', v)} isLink />}
+            {show('instagramLink')     && <EditableField label="Instagram"     editMode={editMode} displayValue={editData.igUrl || null}      editValue={editData.igUrl}      onChange={v => updateField('igUrl', v)} isLink />}
+            {show('highlightsLink')    && <EditableField label="Highlights"    editMode={editMode} displayValue={editData.highlights || null} editValue={editData.highlights} onChange={v => updateField('highlights', v)} isLink />}
           </div>
+
+          {/* Custom extras — only in edit mode */}
+          {editMode && (
+            <div className="mt-3 pt-2.5 border-t border-[#00c896]/15">
+              {editData.customExtras.map((extra, i) => (
+                <div key={i} className="flex items-center gap-1 mb-1.5">
+                  <input
+                    type="text" value={extra.key} onChange={e => updateExtra(i, 'key', e.target.value)}
+                    placeholder="Field" onClick={e => e.stopPropagation()}
+                    className="flex-1 min-w-0 text-[11px] rounded px-1.5 py-0.5 focus:outline-none"
+                    style={{ background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--text-primary)' }}
+                  />
+                  <input
+                    type="text" value={extra.value} onChange={e => updateExtra(i, 'value', e.target.value)}
+                    placeholder="Value" onClick={e => e.stopPropagation()}
+                    className="flex-1 min-w-0 text-[11px] rounded px-1.5 py-0.5 focus:outline-none"
+                    style={{ background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--text-primary)' }}
+                  />
+                  <button onClick={() => removeExtra(i)} className="flex-shrink-0 transition-colors" style={{ color: 'rgba(255,255,255,0.2)' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#f87171' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.2)' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                  </button>
+                </div>
+              ))}
+              <button onClick={e => { e.stopPropagation(); addExtra() }}
+                className="flex items-center gap-1 text-[10px] mt-0.5 transition-colors"
+                style={{ color: 'rgba(255,255,255,0.2)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#00c896' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.2)' }}>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                Add field
+              </button>
+            </div>
+          )}
+
           {show('description') && player.description && (
             <div className="mt-4 pt-3 border-t border-white/5">
               <p className="text-[10px] uppercase tracking-widest mb-1.5 font-medium" style={{ color: 'rgba(255,255,255,0.2)' }}>Bio</p>
@@ -704,13 +841,26 @@ function PlayerCard({ player, selected, onToggleSelect, userName, visibleParams 
           {/* Col 3: FM Attributes radar (aligns with Physical column) */}
           {show('fmAttributes') && (
             <div className="p-4 flex flex-col gap-2">
-              <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>FM Attributes</p>
-              {player.fmAttributes
-                ? <FMRadarChart fmAttributes={player.fmAttributes} />
-                : <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-                    <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>FMInside · no data</span>
-                  </div>
-              }
+              <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: editMode ? 'rgba(0,200,150,0.8)' : 'var(--text-faint)' }}>FM Attributes</p>
+              {editMode ? (
+                <textarea
+                  value={editData.fmAttributes}
+                  onChange={e => { const next = { ...editData, fmAttributes: e.target.value }; setEditData(next); onDataChange(next) }}
+                  onClick={e => e.stopPropagation()}
+                  placeholder="e.g. Pace V15, Shoot V12 / Def V8, Head V6"
+                  rows={4}
+                  className="flex-1 text-[11px] rounded-lg p-2 focus:outline-none resize-none"
+                  style={{ background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--text-primary)', caretColor: '#00c896' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'; e.currentTarget.style.background = 'rgba(0,200,150,0.12)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.3)'; e.currentTarget.style.background = 'rgba(0,200,150,0.07)' }}
+                />
+              ) : editData.fmAttributes ? (
+                <FMRadarChart fmAttributes={editData.fmAttributes} />
+              ) : (
+                <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+                  <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>FMInside · no data</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -751,95 +901,51 @@ function CardField({ label, value, highlight = false, inline = false }: {
 }
 
 
-function LinkInputField({ label, value, onChange }: {
+function EditableField({ label, editMode, displayValue, editValue, onChange, highlight, isLink }: {
   label: string
-  value: string
+  editMode: boolean
+  displayValue: string | null | undefined
+  editValue: string
   onChange: (v: string) => void
+  highlight?: boolean
+  isLink?: boolean
 }) {
-  const isValid = value.startsWith('http')
+  if (!editMode) {
+    if (isLink && displayValue && displayValue.startsWith('http')) {
+      return (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+          <a
+            href={displayValue} target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="text-[11px] font-medium text-right hover:underline"
+            style={{ color: '#00c896' }}
+          >
+            View ↗
+          </a>
+        </div>
+      )
+    }
+    return <CardField label={label} value={displayValue} highlight={highlight} />
+  }
   return (
-    <div className="flex items-center gap-3 group/link">
-      {/* Label — becomes a clickable link when a valid URL is set */}
-      {isValid ? (
-        <a
-          href={value}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[11px] flex-shrink-0 flex items-center gap-0.5 transition-colors hover:underline"
-          style={{ color: '#00c896' }}
-          onClick={e => e.stopPropagation()}
-        >
-          {label}
-          <svg className="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
-          </svg>
-        </a>
-      ) : (
-        <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
-      )}
-
-      {/* Editable URL input — fills remaining space */}
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(0,200,150,0.8)' }}>{label}</span>
       <input
         type="text"
-        value={value}
+        value={editValue}
         onChange={e => onChange(e.target.value)}
-        placeholder="Paste link…"
-        className="text-[11px] text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5 flex-1 min-w-0"
+        onClick={e => e.stopPropagation()}
+        className="text-[11px] font-medium text-right focus:outline-none rounded px-1.5 py-0.5"
         style={{
-          color: isValid ? 'rgba(0,200,150,0.7)' : value ? 'var(--text-secondary)' : 'var(--text-faint)',
-          border: '1px solid var(--border)',
+          flex: 1, maxWidth: 130,
+          background: 'rgba(0,200,150,0.07)',
+          border: '1px solid rgba(0,200,150,0.3)',
+          color: 'var(--text-primary)',
           caretColor: '#00c896',
         }}
-        onFocus={e => {
-          e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'
-          e.currentTarget.style.background = 'rgba(0,200,150,0.06)'
-        }}
-        onBlur={e => {
-          e.currentTarget.style.borderColor = 'var(--border)'
-          e.currentTarget.style.background = 'transparent'
-        }}
-        onClick={e => e.stopPropagation()}
-      />
-    </div>
-  )
-}
-
-function EditableCardField({ label, value, onChange }: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2 group/edit">
-      <span className="text-[11px] flex-shrink-0 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-        {label}
-        <svg className="w-2.5 h-2.5 opacity-0 group-hover/edit:opacity-60 transition-opacity" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)">
-          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-        </svg>
-      </span>
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder="—"
-        className="text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5"
-        style={{
-          width: 90,
-          color: value ? 'var(--text-primary)' : 'var(--text-faint)',
-          border: '1px solid transparent',
-          caretColor: '#00c896',
-        }}
-        onFocus={e => {
-          e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'
-          e.currentTarget.style.background = 'rgba(0,200,150,0.06)'
-          e.currentTarget.style.color = 'var(--text-primary)'
-        }}
-        onBlur={e => {
-          e.currentTarget.style.borderColor = 'transparent'
-          e.currentTarget.style.background = 'transparent'
-          e.currentTarget.style.color = value ? 'var(--text-primary)' : 'var(--text-faint)'
-        }}
-        onClick={e => e.stopPropagation()}
+        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'; e.currentTarget.style.background = 'rgba(0,200,150,0.12)' }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.3)'; e.currentTarget.style.background = 'rgba(0,200,150,0.07)' }}
       />
     </div>
   )
@@ -876,9 +982,10 @@ function hasConflict(sources: { sourceName: string; value: string }[]) {
   return new Set(sources.map(s => s.value)).size > 1
 }
 
-function ImportModal({ players, databases, onClose }: {
+function ImportModal({ players, databases, editedData, onClose }: {
   players: PlayerResult[]
   databases: Database[]
+  editedData: Record<string, PlayerEditData>
   onClose: () => void
 }) {
   const router = useRouter()
@@ -886,28 +993,14 @@ function ImportModal({ players, databases, onClose }: {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Auto-pick best values from sources
-  const nameSources = getSources(players, p => p.name)
-  const posSources  = getSources(players, p => p.position)
-  const clubSources = getSources(players, p => p.team)
-  const natSources  = getSources(players, p => p.nationality)
-  const dobSources  = getSources(players, p => p.dateOfBirth)
-  const htSources   = getSources(players, p => p.heightCm?.toString())
-  const wtSources   = getSources(players, p => p.weightKg?.toString())
-  const mvSources   = getSources(players, p => p.marketValue)
-
-  const bestName    = pickBest(nameSources).trim().split(/\s+/)
+  // Derived player info for the summary header
+  const bestName    = pickBest(getSources(players, p => p.name)).trim().split(/\s+/)
   const firstName   = bestName[0] ?? ''
-  const lastName    = bestName.slice(1).join(' ') || '-'
-  const position    = pickBest(posSources) || null
-  const clubName    = pickBest(clubSources) || null
-  const nationality = pickBest(natSources) || null
-  const dateOfBirth = pickBest(dobSources) || null
-  const heightCm    = pickBest(htSources) ? parseInt(pickBest(htSources)) : null
-  const weightKg    = pickBest(wtSources) ? parseInt(pickBest(wtSources)) : null
-  const marketValue = parseMarketValueToNumber(pickBest(mvSources))
-  const sourceName  = [...new Set(players.flatMap(p => p.sources))].join(', ')
-  const sourceUrl   = players[0]?.transfermarktUrl ?? players[0]?.sofascoreUrl ?? players[0]?.fmInsideUrl
+  const lastName    = bestName.slice(1).join(' ')
+  const position    = pickBest(getSources(players, p => p.position))
+  const clubName    = pickBest(getSources(players, p => p.team))
+  const photoSrc    = pickBest(getSources(players, p => p.photo)) || players[0]?.photo || null
+  const displayName = [firstName, lastName].filter(Boolean).join(' ') || 'Player'
 
   function toggleDb(id: string) {
     setSelectedIds(prev => {
@@ -922,26 +1015,69 @@ function ImportModal({ players, databases, onClose }: {
     setLoading(true)
     setError('')
 
-    // Build custom fields from all scraped data
-    const addCf = (key: string, getter: (p: PlayerResult) => string | null | undefined) => {
-      const v = pickBest(getSources(players, getter))
+    // Merge edit data from all selected players' cards
+    const allEd = players.map(p => editedData[p.id]).filter(Boolean)
+    const firstEd = allEd[0]
+
+    const addCf = (key: string, getter: (p: PlayerResult) => string | null | undefined, override?: string) => {
+      const v = override?.trim() || pickBest(getSources(players, getter))
       return v ? { [key]: v } : {}
     }
-    const customFields = {
-      ...addCf('foot',          p => p.preferredFoot),
-      ...addCf('passports',     p => p.passports),
-      ...addCf('league',        p => p.league),
-      ...addCf('joiningDate',   p => p.joiningDate),
-      ...addCf('contractExpiry',p => p.contractUntil),
-      ...addCf('fmWages',       p => p.fmWages),
-      ...addCf('fmAttributes',  p => p.fmAttributes),
-      ...addCf('transfermarktUrl', p => p.transfermarktUrl),
-      ...addCf('sofascoreUrl',     p => p.sofascoreUrl),
-      ...addCf('fmInsideUrl',      p => p.fmInsideUrl),
-      ...addCf('photo',            p => p.photo),
+
+    const edCf: Record<string, string> = {}
+    for (const ed of allEd) {
+      if (ed.transferFeeExpect) edCf.transferFeeExpect = ed.transferFeeExpect
+      if (ed.transferFeeReal)   edCf.transferFeeReal   = ed.transferFeeReal
+      if (ed.salaryExpect)      edCf.salaryExpect       = ed.salaryExpect
+      if (ed.salaryReal)        edCf.salaryReal         = ed.salaryReal
+      if (ed.recentForm)        edCf.recentForm         = ed.recentForm
+      if (ed.highlights)        edCf.highlights         = ed.highlights
+      if (ed.igUrl)             edCf.instagram          = ed.igUrl
+      for (const extra of ed.customExtras) {
+        if (extra.key.trim() && extra.value.trim()) edCf[extra.key.trim()] = extra.value.trim()
+      }
     }
 
-    const body = { firstName, lastName, position, clubName, nationality, dateOfBirth, heightCm, weightKg, marketValue, sourceName, sourceUrl, customFields }
+    const tmUrl    = firstEd?.tmUrl?.trim()  || pickBest(getSources(players, p => p.transfermarktUrl))
+    const scUrl    = firstEd?.scUrl?.trim()  || pickBest(getSources(players, p => p.sofascoreUrl))
+    const fmUrl    = pickBest(getSources(players, p => p.fmInsideUrl))
+    const sourceUrl = tmUrl || scUrl || fmUrl || undefined
+
+    const customFields = {
+      ...addCf('foot',          p => p.preferredFoot,  firstEd?.preferredFoot),
+      ...addCf('passports',     p => p.passports,       firstEd?.passports),
+      ...addCf('league',        p => p.league,          firstEd?.league),
+      ...addCf('joiningDate',   p => p.joiningDate,     firstEd?.joiningDate),
+      ...addCf('contractExpiry',p => p.contractUntil,   firstEd?.contractExpiry),
+      ...addCf('fmWages',       p => p.fmWages,         firstEd?.fmWages),
+      ...addCf('fmAttributes',  p => p.fmAttributes,    firstEd?.fmAttributes),
+      ...(tmUrl ? { transfermarktUrl: tmUrl } : {}),
+      ...(scUrl ? { sofascoreUrl: scUrl } : {}),
+      ...(fmUrl ? { fmInsideUrl: fmUrl } : {}),
+      ...addCf('photo',         p => p.photo),
+      ...edCf,
+    }
+
+    const heightStr = firstEd?.heightCm?.trim() || pickBest(getSources(players, p => p.heightCm?.toString()))
+    const weightStr = firstEd?.weightKg?.trim() || pickBest(getSources(players, p => p.weightKg?.toString()))
+    const mktStr    = firstEd?.marketValue?.trim() || pickBest(getSources(players, p => p.marketValue))
+
+    const sourceName = [...new Set(players.flatMap(p => p.sources))].join(', ')
+    const body = {
+      firstName:   firstName  || '-',
+      lastName:    lastName   || '-',
+      position:    firstEd?.position?.trim()    || position    || null,
+      clubName:    firstEd?.clubName?.trim()    || clubName    || null,
+      nationality: firstEd?.nationality?.trim() || pickBest(getSources(players, p => p.nationality)) || null,
+      dateOfBirth: firstEd?.dateOfBirth?.trim() || pickBest(getSources(players, p => p.dateOfBirth)) || null,
+      heightCm:    heightStr ? parseInt(heightStr) : null,
+      weightKg:    weightStr ? parseInt(weightStr) : null,
+      marketValue: parseMarketValueToNumber(mktStr || null),
+      sourceName,
+      sourceUrl,
+      customFields,
+    }
+
     try {
       const results = await Promise.all(
         [...selectedIds].map(dbId =>
@@ -958,7 +1094,6 @@ function ImportModal({ players, databases, onClose }: {
         setLoading(false)
         return
       }
-      // Navigate to the player profile in the first selected database
       const firstDbId = [...selectedIds][0]
       const firstResult = results.find(r => r.dbId === firstDbId)
       if (firstResult?.data?.id) {
@@ -972,8 +1107,6 @@ function ImportModal({ players, databases, onClose }: {
     }
   }
 
-  const displayName = [firstName, lastName === '-' ? '' : lastName].filter(Boolean).join(' ')
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl border border-white/10 max-h-[90vh] flex flex-col" style={{ background: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
@@ -981,10 +1114,9 @@ function ImportModal({ players, databases, onClose }: {
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-white/5 flex-shrink-0">
           <h2 className="text-lg font-semibold text-white mb-1">Import into database</h2>
-          {/* Player summary */}
           <div className="flex items-center gap-3 p-3 rounded-xl mt-2" style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)' }}>
-            {players[0]?.photo && (
-              <img src={players[0].photo} alt={displayName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            {photoSrc && (
+              <img src={photoSrc} alt={displayName} className="w-10 h-10 rounded-full object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
             )}
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white truncate">{displayName}</p>
@@ -1022,7 +1154,7 @@ function ImportModal({ players, databases, onClose }: {
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-white/5 flex gap-3 flex-shrink-0">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70 transition-colors" style={{ background: 'var(--hover-bg)' }}>Cancel</button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm transition-colors" style={{ background: 'var(--hover-bg)', color: 'rgba(255,255,255,0.4)' }}>Cancel</button>
           <button onClick={handleImport} disabled={loading || selectedIds.size === 0 || databases.length === 0} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
             {loading ? 'Importing...' : selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
           </button>
