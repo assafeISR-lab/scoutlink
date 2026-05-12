@@ -1,13 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Sidebar from '@/components/Sidebar'
+import { getUser } from '@/lib/auth'
 import CreateDatabaseButton from './CreateDatabaseButton'
 import ImportDatabasesButton from './ImportDatabasesButton'
 
 export default async function DatabasesPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUser()
   if (!user) redirect('/login')
 
   const [ownedDbs, sharedAccess] = await Promise.all([
@@ -24,68 +22,59 @@ export default async function DatabasesPage() {
   ])
 
   return (
-    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
-      <Sidebar
-        userName={user.user_metadata?.full_name || 'Agent'}
-        userEmail={user.email || ''}
-        userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
-        userId={user.id}
-      />
-
-      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-1">My Players Watch List</h1>
-            <p style={{ color: 'var(--text-muted)' }} className="text-sm">Manage your scouting Lists</p>
-          </div>
-          <ImportDatabasesButton databases={[...ownedDbs.map(d => ({ id: d.id, name: d.name })), ...sharedAccess.filter(a => a.permission === 'contributor').map(a => ({ id: a.database.id, name: a.database.name }))]} />
-          <CreateDatabaseButton />
+    <>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-1">My Players Watch List</h1>
+          <p style={{ color: 'var(--text-muted)' }} className="text-sm">Manage your scouting Lists</p>
         </div>
+        <ImportDatabasesButton databases={[...ownedDbs.map(d => ({ id: d.id, name: d.name })), ...sharedAccess.filter(a => a.permission === 'contributor').map(a => ({ id: a.database.id, name: a.database.name }))]} />
+        <CreateDatabaseButton />
+      </div>
 
-        {/* Owned databases */}
-        <section className="mb-8">
-          <h2 className="text-xs uppercase tracking-widest text-white/30 mb-4">My Lists ({ownedDbs.length})</h2>
-          {ownedDbs.length === 0 ? (
-            <EmptyState message="You haven't created any databases yet." />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ownedDbs.map(db => (
-                <DatabaseCard
-                  key={db.id}
-                  id={db.id}
-                  name={db.name}
-                  playerCount={db._count.players}
-                  sharedWith={db.access.length}
-                  permission="owner"
-                  createdAt={db.createdAt}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Shared databases */}
-        {sharedAccess.length > 0 && (
-          <section>
-            <h2 className="text-xs uppercase tracking-widest text-white/30 mb-4">Shared With Me ({sharedAccess.length})</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sharedAccess.map(({ database, permission }) => (
-                <DatabaseCard
-                  key={database.id}
-                  id={database.id}
-                  name={database.name}
-                  playerCount={database._count.players}
-                  sharedWith={0}
-                  permission={permission}
-                  ownerName={database.owner.fullName}
-                  createdAt={database.createdAt}
-                />
-              ))}
-            </div>
-          </section>
+      {/* Owned databases */}
+      <section className="mb-8">
+        <h2 className="text-xs uppercase tracking-widest text-white/30 mb-4">My Lists ({ownedDbs.length})</h2>
+        {ownedDbs.length === 0 ? (
+          <EmptyState message="You haven't created any databases yet." />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {ownedDbs.map(db => (
+              <DatabaseCard
+                key={db.id}
+                id={db.id}
+                name={db.name}
+                playerCount={db._count.players}
+                sharedWith={db.access.length}
+                permission="owner"
+                createdAt={db.createdAt}
+              />
+            ))}
+          </div>
         )}
-      </main>
-    </div>
+      </section>
+
+      {/* Shared databases */}
+      {sharedAccess.length > 0 && (
+        <section>
+          <h2 className="text-xs uppercase tracking-widest text-white/30 mb-4">Shared With Me ({sharedAccess.length})</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sharedAccess.map(({ database, permission }) => (
+              <DatabaseCard
+                key={database.id}
+                id={database.id}
+                name={database.name}
+                playerCount={database._count.players}
+                sharedWith={0}
+                permission={permission}
+                ownerName={database.owner.fullName}
+                createdAt={database.createdAt}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+    </>
   )
 }
 

@@ -1,13 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Sidebar from '@/components/Sidebar'
+import { getUser } from '@/lib/auth'
 import DatabasePageClient from './DatabasePageClient'
 
 export default async function DatabaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUser()
   if (!user) redirect('/login')
 
   const db = await prisma.playerDatabase.findUnique({
@@ -44,25 +42,15 @@ export default async function DatabaseDetailPage({ params }: { params: Promise<{
   }))
 
   return (
-    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
-      <Sidebar
-        userName={user.user_metadata?.full_name || 'Agent'}
-        userEmail={user.email || ''}
-        userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
-        userId={user.id}
-      />
-      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
-        <DatabasePageClient
-          players={players}
-          databaseId={id}
-          databaseName={db.name}
-          ownerName={db.owner.fullName ?? ''}
-          isOwner={isOwner}
-          canEdit={canEdit}
-          columnConfig={Array.isArray(db.columnConfig) ? db.columnConfig as string[] : null}
-          allDatabases={allDatabases}
-        />
-      </main>
-    </div>
+    <DatabasePageClient
+      players={players}
+      databaseId={id}
+      databaseName={db.name}
+      ownerName={db.owner.fullName ?? ''}
+      isOwner={isOwner}
+      canEdit={canEdit}
+      columnConfig={Array.isArray(db.columnConfig) ? db.columnConfig as string[] : null}
+      allDatabases={allDatabases}
+    />
   )
 }

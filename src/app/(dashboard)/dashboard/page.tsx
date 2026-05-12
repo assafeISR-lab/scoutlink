@@ -1,12 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Sidebar from '@/components/Sidebar'
 import { prisma } from '@/lib/prisma'
+import { getUser } from '@/lib/auth'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getUser()
   if (!user) redirect('/login')
 
   await prisma.agent.upsert({
@@ -20,7 +18,6 @@ export default async function DashboardPage() {
   })
 
   const now = new Date()
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
   const [
     totalPlayers,
@@ -32,19 +29,14 @@ export default async function DashboardPage() {
     recentNotes,
     activityLogs,
   ] = await Promise.all([
-    // Total players across all owned databases
     prisma.player.count({
       where: { database: { ownerId: user.id } },
     }),
-    // Total reports
     prisma.report.count({ where: { agentId: user.id } }),
-    // Upcoming calendar events (from today onwards)
     prisma.calendarEvent.count({
       where: { agentId: user.id, startAt: { gte: now } },
     }),
-    // Total notes written
     prisma.playerNote.count({ where: { agentId: user.id } }),
-    // Recently added players (last 5)
     prisma.player.findMany({
       where: { database: { ownerId: user.id } },
       orderBy: { createdAt: 'desc' },
@@ -55,14 +47,12 @@ export default async function DashboardPage() {
         database: { select: { id: true, name: true } },
       },
     }),
-    // Recent reports (last 3)
     prisma.report.findMany({
       where: { agentId: user.id },
       orderBy: { createdAt: 'desc' },
       take: 3,
       select: { id: true, name: true, playerCount: true, createdAt: true },
     }),
-    // Recent notes (last 5)
     prisma.playerNote.findMany({
       where: { agentId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -72,7 +62,6 @@ export default async function DashboardPage() {
         player: { select: { id: true, firstName: true, lastName: true, database: { select: { id: true } } } },
       },
     }),
-    // Recent activity logs
     prisma.activityLog.findMany({
       where: { agentId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -81,7 +70,6 @@ export default async function DashboardPage() {
     }),
   ])
 
-  // Build unified activity feed: merge players + reports + notes + logs, sort by date
   type FeedItem = {
     key: string
     type: 'player' | 'report' | 'note' | 'log'
@@ -154,69 +142,60 @@ export default async function DashboardPage() {
   const firstName = user.user_metadata?.full_name?.split(' ')[0] || 'Agent'
 
   return (
-    <div className="min-h-screen flex" style={{ background: 'var(--page-bg)' }}>
-      <Sidebar
-        userName={user.user_metadata?.full_name || 'Agent'}
-        userEmail={user.email || ''}
-        userInitial={user.user_metadata?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
-        userId={user.id}
-      />
+    <>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white mb-1">
+          Welcome Back, <span style={{ color: '#00c896' }}>{firstName}</span>
+        </h1>
+        <p style={{ color: 'var(--text-muted)' }} className="text-sm">Here's what's happening in your scouting Board.</p>
+      </div>
 
-      <main className="main-content flex-1 p-8 overflow-auto" style={{ color: 'var(--text-primary)' }}>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-1">
-            Welcome Back, <span style={{ color: '#00c896' }}>{firstName}</span>
-          </h1>
-          <p style={{ color: 'var(--text-muted)' }} className="text-sm">Here's what's happening in your scouting Board.</p>
-        </div>
+      {/* Stats grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard label="Players in Database" value={totalPlayers} icon={<IconDatabase />} color="#00c896" href="/databases" />
+        <StatCard label="Scouting Notes" value={totalNotes} icon={<IconNote />} color="#6c8fff" />
+        <StatCard label="Reports Generated" value={totalReports} icon={<IconReports />} color="#ff9f43" href="/reports" />
+        <StatCard label="Upcoming Events" value={upcomingEvents} icon={<IconCalendar />} color="#ff6b9d" href="/calendar" />
+      </div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Players in Database" value={totalPlayers} icon={<IconDatabase />} color="#00c896" href="/databases" />
-          <StatCard label="Scouting Notes" value={totalNotes} icon={<IconNote />} color="#6c8fff" />
-          <StatCard label="Reports Generated" value={totalReports} icon={<IconReports />} color="#ff9f43" href="/reports" />
-          <StatCard label="Upcoming Events" value={upcomingEvents} icon={<IconCalendar />} color="#ff6b9d" href="/calendar" />
-        </div>
+      <div className="rounded-2xl border border-white/5 p-6" style={{
+        background: 'var(--card-bg)',
+        boxShadow: 'var(--card-shadow)'
+      }}>
+        <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-5">Recent Activity</h2>
 
-        <div className="rounded-2xl border border-white/5 p-6" style={{
-          background: 'var(--card-bg)',
-          boxShadow: 'var(--card-shadow)'
-        }}>
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-5">Recent Activity</h2>
-
-          {feed.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-white/20 text-sm">No activity yet</p>
-              <p className="text-white/10 text-xs mt-1">Start by searching for a player or adding to your database</p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {feed.map(item => (
-                item.href ? (
-                  <Link key={item.key} href={item.href} className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group">
-                    <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: item.color }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/80 group-hover:text-white transition-colors truncate">{item.label}</p>
-                      {item.sub && <p className="text-xs text-white/30 truncate mt-0.5">{item.sub}</p>}
-                    </div>
-                    <span className="text-xs text-white/20 shrink-0 mt-0.5">{timeAgo(item.createdAt)}</span>
-                  </Link>
-                ) : (
-                  <div key={item.key} className="flex items-start gap-3 px-3 py-2.5">
-                    <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: item.color }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/80 truncate">{item.label}</p>
-                      {item.sub && <p className="text-xs text-white/30 truncate mt-0.5">{item.sub}</p>}
-                    </div>
-                    <span className="text-xs text-white/20 shrink-0 mt-0.5">{timeAgo(item.createdAt)}</span>
+        {feed.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-white/20 text-sm">No activity yet</p>
+            <p className="text-white/10 text-xs mt-1">Start by searching for a player or adding to your database</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {feed.map(item => (
+              item.href ? (
+                <Link key={item.key} href={item.href} className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group">
+                  <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: item.color }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/80 group-hover:text-white transition-colors truncate">{item.label}</p>
+                    {item.sub && <p className="text-xs text-white/30 truncate mt-0.5">{item.sub}</p>}
                   </div>
-                )
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
+                  <span className="text-xs text-white/20 shrink-0 mt-0.5">{timeAgo(item.createdAt)}</span>
+                </Link>
+              ) : (
+                <div key={item.key} className="flex items-start gap-3 px-3 py-2.5">
+                  <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: item.color }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/80 truncate">{item.label}</p>
+                    {item.sub && <p className="text-xs text-white/30 truncate mt-0.5">{item.sub}</p>}
+                  </div>
+                  <span className="text-xs text-white/20 shrink-0 mt-0.5">{timeAgo(item.createdAt)}</span>
+                </div>
+              )
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 
