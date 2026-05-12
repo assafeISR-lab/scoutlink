@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import ScoutLinkBallLoader from '@/components/ScoutLinkBallLoader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,8 +169,8 @@ export default function CalendarClient() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="w-8 h-8 rounded-full border-2 border-[#00c896] border-t-transparent animate-spin" />
+          <div className="flex flex-col items-center justify-center gap-4 py-20">
+            <ScoutLinkBallLoader size={80} />
           </div>
         ) : (
           <>
