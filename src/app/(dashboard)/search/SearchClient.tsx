@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ScoutLinkBallLoader from '@/components/ScoutLinkBallLoader'
 import { PARAM_KEYS, PARAM_LABELS, PARAM_SOURCES, type ParamKey, loadActive, loadCustomActive } from './SearchParamsPanel'
 import FMRadarChart from '@/components/FMRadarChart'
 
@@ -226,9 +227,9 @@ export default function SearchClient({ databases, userName }: { databases: Datab
 
                 {/* Loading */}
                 {loading && (
-                  <div className="text-center py-16">
-                    <div className="w-10 h-10 rounded-full border-2 border-[#00c896] border-t-transparent animate-spin mx-auto mb-4" />
-                    <p className="text-white/30 text-sm">Searching player database...</p>
+                  <div className="flex flex-col items-center justify-center gap-4 py-16">
+                    <ScoutLinkBallLoader size={88} />
+                    <p className="text-sm" style={{ color: 'var(--text-faint)' }}>Searching player database…</p>
                   </div>
                 )}
 
@@ -1153,12 +1154,19 @@ function ImportModal({ players, databases, editedData, onClose }: {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-white/5 flex gap-3 flex-shrink-0">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm transition-colors" style={{ background: 'var(--hover-bg)', color: 'rgba(255,255,255,0.4)' }}>Cancel</button>
-          <button onClick={handleImport} disabled={loading || selectedIds.size === 0 || databases.length === 0} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
-            {loading ? 'Importing...' : selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
-          </button>
-        </div>
+        {loading ? (
+          <div className="px-6 py-5 border-t border-white/5 flex flex-col items-center gap-3 flex-shrink-0">
+            <ScoutLinkBallLoader size={64} />
+            <p className="text-sm" style={{ color: 'var(--text-faint)' }}>Importing player…</p>
+          </div>
+        ) : (
+          <div className="px-6 py-4 border-t border-white/5 flex gap-3 flex-shrink-0">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm transition-colors" style={{ background: 'var(--hover-bg)', color: 'rgba(255,255,255,0.4)' }}>Cancel</button>
+            <button onClick={handleImport} disabled={selectedIds.size === 0 || databases.length === 0} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
+              {selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

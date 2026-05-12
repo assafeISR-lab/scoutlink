@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { FOOTBALL_ASSOCIATIONS, type FootballAssociation } from '@/lib/footballAssociations'
+import ScoutLinkBallLoader from '@/components/ScoutLinkBallLoader'
 
 interface Props {
   onClose: () => void
@@ -180,9 +181,9 @@ export default function BrowseFootballSites({ onClose, onAdd }: Props) {
               {/* Club results */}
               <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
                 {clubLoading && (
-                  <div className="text-center py-8">
-                    <div className="w-6 h-6 rounded-full border-2 border-[#00c896] border-t-transparent animate-spin mx-auto" />
-                    <p className="text-xs text-white/30 mt-2">Searching...</p>
+                  <div className="flex flex-col items-center justify-center gap-3 py-8">
+                    <ScoutLinkBallLoader size={48} />
+                    <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Searching…</p>
                   </div>
                 )}
                 {!clubLoading && clubSearch.length >= 2 && clubResults.length === 0 && (
