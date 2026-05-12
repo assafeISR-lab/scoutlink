@@ -1,11 +1,13 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { PARAM_LABELS, buildParamsBySource, loadParamSources } from '../search/SearchParamsPanel'
+
 const SCRAPERS = [
   {
     name: 'Transfermarkt',
     url: 'https://www.transfermarkt.com',
     domain: 'transfermarkt.com',
-    fields: ['Nationality', 'Passports', 'Age', 'Date of Birth', 'Height', 'Weight', 'Team / Club', 'Joining Date', 'Market Value'],
     comingSoon: ['Season Stats'],
     color: '#1a6b3c',
     accent: '#2db570',
@@ -14,8 +16,7 @@ const SCRAPERS = [
     name: 'Sofascore',
     url: 'https://www.sofascore.com',
     domain: 'sofascore.com',
-    fields: ['Position', 'Preferred Foot', 'League', 'Contract Expiry'],
-    comingSoon: ['Heat Map', 'Key Strengths', 'Areas for Improvement'],
+    comingSoon: ['Heat Map'],
     color: '#1a3a6b',
     accent: '#3a7bd5',
   },
@@ -23,7 +24,6 @@ const SCRAPERS = [
     name: 'FMInside',
     url: 'https://www.fminside.net',
     domain: 'fminside.net',
-    fields: ['FM Wages', 'Attributes Top3 / Low3'],
     comingSoon: [],
     color: '#3a1a6b',
     accent: '#7b3ad5',
@@ -31,6 +31,12 @@ const SCRAPERS = [
 ]
 
 export default function WebsitesManager() {
+  const [paramsBySource, setParamsBySource] = useState<Record<string, string[]>>({})
+
+  useEffect(() => {
+    setParamsBySource(buildParamsBySource(loadParamSources()))
+  }, [])
+
   return (
     <div className="rounded-2xl border border-white/5 overflow-hidden" style={{
       background: 'var(--card-bg)',
@@ -49,62 +55,67 @@ export default function WebsitesManager() {
 
       {/* Scrapers */}
       <div className="divide-y divide-white/5">
-        {SCRAPERS.map(s => (
-          <div key={s.name} className="px-6 py-4 flex items-start gap-4">
-            {/* Colour dot */}
-            <div className="mt-0.5 w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.accent }} />
+        {SCRAPERS.map(s => {
+          const assignedKeys = (paramsBySource[s.name] ?? []) as string[]
+          const activeFields = assignedKeys.filter(k => !s.comingSoon.includes(PARAM_LABELS[k as keyof typeof PARAM_LABELS] ?? k))
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-1.5">
-                <span className="text-sm font-semibold text-white">{s.name}</span>
-                <a
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] font-mono px-2 py-0.5 rounded-md transition-colors hover:text-white/60"
-                  style={{ color: 'var(--text-faint)', background: 'var(--hover-bg)' }}
-                >
-                  {s.domain} ↗
-                </a>
+          return (
+            <div key={s.name} className="px-6 py-4 flex items-start gap-4">
+              {/* Colour dot */}
+              <div className="mt-0.5 w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.accent }} />
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1.5">
+                  <span className="text-sm font-semibold text-white">{s.name}</span>
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-mono px-2 py-0.5 rounded-md transition-colors hover:text-white/60"
+                    style={{ color: 'var(--text-faint)', background: 'var(--hover-bg)' }}
+                  >
+                    {s.domain} ↗
+                  </a>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {activeFields.map(k => (
+                    <span
+                      key={k}
+                      className="text-[10px] px-2 py-0.5 rounded-md"
+                      style={{ color: s.accent, background: `${s.accent}18`, border: `1px solid ${s.accent}30` }}
+                    >
+                      {PARAM_LABELS[k as keyof typeof PARAM_LABELS] ?? k}
+                    </span>
+                  ))}
+                  {s.comingSoon.map(f => (
+                    <span
+                      key={f}
+                      className="text-[10px] px-2 py-0.5 rounded-md"
+                      style={{ color: '#888', background: 'transparent', border: '1px solid #888' }}
+                    >
+                      {f} · soon
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {s.fields.map(f => (
-                  <span
-                    key={f}
-                    className="text-[10px] px-2 py-0.5 rounded-md"
-                    style={{ color: s.accent, background: `${s.accent}18`, border: `1px solid ${s.accent}30` }}
-                  >
-                    {f}
-                  </span>
-                ))}
-                {s.comingSoon.map(f => (
-                  <span
-                    key={f}
-                    className="text-[10px] px-2 py-0.5 rounded-md"
-                    style={{ color: '#888', background: 'transparent', border: '1px solid #888' }}
-                  >
-                    {f} · soon
-                  </span>
-                ))}
+
+              {/* Active badge */}
+              <div
+                className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                style={{ background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.2)' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                Active
               </div>
             </div>
-
-            {/* Active badge */}
-            <div
-              className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
-              style={{ background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.2)' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-current" />
-              Active
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Footer note */}
       <div className="px-6 py-3 border-t border-white/5" style={{ background: 'var(--subtle-bg)' }}>
         <p className="text-[10px] text-white/20">
-          Data sources are fixed and managed automatically by ScoutLink. Configure which fields to show in Search Parameters.
+          Parameter sources are configured in Search Parameters. Manual parameters are filled in by the scout on the player card.
         </p>
       </div>
     </div>

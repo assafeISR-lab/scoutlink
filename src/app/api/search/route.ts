@@ -6,44 +6,54 @@ import { getScraperForUrl, type ScrapedPlayer, type MergedPlayer } from '@/lib/s
 const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 const normName = (n: string) => stripAccents(n.trim().toLowerCase().replace(/\s+/g, ' '))
 
-function buildMerged(group: ScrapedPlayer[]): MergedPlayer {
+function buildMerged(group: ScrapedPlayer[], paramSources: Record<string, string> = {}): MergedPlayer {
   const tm = group.find(p => p.sourceName === 'Transfermarkt')
   const sc = group.find(p => p.sourceName === 'Sofascore')
   const fm = group.find(p => p.sourceName === 'FMInside')
   const first = group[0]
 
-  // DOB: Sofascore has exact ms-precision timestamp, TM has exact from profile page
+  const srcMap: Record<string, ScrapedPlayer | undefined> = { Transfermarkt: tm, Sofascore: sc, FMInside: fm }
+
+  // Pick a field value: try the user's preferred source first, then fall back in default order
+  function pick<T>(paramKey: string, field: keyof ScrapedPlayer, ...fallback: (ScrapedPlayer | undefined)[]): T | null {
+    const preferred = paramSources[paramKey]
+    if (preferred && srcMap[preferred]?.[field] != null) return srcMap[preferred]![field] as T
+    for (const src of fallback) {
+      if (src?.[field] != null) return src[field] as T
+    }
+    return null
+  }
+
+  // DOB: Sofascore has ms-precision timestamp — preserve that priority regardless of user setting
   const dob = sc?.dateOfBirth ?? tm?.dateOfBirth ?? null
-  const key = `${normName(first.name)}-${dob ?? 'x'}`
 
   return {
-    id: key,
+    id: `${normName(first.name)}-${dob ?? 'x'}`,
     name: tm?.name ?? sc?.name ?? fm?.name ?? first.name,
-    nationality: tm?.nationality ?? sc?.nationality ?? fm?.nationality ?? null,
-    team: tm?.team ?? sc?.team ?? fm?.team ?? null,
-    league: sc?.league ?? tm?.league ?? null,
-    // Sofascore is most precise for position; TM position from search list is approximate
-    position: sc?.position ?? tm?.position ?? fm?.position ?? null,
-    dateOfBirth: dob,
-    heightCm: sc?.heightCm ?? tm?.heightCm ?? null,
-    weightKg: sc?.weightKg ?? tm?.weightKg ?? null,
-    preferredFoot: sc?.preferredFoot ?? tm?.preferredFoot ?? null,
-    contractUntil: sc?.contractUntil ?? tm?.contractUntil ?? null,
-    passports: tm?.passports ?? null,
-    joiningDate: tm?.joiningDate ?? null,
-    photo: tm?.photo ?? sc?.photo ?? fm?.photo ?? null,
-    description: tm?.description ?? sc?.description ?? fm?.description ?? null,
-    marketValue: tm?.marketValue ?? sc?.marketValue ?? null,
-    fmWages: fm?.fmWages ?? null,
-    fmAttributes: fm?.fmAttributes ?? null,
+    nationality:   pick('nationality',    'nationality',   tm, sc, fm),
+    team:          pick('team',           'team',          tm, sc, fm),
+    league:        pick('league',         'league',        sc, tm),
+    position:      pick('position',       'position',      sc, tm, fm),
+    dateOfBirth:   dob,
+    heightCm:      pick('height',         'heightCm',      sc, tm),
+    weightKg:      pick('weight',         'weightKg',      sc, tm),
+    preferredFoot: pick('preferredFoot',  'preferredFoot', sc, tm),
+    contractUntil: pick('contractExpiry', 'contractUntil', sc, tm),
+    passports:     pick('passports',      'passports',     tm),
+    joiningDate:   pick('joiningDate',    'joiningDate',   tm),
+    photo:         pick('photo',          'photo',         tm, sc, fm),
+    description:   pick('description',    'description',   tm, sc, fm),
+    marketValue:   pick('marketValue',    'marketValue',   tm, sc),
+    fmWages:       pick('fmWages',        'fmWages',       fm),
+    fmAttributes:  pick('fmAttributes',   'fmAttributes',  fm),
     transfermarktUrl: tm?.sourceUrl ?? null,
-    sofascoreUrl: sc?.sourceUrl ?? null,
-    fmInsideUrl: fm?.sourceUrl ?? null,
+    sofascoreUrl:     sc?.sourceUrl ?? null,
+    fmInsideUrl:      fm?.sourceUrl ?? null,
     sources: [...new Set(group.map(p => p.sourceName))],
   }
 }
 
-function mergePlayers(allResults: ScrapedPlayer[]): MergedPlayer[] {
+function mergePlayers(allResults: ScrapedPlayer[], paramSources: Record<string, string> = {}): MergedPlayer[] {
   // Group raw results by normalised name
   const byName = new Map<string, ScrapedPlayer[]>()
   for (const p of allResults) {
@@ -61,7 +71,7 @@ function mergePlayers(allResults: ScrapedPlayer[]): MergedPlayer[] {
 
     if (uniqueDobs.length <= 1) {
       // All same DOB (or all null) → one merged card
-      merged.push(buildMerged(group))
+      merged.push(buildMerged(group, paramSources))
     } else {
       // Multiple DOBs = different players with same name; one card per DOB
       const assignedNoDob = new Set<ScrapedPlayer>()
@@ -74,7 +84,7 @@ function mergePlayers(allResults: ScrapedPlayer[]): MergedPlayer[] {
           dobGroup.some(d => d.team?.toLowerCase() === p.team!.toLowerCase())
         )
         matched.forEach(p => assignedNoDob.add(p))
-        merged.push(buildMerged([...dobGroup, ...matched]))
+        merged.push(buildMerged([...dobGroup, ...matched], paramSources))
       }
       // Remaining unassigned null-DOB results → add to first group
       const unassigned = noDob.filter(p => !assignedNoDob.has(p))
@@ -83,7 +93,7 @@ function mergePlayers(allResults: ScrapedPlayer[]): MergedPlayer[] {
         const extra = buildMerged([
           ...withDob.filter(p => p.dateOfBirth === uniqueDobs[0]),
           ...unassigned,
-        ])
+        ], paramSources)
         // Merge extra into first
         merged[0] = { ...first, ...Object.fromEntries(
           Object.entries(extra).filter(([k, v]) => v != null && first[k as keyof MergedPlayer] == null)
@@ -95,9 +105,10 @@ function mergePlayers(allResults: ScrapedPlayer[]): MergedPlayer[] {
   return merged
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const query = searchParams.get('q')
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}))
+  const query: string = body.q ?? ''
+  const paramSources: Record<string, string> = body.paramSources ?? {}
 
   if (!query || query.trim().length < 2) {
     return NextResponse.json({ players: [] })
@@ -220,7 +231,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Merge raw results from all sources into unified player records
-  const players = mergePlayers(rawPlayers)
+  const players = mergePlayers(rawPlayers, paramSources)
 
   // Log search activity (fire and forget)
   prisma.activityLog.create({ data: { agentId: user.id, action: 'search', detail: query } }).catch(() => {})

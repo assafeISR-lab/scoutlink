@@ -162,6 +162,25 @@ export function loadCustomActive(): Set<string> {
   }
 }
 
+const PARAM_SOURCES_KEY = 'scoutlink_param_sources'
+
+export function loadParamSources(): Record<string, string> {
+  if (typeof window === 'undefined') return {}
+  try { return JSON.parse(localStorage.getItem(PARAM_SOURCES_KEY) ?? '{}') } catch { return {} }
+}
+
+export function buildParamsBySource(overrides: Record<string, string> = {}): Record<string, ParamKey[]> {
+  const result: Record<string, ParamKey[]> = {}
+  for (const key of PARAM_KEYS) {
+    const src = overrides[key] ?? PARAM_SOURCES[key as ParamKey]
+    if (src) {
+      if (!result[src]) result[src] = []
+      result[src].push(key as ParamKey)
+    }
+  }
+  return result
+}
+
 interface Props {
   onChange?: (active: Set<string>) => void
 }

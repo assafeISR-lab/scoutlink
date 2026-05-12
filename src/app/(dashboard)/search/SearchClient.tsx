@@ -1,23 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import ScoutLinkBallLoader from '@/components/ScoutLinkBallLoader'
-import { PARAM_KEYS, PARAM_LABELS, PARAM_SOURCES, type ParamKey, loadActive, loadCustomActive } from './SearchParamsPanel'
+import { PARAM_KEYS, PARAM_LABELS, PARAM_SOURCES, type ParamKey, loadActive, loadCustomActive, loadParamSources, buildParamsBySource } from './SearchParamsPanel'
 import FMRadarChart from '@/components/FMRadarChart'
 
 // Params that are planned but not yet scraped — always shown as "coming soon"
 const COMING_SOON = new Set<string>(['heatMap', 'seasonStats'])
-
-// Group PARAM_KEYS by their scraper source (computed once at module level)
-const PARAMS_BY_SOURCE: Record<string, ParamKey[]> = {}
-for (const key of PARAM_KEYS) {
-  const src = PARAM_SOURCES[key]
-  if (src) {
-    if (!PARAMS_BY_SOURCE[src]) PARAMS_BY_SOURCE[src] = []
-    PARAMS_BY_SOURCE[src].push(key)
-  }
-}
 
 interface PlayerResult {
   id: string
@@ -99,6 +89,9 @@ export default function SearchClient({ databases, userName }: { databases: Datab
   const [editedData, setEditedData] = useState<Record<string, PlayerEditData>>({})
   const [visibleParams, setVisibleParams] = useState<Set<string>>(new Set())
 
+  // Build param→source mapping from user's saved preferences (reads localStorage on mount)
+  const paramsBySource = useMemo(() => buildParamsBySource(loadParamSources()), [])
+
   function handleDataChange(playerId: string, data: PlayerEditData) {
     setEditedData(prev => ({ ...prev, [playerId]: data }))
   }
@@ -127,7 +120,18 @@ export default function SearchClient({ databases, userName }: { databases: Datab
     setSiteStats([])
     setSelectedIds(new Set())
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+      // Build effective sources (user overrides merged with defaults) and send to API
+      const overrides = loadParamSources()
+      const effectiveSources: Record<string, string> = {}
+      for (const key of PARAM_KEYS) {
+        const src = overrides[key] ?? PARAM_SOURCES[key]
+        if (src) effectiveSources[key] = src
+      }
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: query, paramSources: effectiveSources }),
+      })
       const data = res.ok ? await res.json() : {}
       setResults(data.players || [])
       setSiteStats(data.siteStats || [])
@@ -282,7 +286,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
 
               {/* Right column: Combined Coverage */}
               <div className="w-64 flex-shrink-0 self-start sticky top-4">
-                <CoveragePanel siteStats={siteStats} results={results} loading={loading} noSitesSelected={noSitesSelected} />
+                <CoveragePanel siteStats={siteStats} results={results} loading={loading} noSitesSelected={noSitesSelected} paramsBySource={paramsBySource} />
               </div>{/* end right column */}
 
             </div>{/* end flex row */}
@@ -325,11 +329,12 @@ function isFound(results: PlayerResult[], key: string): boolean {
   }
 }
 
-function CoveragePanel({ siteStats, results, loading, noSitesSelected }: {
+function CoveragePanel({ siteStats, results, loading, noSitesSelected, paramsBySource }: {
   siteStats: SiteStat[]
   results: PlayerResult[]
   loading: boolean
   noSitesSelected: boolean
+  paramsBySource: Record<string, ParamKey[]>
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -404,7 +409,7 @@ function CoveragePanel({ siteStats, results, loading, noSitesSelected }: {
       ) : (
         <div className="divide-y divide-white/5">
           {orderedSites.map(site => {
-            const siteParams = PARAMS_BY_SOURCE[site.name] ?? []
+            const siteParams = paramsBySource[site.name] ?? []
             const hasParams  = siteParams.length > 0 && !site.noScraper
             const isOpen     = expanded.has(site.name)
             const realParams = siteParams.filter(k => !COMING_SOON.has(k))
