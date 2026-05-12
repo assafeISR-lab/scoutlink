@@ -97,6 +97,27 @@ function getCF(player: Player, fieldName: string): string {
   return player.customFields.find(f => f.fieldName === fieldName)?.value ?? ''
 }
 
+function PlayerAvatar({ player }: { player: Player }) {
+  const [failed, setFailed] = useState(false)
+  const photo = getCF(player, 'photo')
+  if (photo && !failed) {
+    return (
+      <img
+        src={photo}
+        alt=""
+        referrerPolicy="no-referrer"
+        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        onError={() => setFailed(true)}
+      />
+    )
+  }
+  return (
+    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-black flex-shrink-0" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
+      {player.firstName[0]}{player.lastName[0]}
+    </div>
+  )
+}
+
 function calcAge(dob: string | null): number | null {
   if (!dob) return null
   return Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
@@ -371,25 +392,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                   <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group" style={{ background: rowBg }}>
                     <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
                       <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3">
-                        {getCF(player, 'photo') ? (
-                          <img
-                            src={getCF(player, 'photo')}
-                            alt={`${player.firstName} ${player.lastName}`}
-                            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                            onError={e => {
-                              const img = e.currentTarget
-                              img.style.display = 'none'
-                              const fallback = img.nextElementSibling as HTMLElement | null
-                              if (fallback) fallback.style.display = 'flex'
-                            }}
-                          />
-                        ) : null}
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-black flex-shrink-0"
-                          style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', display: getCF(player, 'photo') ? 'none' : 'flex' }}
-                        >
-                          {player.firstName[0]}{player.lastName[0]}
-                        </div>
+                        <PlayerAvatar player={player} />
                         <p className="text-sm font-medium text-white group-hover:text-[#00c896] transition-colors whitespace-nowrap">{player.firstName} {player.lastName}</p>
                       </Link>
                     </td>
