@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
-import { getUser } from '@/lib/auth'
+import { getVerifiedUser } from '@/lib/auth'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const user = await getUser()
+  const user = await getVerifiedUser()
   if (!user) redirect('/login')
 
   return (
