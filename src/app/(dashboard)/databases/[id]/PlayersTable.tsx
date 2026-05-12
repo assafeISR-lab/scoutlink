@@ -624,8 +624,8 @@ function AddFilterDropdown({ activeKeys, onSelect }: { activeKeys: FilterKey[]; 
       <div className="p-2.5 border-b" style={{ borderColor: '#2a2d3a' }}>
         <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search parameters…"
-          className="w-full px-2.5 py-1.5 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none"
-          style={{ background: '#0f1117', border: '1px solid #2a2d3a' }}
+          className="w-full px-2.5 py-1.5 rounded-lg text-sm focus:outline-none"
+          style={{ background: '#0f1117', border: '1px solid #2a2d3a', color: '#ffffff' }}
           onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
           onBlur={e => e.currentTarget.style.borderColor = '#2a2d3a'} />
       </div>
