@@ -26,6 +26,8 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
+      // Ensure agent record exists — idempotent, safe for existing users
+      await fetch('/api/agent/create', { method: 'POST' })
       router.push('/dashboard')
       router.refresh()
     }

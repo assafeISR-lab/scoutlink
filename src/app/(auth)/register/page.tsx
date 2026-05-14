@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkEmail, setCheckEmail] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -19,7 +20,7 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -30,16 +31,24 @@ export default function RegisterPage() {
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else {
-      const res = await fetch('/api/agent/create', { method: 'POST' })
-      if (!res.ok) {
-        setError('Account setup failed. Please try signing in or contact support.')
-        setLoading(false)
-        return
-      }
-      router.push('/dashboard')
-      router.refresh()
+      return
     }
+
+    if (!data.session) {
+      // Email confirmation required — agent record will be created on first login
+      setCheckEmail(true)
+      setLoading(false)
+      return
+    }
+
+    const res = await fetch('/api/agent/create', { method: 'POST' })
+    if (!res.ok) {
+      setError('Account setup failed. Please try signing in or contact support.')
+      setLoading(false)
+      return
+    }
+    router.push('/dashboard')
+    router.refresh()
   }
 
   return (
@@ -67,6 +76,22 @@ export default function RegisterPage() {
           <p className="text-[#8b8fa8] text-sm mt-1">Football Scouting Platform</p>
         </div>
 
+        {checkEmail ? (
+          <div className="text-center">
+            <div className="w-14 h-14 rounded-full bg-[#00c896]/20 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-[#00c896]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-white font-medium">Check your email</p>
+            <p className="text-[#8b8fa8] text-sm mt-1">We sent a confirmation link to <span className="text-white">{email}</span></p>
+            <p className="text-[#8b8fa8] text-xs mt-2">Click the link to activate your account, then sign in.</p>
+            <Link href="/login" className="text-[#00c896] hover:underline text-sm mt-4 block">
+              Go to sign in
+            </Link>
+          </div>
+        ) : (
+        <>
         <h2 className="text-lg font-semibold text-white mb-6">Create your account</h2>
 
         <form onSubmit={handleRegister} className="flex flex-col gap-4">
@@ -126,6 +151,8 @@ export default function RegisterPage() {
             Sign in
           </Link>
         </p>
+        </>
+        )}
       </div>
     </div>
   )
