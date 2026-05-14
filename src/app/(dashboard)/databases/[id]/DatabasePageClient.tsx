@@ -6,6 +6,7 @@ import PlayersTable, { PlayersTableHandle } from './PlayersTable'
 import AddPlayerButton from './AddPlayerButton'
 import ColumnPicker from './ColumnPicker'
 import ImportPlayersModal from '../ImportPlayersModal'
+import ListAISearch from './ListAISearch'
 
 interface Player {
   id: string
@@ -92,6 +93,9 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
           {canEdit && <AddPlayerButton databaseId={databaseId} />}
         </div>
       </div>
+
+      {/* Per-list AI search */}
+      {players.length > 0 && <ListAISearch databaseId={databaseId} />}
 
       {/* Content */}
       {players.length === 0 ? (

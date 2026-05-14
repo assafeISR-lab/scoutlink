@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import NotesSection from './NotesSection'
 import FMRadarChart from '@/components/FMRadarChart'
+import { loadActive } from '@/app/(dashboard)/search/SearchParamsPanel'
 
 interface FieldSource {
   id: string
@@ -69,6 +70,9 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   const cf = (name: string) => player.customFields.find(f => f.fieldName === name)?.value ?? ''
 
   // ── Edit state ────────────────────────────────────────────────────────────
+  const [photoEnabled, setPhotoEnabled] = useState(true)
+  useEffect(() => { setPhotoEnabled(loadActive().has('photo')) }, [])
+
   const [isEditing, setIsEditing]   = useState(false)
   const [saving,    setSaving]      = useState(false)
   const [saveError, setSaveError]   = useState('')
@@ -110,6 +114,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     instagram:         cf('instagram'),
     highlights:        cf('highlights'),
     fmAttributes:      cf('fmAttributes'),
+    description:       cf('description'),
+    sentBy:            cf('sentBy'),
   })
 
   const [form, setForm] = useState(initialForm)
@@ -140,7 +146,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
     // Split changed fields into DB fields and custom fields
     const dbFields = new Set(['position','heightCm','weightKg','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','goalsThisYear','totalGoals','totalGames','nationalGames','yearsInProClub'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','highlights','fmAttributes']
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','highlights','fmAttributes','description','sentBy']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -232,9 +238,9 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
       <div className="flex items-center gap-4 p-5" style={{ borderBottom: '1px solid var(--border)' }}>
         <div
           className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center text-lg font-bold text-black flex-shrink-0"
-          style={cf('photo') ? { border: '1px solid var(--border)' } : { background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 0 16px rgba(0,200,150,0.3)' }}
+          style={photoEnabled && cf('photo') ? { border: '1px solid var(--border)' } : { background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 0 16px rgba(0,200,150,0.3)' }}
         >
-          {cf('photo')
+          {photoEnabled && cf('photo')
             ? <img src={cf('photo')} alt={fullName} className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
             : <>{player.firstName[0]}{player.lastName[0]}</>
           }
@@ -332,6 +338,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
           <div className="space-y-2.5">
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
+            <Row label="Referral"        display={cf('sentBy') || null}      manual={cfGreen('sentBy')}      isEditing={isEditing} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} />
             <Row label="Agent"           display={player.agentName}               manual={isManual('agentName')}   isEditing={isEditing} inputValue={form.agentName}   onChange={v => setField('agentName', v)} />
             <Row label="Plays National"  display={player.playsNational ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={isEditing} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
             <Row label="Recent Form"     display={cf('recentForm') || null}       manual={cfGreen('recentForm')}   isEditing={isEditing} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} />
@@ -340,6 +347,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <LinkRow label="FMInside"      display={fmUrl}           isEditing={isEditing} inputValue={form.fmInsideUrl}      onChange={v => setField('fmInsideUrl', v)} />
             <LinkRow label="Instagram"     display={cf('instagram')} isEditing={isEditing} inputValue={form.instagram}        onChange={v => setField('instagram', v)} />
             <LinkRow label="Highlights"    display={cf('highlights')} isEditing={isEditing} inputValue={form.highlights}      onChange={v => setField('highlights', v)} />
+            <DescRow label="Description"   display={cf('description') || null} manual={cfGreen('description')} isEditing={isEditing} inputValue={form.description} onChange={v => setField('description', v)} />
           </div>
         </div>
       </div>
@@ -485,6 +493,48 @@ function LinkRow({ label, display, isEditing, inputValue, onChange }: {
         style={{ color: isValid ? '#00c896' : 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }}
         onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
         onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'} />
+    </div>
+  )
+}
+
+// ── Description row: multi-line textarea when editing ──────────────────────────
+
+function DescRow({ label, display, manual = false, isEditing, inputValue, onChange }: {
+  label: string; display: string | null | undefined; manual?: boolean
+  isEditing: boolean; inputValue: string; onChange: (v: string) => void
+}) {
+  const hasValue = display != null && display !== ''
+
+  if (isEditing) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{label}</span>
+        <textarea value={inputValue} onChange={e => onChange(e.target.value)} placeholder="—"
+          rows={3}
+          className="text-[11px] focus:outline-none rounded px-2 py-1 resize-none transition-all"
+          style={{ color: 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }}
+          onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+          onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'} />
+      </div>
+    )
+  }
+
+  if (!hasValue) {
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+        <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1">
+        {manual && <span title="Manually edited" style={{ color: '#00c896', fontSize: 9 }}>✎</span>}
+        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      </div>
+      <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>{display}</p>
     </div>
   )
 }

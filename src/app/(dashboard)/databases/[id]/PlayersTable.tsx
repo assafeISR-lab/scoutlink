@@ -46,10 +46,10 @@ function getCF(player: Player, fieldName: string): string {
   return player.customFields.find(f => f.fieldName === fieldName)?.value ?? ''
 }
 
-function PlayerAvatar({ player }: { player: Player }) {
+function PlayerAvatar({ player, photoEnabled }: { player: Player; photoEnabled: boolean }) {
   const [failed, setFailed] = useState(false)
   const photo = getCF(player, 'photo')
-  if (photo && !failed) {
+  if (photoEnabled && photo && !failed) {
     return (
       <img
         src={photo}
@@ -133,13 +133,23 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const [editingPlayer,  setEditingPlayer]  = useState<Player | null>(null)
   const [deletingPlayer, setDeletingPlayer] = useState<Player | null>(null)
   const [showReport,     setShowReport]     = useState(false)
-  const [visibleParams,  setVisibleParams]  = useState<Set<string>>(new Set())
+  const [visibleParams,  setVisibleParams]  = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    if (columnConfig !== null) return new Set(columnConfig)
+    return new Set([...loadActive(), ...loadCustomActive()])
+  })
+  const [photoEnabled, setPhotoEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return loadActive().has('photo')
+  })
 
   useImperativeHandle(ref, () => ({ openCreateReport: () => setShowReport(true) }))
 
   useEffect(() => {
+    const active = loadActive()
+    setPhotoEnabled(active.has('photo'))
     if (columnConfig !== null) setVisibleParams(new Set(columnConfig))
-    else setVisibleParams(new Set([...loadActive(), ...loadCustomActive()]))
+    else setVisibleParams(new Set([...active, ...loadCustomActive()]))
   }, [columnConfig])
 
   useEffect(() => {
@@ -282,7 +292,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                   <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group" style={{ background: rowBg }}>
                     <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBgSolid, zIndex: 3, maxWidth: 280, boxShadow: '4px 0 8px -2px rgba(0,0,0,0.4)' }}>
                       <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3 overflow-hidden">
-                        <PlayerAvatar player={player} />
+                        <PlayerAvatar player={player} photoEnabled={photoEnabled} />
                         <p
                           className="text-sm font-medium text-white group-hover:text-[#00c896] transition-colors truncate"
                           style={{ maxWidth: '30ch' }}

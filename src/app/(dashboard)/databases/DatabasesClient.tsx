@@ -23,8 +23,8 @@ export default function DatabasesClient({
 }) {
   return (
     <>
-      <SearchAllLists />
       <ScoutAIBar />
+      <SearchAllLists />
 
       <section className="mb-8">
         <h2 className="text-xs uppercase tracking-widest text-white/30 mb-4">

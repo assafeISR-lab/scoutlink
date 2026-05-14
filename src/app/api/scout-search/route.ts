@@ -42,9 +42,11 @@ marketValue values are in euros. contractExpiryYearMax is the latest year the co
 Return no text outside the JSON object.`
 
 const RANK_SYSTEM = `You are an expert football scout analyst. Given a scout's player description and a list of candidate players, score and rank the best matches.
+Each player may include: name, position, nationality, club, league, age, heightCm, weightKg, marketValue, foot, passports, contractExpiry, fmWages, transferFeeExpect, transferFeeReal, salaryExpect, salaryReal, recentForm, goalsThisYear, totalGoals, totalGames, nationalGames, yearsInProClub, playsNational, agentName, description, fmAttributes.
+Use every available field to judge fit. Pay special attention to description and recentForm as they contain scout context.
 Return ONLY a valid JSON array of up to 10 objects, sorted by score descending:
 [{"playerId": "...", "score": 85, "explanation": "..."}]
-score: 0–100 (100 = perfect match). explanation: 1–2 sentences on why this player matches the description.
+score: 0–100 (100 = perfect match). explanation: 1–2 sentences on why this player matches.
 Return no text outside the JSON array.`
 
 function calcAge(dob: Date | null): number | null {
@@ -59,6 +61,7 @@ function getCF(customFields: { fieldName: string; value: string }[], name: strin
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const message: string = body.message ?? ''
+  const scopedDatabaseId: string | undefined = body.databaseId
   if (!message.trim()) {
     return NextResponse.json({ error: 'Message required' }, { status: 400 })
   }
@@ -83,15 +86,28 @@ export async function POST(req: NextRequest) {
   } catch { /* use empty filters */ }
 
   // ── DB Query ──────────────────────────────────────────────────────────────
-  const [ownedDbs, sharedAccess] = await Promise.all([
-    prisma.playerDatabase.findMany({ where: { ownerId: user.id }, select: { id: true, name: true } }),
-    prisma.databaseAccess.findMany({
-      where: { agentId: user.id },
-      select: { database: { select: { id: true, name: true } } },
-    }),
-  ])
+  let allDbs: { id: string; name: string }[]
 
-  const allDbs = [...ownedDbs, ...sharedAccess.map(a => a.database)]
+  if (scopedDatabaseId) {
+    const db = await prisma.playerDatabase.findUnique({
+      where: { id: scopedDatabaseId },
+      include: { access: { where: { agentId: user.id } } },
+    })
+    if (!db) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const canAccess = db.ownerId === user.id || db.access.length > 0
+    if (!canAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    allDbs = [{ id: db.id, name: db.name }]
+  } else {
+    const [ownedDbs, sharedAccess] = await Promise.all([
+      prisma.playerDatabase.findMany({ where: { ownerId: user.id }, select: { id: true, name: true } }),
+      prisma.databaseAccess.findMany({
+        where: { agentId: user.id },
+        select: { database: { select: { id: true, name: true } } },
+      }),
+    ])
+    allDbs = [...ownedDbs, ...sharedAccess.map(a => a.database)]
+  }
+
   if (allDbs.length === 0) return NextResponse.json({ results: [], filters })
 
   const dbNameMap = Object.fromEntries(allDbs.map(d => [d.id, d.name]))
@@ -151,20 +167,38 @@ export async function POST(req: NextRequest) {
   if (candidates.length === 0) return NextResponse.json({ results: [], filters })
 
   // ── LLM Call 2: Score and rank top 10 ────────────────────────────────────
-  const playerSummaries = candidates.map(p => ({
-    playerId: p.id,
-    name: `${p.firstName} ${p.lastName}`,
-    position: p.position ?? null,
-    nationality: p.nationality ?? null,
-    club: p.clubName ?? null,
-    age: calcAge(p.dateOfBirth),
-    heightCm: p.heightCm ?? null,
-    weightKg: p.weightKg ?? null,
-    marketValue: p.marketValue ?? null,
-    foot: getCF(p.customFields, 'foot') || null,
-    league: getCF(p.customFields, 'league') || null,
-    contractExpiry: getCF(p.customFields, 'contractExpiry') || null,
-  }))
+  const CF_FIELDS = [
+    'foot', 'league', 'passports', 'joiningDate', 'contractExpiry',
+    'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
+    'recentForm', 'description', 'fmAttributes',
+  ]
+
+  const playerSummaries = candidates.map(p => {
+    const base: Record<string, unknown> = {
+      playerId: p.id,
+      name: `${p.firstName} ${p.lastName}`,
+      position: p.position,
+      nationality: p.nationality,
+      club: p.clubName,
+      age: calcAge(p.dateOfBirth),
+      heightCm: p.heightCm,
+      weightKg: p.weightKg,
+      marketValue: p.marketValue,
+      agentName: p.agentName,
+      playsNational: p.playsNational || null,
+      goalsThisYear: p.goalsThisYear,
+      totalGoals: p.totalGoals,
+      totalGames: p.totalGames,
+      nationalGames: p.nationalGames,
+      yearsInProClub: p.yearsInProClub,
+    }
+    for (const field of CF_FIELDS) {
+      const val = getCF(p.customFields, field)
+      if (val) base[field] = val
+    }
+    // Strip nulls/undefined to keep payload compact
+    return Object.fromEntries(Object.entries(base).filter(([, v]) => v != null))
+  })
 
   const rankResp = await anthropic.messages.create({
     model: 'claude-haiku-4-5',
