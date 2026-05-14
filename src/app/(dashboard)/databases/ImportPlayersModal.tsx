@@ -16,6 +16,7 @@ const SCOUTLINK_FIELDS: FieldDef[] = [
   { key: 'middleName',     label: 'Middle Name',             group: 'Identity' },
   { key: 'nationality',    label: 'Nationality',             group: 'Identity' },
   { key: 'dateOfBirth',    label: 'Date of Birth',           group: 'Identity' },
+  { key: 'ageApprox',     label: 'Age (→ approx. DOB)',     group: 'Identity' },
   { key: 'heightCm',       label: 'Height (cm)',             group: 'Identity' },
   { key: 'weightKg',       label: 'Weight (kg)',             group: 'Identity' },
   { key: 'position',       label: 'Position',                group: 'Club / Career' },
@@ -57,6 +58,7 @@ const AUTO_MAP: Record<string, string> = {
   'middle name': 'middleName', 'middlename': 'middleName',
   'nationality': 'nationality', 'country': 'nationality', 'nation': 'nationality',
   'dob': 'dateOfBirth', 'date of birth': 'dateOfBirth', 'birthday': 'dateOfBirth', 'birth date': 'dateOfBirth',
+  'age': 'ageApprox', 'years old': 'ageApprox', 'player age': 'ageApprox',
   'height': 'heightCm', 'height (cm)': 'heightCm', 'height cm': 'heightCm',
   'weight': 'weightKg', 'weight (kg)': 'weightKg', 'weight kg': 'weightKg',
   'position': 'position', 'pos': 'position', 'role': 'position',
@@ -584,6 +586,15 @@ function applyMapping(row: ParsedRow, mapping: Record<string, string>): MappedPl
     if (fieldKey === 'dateOfBirth') {
       const d = tryParseDate(raw)
       if (d) out[fieldKey] = d
+      continue
+    }
+
+    if (fieldKey === 'ageApprox') {
+      const age = parseInt(raw, 10)
+      if (!isNaN(age) && age > 0 && age < 100) {
+        const birthYear = new Date().getFullYear() - age
+        out['dateOfBirth'] = `${birthYear}-01-01`
+      }
       continue
     }
 
