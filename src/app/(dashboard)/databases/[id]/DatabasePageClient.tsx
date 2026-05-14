@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import PlayersTable, { PlayersTableHandle } from './PlayersTable'
 import AddPlayerButton from './AddPlayerButton'
@@ -46,6 +47,9 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
   const tableRef = useRef<PlayersTableHandle>(null)
   const [colConfig, setColConfig] = useState<string[] | null>(initialColumnConfig)
   const [showImport, setShowImport] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const router = useRouter()
 
   return (
     <>
@@ -91,8 +95,56 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
             onUpdate={setColConfig}
           />
           {canEdit && <AddPlayerButton databaseId={databaseId} />}
+          {isOwner && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+              </svg>
+              Delete List
+            </button>
+          )}
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }}
+          onClick={() => setShowDeleteConfirm(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-6" style={{ background: 'var(--card-bg)', border: '1px solid rgba(239,68,68,0.3)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#ef4444">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-white text-center mb-2">Delete &ldquo;{databaseName}&rdquo;?</h3>
+            <p className="text-sm text-center mb-6" style={{ color: 'var(--text-muted)' }}>
+              This will permanently delete all {players.length} player{players.length !== 1 ? 's' : ''} in this list. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setDeleting(true)
+                  await fetch(`/api/databases/${databaseId}`, { method: 'DELETE' })
+                  router.push('/databases')
+                }}
+                disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50"
+                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+                {deleting ? 'Deleting…' : 'Delete List'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Per-list AI search */}
       {players.length > 0 && <ListAISearch databaseId={databaseId} />}
