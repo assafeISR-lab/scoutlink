@@ -106,9 +106,10 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     recentForm:        cf('recentForm'),
     transfermarktUrl:  cf('transfermarktUrl') || player.fieldSources.find(s => s.sourceName === 'Transfermarkt' && s.isActive)?.sourceUrl || '',
     sofascoreUrl:      cf('sofascoreUrl')     || player.fieldSources.find(s => s.sourceName === 'Sofascore'     && s.isActive)?.sourceUrl || '',
+    fmInsideUrl:       cf('fmInsideUrl'),
     instagram:         cf('instagram'),
     highlights:        cf('highlights'),
-    fmAttributes:        cf('fmAttributes'),
+    fmAttributes:      cf('fmAttributes'),
   })
 
   const [form, setForm] = useState(initialForm)
@@ -139,7 +140,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
     // Split changed fields into DB fields and custom fields
     const dbFields = new Set(['position','heightCm','weightKg','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','goalsThisYear','totalGoals','totalGames','nationalGames','yearsInProClub'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','instagram','highlights','fmAttributes']
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','highlights','fmAttributes']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -334,10 +335,11 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <Row label="Agent"           display={player.agentName}               manual={isManual('agentName')}   isEditing={isEditing} inputValue={form.agentName}   onChange={v => setField('agentName', v)} />
             <Row label="Plays National"  display={player.playsNational ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={isEditing} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
             <Row label="Recent Form"     display={cf('recentForm') || null}       manual={cfGreen('recentForm')}   isEditing={isEditing} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} />
-            <LinkRow label="Transfermarkt" display={tmUrl}  isEditing={isEditing} inputValue={form.transfermarktUrl} onChange={v => setField('transfermarktUrl', v)} />
-            <LinkRow label="Sofascore"     display={scUrl}  isEditing={isEditing} inputValue={form.sofascoreUrl}     onChange={v => setField('sofascoreUrl', v)} />
-            <LinkRow label="Instagram"     display={cf('instagram')} isEditing={isEditing} inputValue={form.instagram}    onChange={v => setField('instagram', v)} />
-            <Row label="Highlights"      display={cf('highlights') || null}       manual={cfGreen('highlights')}   isEditing={isEditing} inputValue={form.highlights}  onChange={v => setField('highlights', v)} />
+            <LinkRow label="Transfermarkt" display={tmUrl}           isEditing={isEditing} inputValue={form.transfermarktUrl} onChange={v => setField('transfermarktUrl', v)} />
+            <LinkRow label="Sofascore"     display={scUrl}           isEditing={isEditing} inputValue={form.sofascoreUrl}     onChange={v => setField('sofascoreUrl', v)} />
+            <LinkRow label="FMInside"      display={fmUrl}           isEditing={isEditing} inputValue={form.fmInsideUrl}      onChange={v => setField('fmInsideUrl', v)} />
+            <LinkRow label="Instagram"     display={cf('instagram')} isEditing={isEditing} inputValue={form.instagram}        onChange={v => setField('instagram', v)} />
+            <LinkRow label="Highlights"    display={cf('highlights')} isEditing={isEditing} inputValue={form.highlights}      onChange={v => setField('highlights', v)} />
           </div>
         </div>
       </div>
