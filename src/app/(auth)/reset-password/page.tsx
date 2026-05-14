@@ -61,6 +61,8 @@ const supabase = createClient()
       setError(error.message)
       setLoading(false)
     } else {
+      // Ensure agent record exists (idempotent — covers email-confirmation flow)
+      await fetch('/api/agent/create', { method: 'POST' })
       setSuccess(true)
       setTimeout(() => router.push('/dashboard'), 2000)
     }
