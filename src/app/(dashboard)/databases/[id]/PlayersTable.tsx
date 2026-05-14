@@ -248,8 +248,8 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
         onClosePending={() => setPendingFilter(null)}
       />
 
-      <div className="rounded-2xl border border-white/5" style={{ background: 'var(--card-bg)', borderRadius: '16px' }}>
-        <div style={{ borderRadius: '16px', overflowX: 'auto' }}>
+      <div className="rounded-2xl border border-white/5" style={{ background: 'var(--card-bg)', borderRadius: '16px', overflow: 'hidden' }}>
+        <div style={{ borderRadius: '16px', overflow: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
           <table style={{ minWidth: '600px', width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr className="border-b border-white/5">
@@ -265,7 +265,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                 {show('contractExpiry') && <ColHeader label="Contract"  sortKey="contractExpiry" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
                 {show('preferredFoot') && <ColHeader label="Foot"       sortKey="name"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={80} noSort />}
                 {show('fmWages')     && <ColHeader label="FM Wages"     sortKey="fmWages"      currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
-                {canEdit && <th className="px-4 py-3" style={{ minWidth: 72, position: 'sticky', right: 0, background: 'var(--card-solid)', zIndex: 2 }} />}
+                {canEdit && <th className="px-4 py-3" style={{ minWidth: 72, position: 'sticky', right: 0, top: 0, background: 'var(--card-solid)', zIndex: 4 }} />}
               </tr>
             </thead>
             <tbody>
@@ -358,8 +358,11 @@ function ColHeader({ label, sortKey, currentSort, sortDir, onSort, minWidth, sti
   onSort: (k: SortKey) => void; minWidth?: number; sticky?: 'left' | 'right'; noSort?: boolean
 }) {
   const isSorted = currentSort === sortKey && !noSort
+  const stickyStyle: React.CSSProperties = sticky
+    ? { position: 'sticky', [sticky]: 0, top: 0, background: 'var(--card-solid)', zIndex: 4 }
+    : { position: 'sticky', top: 0, background: 'var(--card-solid)', zIndex: 2 }
   return (
-    <th className="text-left px-4 py-3" style={{ minWidth, ...(sticky ? { position: 'sticky', [sticky]: 0, background: 'var(--card-solid)', zIndex: 2 } : {}) }}>
+    <th className="text-left px-4 py-3" style={{ minWidth, ...stickyStyle }}>
       {noSort
         ? <span className="text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
         : <button onClick={() => onSort(sortKey)} className="flex items-center gap-1 text-xs uppercase tracking-widest font-medium transition-colors" style={{ color: isSorted ? '#00c896' : 'var(--text-secondary)' }}>
