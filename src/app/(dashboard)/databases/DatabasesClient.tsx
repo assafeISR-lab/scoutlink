@@ -130,12 +130,12 @@ function DatabaseCard({ id, name, playerCount, sharedWith, permission, ownerName
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
           </svg>
           <p className="text-sm font-semibold text-white text-center">Delete &ldquo;{name}&rdquo;?</p>
-          <p className="text-xs text-white/40 text-center">All {playerCount} players will be permanently removed.</p>
+          <p className="text-xs text-white/60 text-center">All {playerCount} players will be permanently removed.</p>
           <div className="flex gap-2">
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); setConfirming(false) }}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium"
-              style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-white/80"
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
               Cancel
             </button>
             <button
