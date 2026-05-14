@@ -161,9 +161,13 @@ export default function ImportPlayersModal({
       setColumns(cols)
       setRows(data)
       const autoMapped: Record<string, string> = {}
+      const usedTargets = new Set<string>()
       for (const col of cols) {
         const mapped = AUTO_MAP[col.toLowerCase().trim()]
-        if (mapped) autoMapped[col] = mapped
+        if (mapped && !usedTargets.has(mapped)) {
+          autoMapped[col] = mapped
+          usedTargets.add(mapped)
+        }
       }
       setMapping(autoMapped)
       setStep(2)
