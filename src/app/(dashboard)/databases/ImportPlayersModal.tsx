@@ -553,14 +553,36 @@ async function parseFile(file: File): Promise<{ cols: string[]; data: ParsedRow[
     })
   }
 
-  // xlsx / xls
+  // xlsx / xls — read as raw row arrays so we control header detection
   const buf = await file.arrayBuffer()
-  const wb  = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: false })
+  const wb  = XLSX.read(new Uint8Array(buf), { type: 'array' })
   const ws  = wb.Sheets[wb.SheetNames[0]]
-  // raw: false → all cell values returned as formatted strings (prevents JS Date objects in JSX)
-  const raw = XLSX.utils.sheet_to_json<ParsedRow>(ws, { defval: '', raw: false })
-  const cols = raw.length > 0 ? Object.keys(raw[0]) : []
-  return { cols, data: raw }
+  const allRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' }) as unknown[][]
+
+  if (allRows.length === 0) return { cols: [], data: [] }
+
+  // Find header row: first row (in first 5) with 2+ non-empty, non-numeric cells
+  let headerIdx = 0
+  for (let i = 0; i < Math.min(allRows.length, 5); i++) {
+    const textCells = allRows[i].filter(c => {
+      const s = String(c ?? '').trim()
+      return s.length > 0 && isNaN(Number(s))
+    })
+    if (textCells.length >= 2) { headerIdx = i; break }
+  }
+
+  const headers = allRows[headerIdx].map(h => String(h ?? '').trim())
+  const cols = headers.filter(h => h)
+
+  const data: ParsedRow[] = allRows.slice(headerIdx + 1)
+    .map(row => {
+      const obj: ParsedRow = {}
+      headers.forEach((h, i) => { if (h) obj[h] = String(row[i] ?? '').trim() })
+      return obj
+    })
+    .filter(row => Object.values(row).some(v => v))
+
+  return { cols, data }
 }
 
 // ─── Mapping helpers ──────────────────────────────────────────────────────────
