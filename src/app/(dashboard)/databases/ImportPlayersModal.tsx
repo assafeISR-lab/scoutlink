@@ -378,7 +378,7 @@ export default function ImportPlayersModal({
                         <tr key={col}>
                           <td className="px-4 py-2.5 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{col}</td>
                           <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-muted)', maxWidth: 120 }}>
-                            <span className="truncate block">{rows[0]?.[col] ?? '—'}</span>
+                            <span className="truncate block">{String(rows[0]?.[col] ?? '') || '—'}</span>
                           </td>
                           <td className="px-4 py-2.5">
                             <select value={mapping[col] ?? ''} onChange={e => setMapping(m => ({ ...m, [col]: e.target.value }))}
@@ -555,9 +555,10 @@ async function parseFile(file: File): Promise<{ cols: string[]; data: ParsedRow[
 
   // xlsx / xls
   const buf = await file.arrayBuffer()
-  const wb  = XLSX.read(buf, { type: 'array' })
+  const wb  = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: false })
   const ws  = wb.Sheets[wb.SheetNames[0]]
-  const raw = XLSX.utils.sheet_to_json<ParsedRow>(ws, { defval: '' })
+  // raw: false → all cell values returned as formatted strings (prevents JS Date objects in JSX)
+  const raw = XLSX.utils.sheet_to_json<ParsedRow>(ws, { defval: '', raw: false })
   const cols = raw.length > 0 ? Object.keys(raw[0]) : []
   return { cols, data: raw }
 }
