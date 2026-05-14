@@ -1,0 +1,215 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
+import Anthropic from '@anthropic-ai/sdk'
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+
+interface ExtractedFilters {
+  position?: string | null
+  ageMin?: number | null
+  ageMax?: number | null
+  nationality?: string | null
+  preferredFoot?: string | null
+  marketValueMin?: number | null
+  marketValueMax?: number | null
+  contractExpiryYearMax?: number | null
+  league?: string | null
+  club?: string | null
+}
+
+interface RankedResult {
+  playerId: string
+  score: number
+  explanation: string
+}
+
+const EXTRACT_SYSTEM = `You are a football scouting assistant. Extract structured search filters from a scout's player description.
+Return ONLY a valid JSON object with these fields (use null for anything not mentioned or unclear):
+{
+  "position": string | null,
+  "ageMin": number | null,
+  "ageMax": number | null,
+  "nationality": string | null,
+  "preferredFoot": "Right" | "Left" | "Both" | null,
+  "marketValueMin": number | null,
+  "marketValueMax": number | null,
+  "contractExpiryYearMax": number | null,
+  "league": string | null,
+  "club": string | null
+}
+marketValue values are in euros. contractExpiryYearMax is the latest year the contract can expire (e.g. "expiring soon" → current year + 1).
+Return no text outside the JSON object.`
+
+const RANK_SYSTEM = `You are an expert football scout analyst. Given a scout's player description and a list of candidate players, score and rank the best matches.
+Return ONLY a valid JSON array of up to 10 objects, sorted by score descending:
+[{"playerId": "...", "score": 85, "explanation": "..."}]
+score: 0–100 (100 = perfect match). explanation: 1–2 sentences on why this player matches the description.
+Return no text outside the JSON array.`
+
+function calcAge(dob: Date | null): number | null {
+  if (!dob) return null
+  return Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+}
+
+function getCF(customFields: { fieldName: string; value: string }[], name: string): string {
+  return customFields.find(f => f.fieldName === name)?.value ?? ''
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}))
+  const message: string = body.message ?? ''
+  if (!message.trim()) {
+    return NextResponse.json({ error: 'Message required' }, { status: 400 })
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // ── LLM Call 1: Extract structured filters ────────────────────────────────
+  const extractResp = await anthropic.messages.create({
+    model: 'claude-haiku-4-5',
+    max_tokens: 512,
+    system: [{ type: 'text', text: EXTRACT_SYSTEM, cache_control: { type: 'ephemeral' } }] as Parameters<typeof anthropic.messages.create>[0]['system'],
+    messages: [{ role: 'user', content: message }],
+  })
+
+  const extractText = extractResp.content.find(b => b.type === 'text')?.text ?? '{}'
+  let filters: ExtractedFilters = {}
+  try {
+    const m = extractText.match(/\{[\s\S]*\}/)
+    if (m) filters = JSON.parse(m[0])
+  } catch { /* use empty filters */ }
+
+  // ── DB Query ──────────────────────────────────────────────────────────────
+  const [ownedDbs, sharedAccess] = await Promise.all([
+    prisma.playerDatabase.findMany({ where: { ownerId: user.id }, select: { id: true, name: true } }),
+    prisma.databaseAccess.findMany({
+      where: { agentId: user.id },
+      select: { database: { select: { id: true, name: true } } },
+    }),
+  ])
+
+  const allDbs = [...ownedDbs, ...sharedAccess.map(a => a.database)]
+  if (allDbs.length === 0) return NextResponse.json({ results: [], filters })
+
+  const dbNameMap = Object.fromEntries(allDbs.map(d => [d.id, d.name]))
+
+  const now = new Date()
+  const ageToDate = (age: number) => new Date(now.getFullYear() - age, now.getMonth(), now.getDate())
+
+  // Build where clause for standard fields
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {
+    databaseId: { in: allDbs.map(d => d.id) },
+    ...(filters.position && { position: { contains: filters.position, mode: 'insensitive' } }),
+    ...(filters.nationality && { nationality: { contains: filters.nationality, mode: 'insensitive' } }),
+    ...(filters.club && { clubName: { contains: filters.club, mode: 'insensitive' } }),
+  }
+
+  if (filters.ageMin != null || filters.ageMax != null) {
+    where.dateOfBirth = {
+      ...(filters.ageMax != null ? { gte: ageToDate(filters.ageMax + 1) } : {}),
+      ...(filters.ageMin != null ? { lte: ageToDate(filters.ageMin) } : {}),
+    }
+  }
+
+  if (filters.marketValueMin != null || filters.marketValueMax != null) {
+    where.marketValue = {
+      ...(filters.marketValueMin != null ? { gte: filters.marketValueMin } : {}),
+      ...(filters.marketValueMax != null ? { lte: filters.marketValueMax } : {}),
+    }
+  }
+
+  const rawPlayers = await prisma.player.findMany({
+    where,
+    include: { customFields: { select: { fieldName: true, value: true } } },
+    take: 200,
+  })
+
+  // In-memory filter for custom fields
+  const candidates = rawPlayers.filter(p => {
+    if (filters.preferredFoot) {
+      const foot = getCF(p.customFields, 'foot')
+      if (foot && foot.toLowerCase() !== filters.preferredFoot.toLowerCase()) return false
+    }
+    if (filters.league) {
+      const league = getCF(p.customFields, 'league')
+      if (league && !league.toLowerCase().includes(filters.league.toLowerCase())) return false
+    }
+    if (filters.contractExpiryYearMax != null) {
+      const expiry = getCF(p.customFields, 'contractExpiry')
+      if (expiry) {
+        const d = new Date(expiry)
+        if (!isNaN(d.getTime()) && d.getFullYear() > filters.contractExpiryYearMax) return false
+      }
+    }
+    return true
+  }).slice(0, 50)
+
+  if (candidates.length === 0) return NextResponse.json({ results: [], filters })
+
+  // ── LLM Call 2: Score and rank top 10 ────────────────────────────────────
+  const playerSummaries = candidates.map(p => ({
+    playerId: p.id,
+    name: `${p.firstName} ${p.lastName}`,
+    position: p.position ?? null,
+    nationality: p.nationality ?? null,
+    club: p.clubName ?? null,
+    age: calcAge(p.dateOfBirth),
+    heightCm: p.heightCm ?? null,
+    weightKg: p.weightKg ?? null,
+    marketValue: p.marketValue ?? null,
+    foot: getCF(p.customFields, 'foot') || null,
+    league: getCF(p.customFields, 'league') || null,
+    contractExpiry: getCF(p.customFields, 'contractExpiry') || null,
+  }))
+
+  const rankResp = await anthropic.messages.create({
+    model: 'claude-haiku-4-5',
+    max_tokens: 2048,
+    system: [{ type: 'text', text: RANK_SYSTEM, cache_control: { type: 'ephemeral' } }] as Parameters<typeof anthropic.messages.create>[0]['system'],
+    messages: [{
+      role: 'user',
+      content: `Scout's description:\n${message}\n\nCandidates:\n${JSON.stringify(playerSummaries, null, 2)}`,
+    }],
+  })
+
+  const rankText = rankResp.content.find(b => b.type === 'text')?.text ?? '[]'
+  let ranked: RankedResult[] = []
+  try {
+    const m = rankText.match(/\[[\s\S]*\]/)
+    if (m) ranked = JSON.parse(m[0])
+  } catch { /* return empty */ }
+
+  const playerMap = Object.fromEntries(candidates.map(p => [p.id, p]))
+  const results = ranked
+    .filter(r => playerMap[r.playerId])
+    .slice(0, 10)
+    .map(r => {
+      const p = playerMap[r.playerId]
+      return {
+        score: r.score,
+        explanation: r.explanation,
+        player: {
+          id: p.id,
+          databaseId: p.databaseId,
+          databaseName: dbNameMap[p.databaseId] ?? '',
+          firstName: p.firstName,
+          lastName: p.lastName,
+          position: p.position ?? null,
+          clubName: p.clubName ?? null,
+          nationality: p.nationality ?? null,
+          age: calcAge(p.dateOfBirth),
+          heightCm: p.heightCm ?? null,
+          marketValue: p.marketValue ?? null,
+          photo: getCF(p.customFields, 'photo'),
+          foot: getCF(p.customFields, 'foot'),
+          league: getCF(p.customFields, 'league'),
+        },
+      }
+    })
+
+  return NextResponse.json({ results, filters })
+}
