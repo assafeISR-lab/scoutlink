@@ -279,7 +279,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                 const rowBg = i % 2 !== 0 ? 'var(--subtle-bg)' : 'var(--card-solid)'
                 return (
                   <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group" style={{ background: rowBg }}>
-                    <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBg, zIndex: 1, maxWidth: 280 }}>
+                    <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBg, zIndex: 3, maxWidth: 280, boxShadow: '4px 0 8px -2px rgba(0,0,0,0.4)' }}>
                       <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3 overflow-hidden">
                         <PlayerAvatar player={player} />
                         <p
@@ -336,7 +336,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                       return <td className="px-6 py-3 text-sm text-white/75"><Trunc text={display} /></td>
                     })()}
                     {canEdit && (
-                      <td className="px-4 py-3" style={{ position: 'sticky', right: 0, background: rowBg, zIndex: 1 }}>
+                      <td className="px-4 py-3" style={{ position: 'sticky', right: 0, background: rowBg, zIndex: 3, boxShadow: '-4px 0 8px -2px rgba(0,0,0,0.4)' }}>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => setEditingPlayer(player)} title="Edit" className="w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
