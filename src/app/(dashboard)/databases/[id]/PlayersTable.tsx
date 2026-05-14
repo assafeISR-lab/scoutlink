@@ -279,10 +279,14 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                 const rowBg = i % 2 !== 0 ? 'var(--subtle-bg)' : 'var(--card-solid)'
                 return (
                   <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group" style={{ background: rowBg }}>
-                    <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
-                      <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3">
+                    <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBg, zIndex: 1, maxWidth: 280 }}>
+                      <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3 overflow-hidden">
                         <PlayerAvatar player={player} />
-                        <p className="text-sm font-medium text-white group-hover:text-[#00c896] transition-colors whitespace-nowrap">{player.firstName} {player.lastName}</p>
+                        <p
+                          className="text-sm font-medium text-white group-hover:text-[#00c896] transition-colors truncate"
+                          style={{ maxWidth: '30ch' }}
+                          title={`${player.firstName} ${player.lastName}`}
+                        >{player.firstName} {player.lastName}</p>
                       </Link>
                     </td>
                     {show('position') && (
