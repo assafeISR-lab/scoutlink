@@ -407,7 +407,7 @@ export default function ImportPlayersModal({
           )}
 
           {/* ── Step 3 ── */}
-          {step === 3 && !result && (
+          {step === 3 && !result && !importing && (
             <div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm" style={{ background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.2)' }}>
@@ -471,6 +471,15 @@ export default function ImportPlayersModal({
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* ── Importing ── */}
+          {importing && (
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#00c896', borderTopColor: 'transparent' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Importing players…</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>This may take a moment for large lists</p>
             </div>
           )}
 

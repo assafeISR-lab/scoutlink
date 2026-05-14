@@ -54,15 +54,87 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   let imported = 0, skipped = 0, overwritten = 0
   const errors: string[] = []
 
+  // Separate rows into new, overwrite, and skip buckets
+  const toCreate: { row: ImportRow }[] = []
+  const toOverwrite: { row: ImportRow; existingId: string }[] = []
+
   for (const row of body.players) {
     if (!row.firstName?.trim() || !row.lastName?.trim()) { errors.push(`Row missing name`); continue }
-
     const nameKey = `${row.firstName.trim().toLowerCase()} ${row.lastName.trim().toLowerCase()}`
     const existingId = existingMap.get(nameKey)
-
     if (existingId) {
-      if (row.conflictAction === 'skip') { skipped++; continue }
       if (row.conflictAction === 'overwrite') {
+        toOverwrite.push({ row, existingId })
+      } else {
+        skipped++
+      }
+    } else {
+      toCreate.push({ row })
+    }
+  }
+
+  // ── Batch create new players ───────────────────────────────────────────────
+  if (toCreate.length > 0) {
+    const createData = toCreate.map(({ row }) => ({
+      databaseId,
+      addedById: user.id,
+      firstName: row.firstName.trim(),
+      lastName: row.lastName.trim(),
+      middleName: row.middleName?.trim() || null,
+      position: row.position?.trim() || null,
+      clubName: row.clubName?.trim() || null,
+      nationality: row.nationality?.trim() || null,
+      agentName: row.agentName?.trim() || null,
+      dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
+      heightCm: row.heightCm ?? null,
+      weightKg: row.weightKg ?? null,
+      marketValue: row.marketValue ?? null,
+      goalsThisYear: row.goalsThisYear ?? null,
+      totalGoals: row.totalGoals ?? null,
+      totalGames: row.totalGames ?? null,
+      nationalGames: row.nationalGames ?? null,
+      yearsInProClub: row.yearsInProClub ?? null,
+      playsNational: row.playsNational ?? false,
+    }))
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const created = await (prisma.player as any).createManyAndReturn({
+        data: createData,
+        select: { id: true, firstName: true, lastName: true },
+      }) as { id: string; firstName: string; lastName: string }[]
+
+      imported += created.length
+
+      // Build custom field entries for newly created players
+      const cfEntries: { playerId: string; fieldName: string; value: string }[] = []
+      for (const createdPlayer of created) {
+        const nameKey = `${createdPlayer.firstName.toLowerCase()} ${createdPlayer.lastName.toLowerCase()}`
+        // Find the matching row (by position in toCreate array matching by name)
+        const match = toCreate.find(({ row }) =>
+          `${row.firstName.trim().toLowerCase()} ${row.lastName.trim().toLowerCase()}` === nameKey
+        )
+        if (!match) continue
+        const cfs = match.row.customFields
+        if (cfs) {
+          for (const [fieldName, value] of Object.entries(cfs)) {
+            if (value?.trim()) cfEntries.push({ playerId: createdPlayer.id, fieldName, value: value.trim() })
+          }
+        }
+      }
+
+      if (cfEntries.length > 0) {
+        await prisma.customField.createMany({ data: cfEntries })
+      }
+    } catch {
+      errors.push(`Batch create failed — some players may not have been imported`)
+    }
+  }
+
+  // ── Overwrite existing players ─────────────────────────────────────────────
+  if (toOverwrite.length > 0) {
+    await Promise.all(toOverwrite.map(async ({ row, existingId }) => {
+      try {
         await prisma.player.update({
           where: { id: existingId },
           data: {
@@ -84,56 +156,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           },
         })
         if (row.customFields && Object.keys(row.customFields).length > 0) {
-          for (const [fieldName, value] of Object.entries(row.customFields)) {
-            if (!value?.trim()) continue
-            const existingCf = await prisma.customField.findFirst({ where: { playerId: existingId, fieldName } })
-            if (existingCf) {
-              await prisma.customField.update({ where: { id: existingCf.id }, data: { value: value.trim() } })
-            } else {
-              await prisma.customField.create({ data: { playerId: existingId, fieldName, value: value.trim() } })
-            }
-          }
+          const existingCfs = await prisma.customField.findMany({ where: { playerId: existingId } })
+          const existingCfMap = new Map(existingCfs.map(cf => [cf.fieldName, cf.id]))
+          const toUpsert = Object.entries(row.customFields).filter(([, v]) => v?.trim())
+          await Promise.all(toUpsert.map(([fieldName, value]) => {
+            const cfId = existingCfMap.get(fieldName)
+            if (cfId) return prisma.customField.update({ where: { id: cfId }, data: { value: value.trim() } })
+            return prisma.customField.create({ data: { playerId: existingId, fieldName, value: value.trim() } })
+          }))
         }
         overwritten++
-        continue
+      } catch {
+        errors.push(`Failed to overwrite ${row.firstName} ${row.lastName}`)
       }
-      skipped++; continue
-    }
-
-    try {
-      const player = await prisma.player.create({
-        data: {
-          databaseId,
-          addedById: user.id,
-          firstName: row.firstName.trim(),
-          lastName: row.lastName.trim(),
-          middleName: row.middleName?.trim() || null,
-          position: row.position?.trim() || null,
-          clubName: row.clubName?.trim() || null,
-          nationality: row.nationality?.trim() || null,
-          agentName: row.agentName?.trim() || null,
-          dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
-          heightCm: row.heightCm ?? null,
-          weightKg: row.weightKg ?? null,
-          marketValue: row.marketValue ?? null,
-          goalsThisYear: row.goalsThisYear ?? null,
-          totalGoals: row.totalGoals ?? null,
-          totalGames: row.totalGames ?? null,
-          nationalGames: row.nationalGames ?? null,
-          yearsInProClub: row.yearsInProClub ?? null,
-          playsNational: row.playsNational ?? false,
-        },
-      })
-      if (row.customFields && Object.keys(row.customFields).length > 0) {
-        const cfEntries = Object.entries(row.customFields)
-          .filter(([, v]) => v?.trim())
-          .map(([fieldName, value]) => ({ playerId: player.id, fieldName, value: value.trim() }))
-        if (cfEntries.length > 0) await prisma.customField.createMany({ data: cfEntries })
-      }
-      imported++
-    } catch (e) {
-      errors.push(`Failed to import ${row.firstName} ${row.lastName}`)
-    }
+    }))
   }
 
   if (imported > 0) {
