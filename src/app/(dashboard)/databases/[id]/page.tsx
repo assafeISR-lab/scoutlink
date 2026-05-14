@@ -8,17 +8,29 @@ export default async function DatabaseDetailPage({ params }: { params: Promise<{
   const user = await getUser()
   if (!user) redirect('/login')
 
-  const db = await prisma.playerDatabase.findUnique({
-    where: { id },
-    include: {
-      owner: true,
-      players: {
-        orderBy: { createdAt: 'desc' },
-        include: { customFields: { select: { fieldName: true, value: true } } },
+  const [db, allDatabases] = await Promise.all([
+    prisma.playerDatabase.findUnique({
+      where: { id },
+      include: {
+        owner: { select: { fullName: true } },
+        players: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            customFields: {
+              select: { fieldName: true, value: true },
+              where: { fieldName: { in: ['league', 'foot', 'contractExpiry', 'fmWages', 'photo'] } },
+            },
+          },
+        },
+        access: { where: { agentId: user.id } },
       },
-      access: { where: { agentId: user.id } },
-    },
-  })
+    }),
+    prisma.playerDatabase.findMany({
+      where: { OR: [{ ownerId: user.id }, { access: { some: { agentId: user.id, permission: 'contributor' } } }] },
+      select: { id: true, name: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ])
 
   if (!db) notFound()
 
@@ -27,12 +39,6 @@ export default async function DatabaseDetailPage({ params }: { params: Promise<{
   if (!hasAccess) redirect('/databases')
 
   const canEdit = isOwner || db.access[0]?.permission === 'contributor'
-
-  const allDatabases = await prisma.playerDatabase.findMany({
-    where: { OR: [{ ownerId: user.id }, { access: { some: { agentId: user.id, permission: 'contributor' } } }] },
-    select: { id: true, name: true },
-    orderBy: { createdAt: 'asc' },
-  })
 
   const players = db.players.map(p => ({
     ...p,
