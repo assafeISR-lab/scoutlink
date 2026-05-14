@@ -290,41 +290,50 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                       </Link>
                     </td>
                     {show('position') && (
-                      <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">
-                        {player.position ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{player.position}</span> : <span className="text-white/25">—</span>}
-                      </td>
-                    )}
-                    {show('team')        && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.clubName || <span className="text-white/25">—</span>}</td>}
-                    {show('league')      && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{getCF(player, 'league') || <span className="text-white/25">—</span>}</td>}
-                    {show('nationality') && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.nationality || <span className="text-white/25">—</span>}</td>}
-                    {showDob && (
-                      <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">
-                        {player.dateOfBirth
-                          ? <>{new Date(player.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} <span className="text-white/35 text-xs">({calcAge(player.dateOfBirth)}y)</span></>
+                      <td className="px-6 py-3 text-sm">
+                        {player.position
+                          ? <span className="text-xs px-2 py-0.5 rounded-full truncate inline-block" style={{ maxWidth: '30ch', background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }} title={player.position}>{player.position}</span>
                           : <span className="text-white/25">—</span>}
                       </td>
                     )}
-                    {show('height')      && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.heightCm ? `${player.heightCm} cm` : <span className="text-white/25">—</span>}</td>}
-                    {show('weight')      && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{player.weightKg ? `${player.weightKg} kg` : <span className="text-white/25">—</span>}</td>}
-                    {show('marketValue') && (
-                      <td className="px-6 py-3 text-sm whitespace-nowrap" style={{ color: player.marketValue ? '#00c896' : 'rgba(255,255,255,0.25)' }}>
-                        {player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(1)}M` : '—'}
+                    {show('team')        && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={player.clubName ?? ''} /></td>}
+                    {show('league')      && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={getCF(player, 'league')} /></td>}
+                    {show('nationality') && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={player.nationality ?? ''} /></td>}
+                    {showDob && (
+                      <td className="px-6 py-3 text-sm text-white/75">
+                        {player.dateOfBirth ? (() => {
+                          const ds = new Date(player.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                          const age = calcAge(player.dateOfBirth)
+                          return <span className="truncate block" style={{ maxWidth: '30ch' }} title={`${ds} (${age}y)`}>{ds} <span className="text-white/35 text-xs">({age}y)</span></span>
+                        })() : <span className="text-white/25">—</span>}
                       </td>
                     )}
+                    {show('height')      && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={player.heightCm ? `${player.heightCm} cm` : ''} /></td>}
+                    {show('weight')      && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={player.weightKg ? `${player.weightKg} kg` : ''} /></td>}
+                    {show('marketValue') && (() => {
+                      const val = player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(1)}M` : ''
+                      return (
+                        <td className="px-6 py-3 text-sm" style={{ color: val ? '#00c896' : 'rgba(255,255,255,0.25)' }}>
+                          <Trunc text={val} />
+                        </td>
+                      )
+                    })()}
                     {show('contractExpiry') && (() => {
                       const raw = getCF(player, 'contractExpiry')
                       const year = getContractYear(player)
                       const soon = year !== null && year <= new Date().getFullYear() + 1
+                      const display = raw ? new Date(raw).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : ''
                       return (
-                        <td className="px-6 py-3 text-sm whitespace-nowrap" style={{ color: raw ? (soon ? '#f59e0b' : 'rgba(255,255,255,0.75)') : 'rgba(255,255,255,0.25)' }}>
-                          {raw ? new Date(raw).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '—'}
+                        <td className="px-6 py-3 text-sm" style={{ color: display ? (soon ? '#f59e0b' : 'rgba(255,255,255,0.75)') : 'rgba(255,255,255,0.25)' }}>
+                          <Trunc text={display} />
                         </td>
                       )
                     })()}
-                    {show('preferredFoot') && <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{getCF(player, 'foot') || <span className="text-white/25">—</span>}</td>}
+                    {show('preferredFoot') && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={getCF(player, 'foot')} /></td>}
                     {show('fmWages') && (() => {
                       const w = getFmWages(player)
-                      return <td className="px-6 py-3 text-sm text-white/75 whitespace-nowrap">{w != null ? `£${w.toLocaleString()}/w` : <span className="text-white/25">—</span>}</td>
+                      const display = w != null ? `£${w.toLocaleString()}/w` : ''
+                      return <td className="px-6 py-3 text-sm text-white/75"><Trunc text={display} /></td>
                     })()}
                     {canEdit && (
                       <td className="px-4 py-3" style={{ position: 'sticky', right: 0, background: rowBg, zIndex: 1 }}>
@@ -354,6 +363,17 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
 })
 
 export default PlayersTable
+
+// ─── Truncating cell content ─────────────────────────────────────────────────
+
+function Trunc({ text }: { text: string }) {
+  if (!text) return <span className="text-white/25">—</span>
+  return (
+    <span className="truncate block" style={{ maxWidth: '30ch' }} title={text}>
+      {text}
+    </span>
+  )
+}
 
 // ─── Column Header ────────────────────────────────────────────────────────────
 
