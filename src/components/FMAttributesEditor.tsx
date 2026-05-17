@@ -145,11 +145,14 @@ function AttrInput({ attr, textColor, focusColor, rowRef, onChange }: {
       />
       <input
         value={attr.value}
-        onChange={e => onChange('value', e.target.value)}
+        onChange={e => {
+          const n = e.target.value === '' ? '' : String(Math.min(100, Math.max(0, Number(e.target.value))))
+          onChange('value', n)
+        }}
         placeholder="—"
         type="number"
         min={0}
-        max={99}
+        max={100}
         className="text-[10px] rounded px-1 py-[2px] focus:outline-none text-center tabular-nums font-bold"
         style={{ ...base, width: 36, color: textColor, caretColor: textColor, colorScheme: 'dark' }}
         onFocus={onFocus}

@@ -12,7 +12,7 @@ export default function FMRadarChart({ fmAttributes }: { fmAttributes: string })
   const bot = parseSection(parts[1])
 
   const AttrRow = ({ name, value, isTop }: { name: string; value: number; isTop: boolean }) => {
-    const pct    = Math.round((value / 99) * 100)
+    const pct    = Math.min(100, Math.round((value / 100) * 100))
     const color  = isTop ? '#00c896' : 'rgba(255,90,90,0.9)'
     const barBg  = isTop ? 'rgba(0,200,150,0.12)' : 'rgba(255,90,90,0.1)'
     const barFill= isTop ? 'rgba(0,200,150,0.55)' : 'rgba(255,90,90,0.5)'
