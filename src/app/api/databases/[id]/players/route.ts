@@ -25,6 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       databaseId,
       addedById: user.id,
       firstName: body.firstName.trim(),
+      middleName: body.middleName?.trim() || null,
       lastName: body.lastName.trim(),
       position: body.position?.trim() || null,
       clubName: body.clubName?.trim() || null,
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       weightKg: body.weightKg ?? null,
       marketValue: body.marketValue ?? null,
       agentName: body.agentName?.trim() || null,
+      playsNational: body.playsNational ?? false,
     },
   })
 

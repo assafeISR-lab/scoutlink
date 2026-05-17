@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
+import FMRadarChart from '@/components/FMRadarChart'
 
 interface Form {
   // DB model fields
   firstName: string
+  middleName: string
   lastName: string
   position: string
   clubName: string
@@ -14,6 +16,8 @@ interface Form {
   dateOfBirth: string
   heightCm: string
   marketValue: string
+  agentName: string
+  playsNational: boolean
   // Custom fields (stored in CustomField table)
   foot: string
   passports: string
@@ -28,30 +32,36 @@ interface Form {
   recentForm: string
   transfermarktUrl: string
   sofascoreUrl: string
+  fmInsideUrl: string
   instagram: string
   twitter: string
   tiktok: string
   highlights: string
   playerPhone: string
   agentPhone: string
+  sentBy: string
+  description: string
   fmAttributes: string
 }
 
 const EMPTY: Form = {
-  firstName: '', lastName: '', position: '', clubName: '',
+  firstName: '', middleName: '', lastName: '', position: '', clubName: '',
   nationality: '', dateOfBirth: '', heightCm: '', marketValue: '',
+  agentName: '', playsNational: false,
   foot: '', passports: '', league: '', joiningDate: '', contractExpiry: '',
   fmWages: '', transferFeeExpect: '', transferFeeReal: '',
   salaryExpect: '', salaryReal: '', recentForm: '',
-  transfermarktUrl: '', sofascoreUrl: '', instagram: '', twitter: '', tiktok: '',
-  highlights: '', playerPhone: '', agentPhone: '', fmAttributes: '',
+  transfermarktUrl: '', sofascoreUrl: '', fmInsideUrl: '',
+  instagram: '', twitter: '', tiktok: '', highlights: '',
+  playerPhone: '', agentPhone: '', sentBy: '', description: '', fmAttributes: '',
 }
 
 const CUSTOM_FIELD_KEYS: (keyof Form)[] = [
   'foot', 'passports', 'league', 'joiningDate', 'contractExpiry',
   'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
-  'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'instagram', 'twitter', 'tiktok',
-  'highlights', 'playerPhone', 'agentPhone', 'fmAttributes',
+  'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
+  'instagram', 'twitter', 'tiktok', 'highlights',
+  'playerPhone', 'agentPhone', 'sentBy', 'description', 'fmAttributes',
 ]
 
 export default function AddPlayerButton({ databaseId }: { databaseId: string }) {
@@ -61,7 +71,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
   const [form, setForm]       = useState<Form>(EMPTY)
   const router = useRouter()
 
-  function set(field: keyof Form, value: string) {
+  function set(field: keyof Form, value: string | boolean) {
     setForm(f => ({ ...f, [field]: value }))
   }
 
@@ -71,25 +81,27 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
     if (!form.firstName.trim() || !form.lastName.trim()) { setError('First and last name are required'); return }
     setLoading(true); setError('')
 
-    // Build custom fields object (only non-empty values)
     const customFields: Record<string, string> = {}
     for (const key of CUSTOM_FIELD_KEYS) {
       const val = form[key]
-      if (val && val.trim()) customFields[key] = val.trim()
+      if (typeof val === 'string' && val.trim()) customFields[key] = val.trim()
     }
 
     const res = await fetch(`/api/databases/${databaseId}/players`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        firstName:   form.firstName.trim(),
-        lastName:    form.lastName.trim(),
-        position:    form.position.trim() || null,
-        clubName:    form.clubName.trim() || null,
-        nationality: form.nationality.trim() || null,
-        dateOfBirth: form.dateOfBirth || null,
-        heightCm:    form.heightCm    ? parseFloat(form.heightCm)    : null,
-        marketValue: form.marketValue ? parseFloat(form.marketValue) * 1_000_000 : null,
+        firstName:    form.firstName.trim(),
+        middleName:   form.middleName.trim() || null,
+        lastName:     form.lastName.trim(),
+        position:     form.position.trim() || null,
+        clubName:     form.clubName.trim() || null,
+        nationality:  form.nationality.trim() || null,
+        dateOfBirth:  form.dateOfBirth || null,
+        heightCm:     form.heightCm    ? parseFloat(form.heightCm)    : null,
+        marketValue:  form.marketValue ? parseFloat(form.marketValue) * 1_000_000 : null,
+        agentName:    form.agentName.trim() || null,
+        playsNational: form.playsNational,
         customFields,
       }),
     })
@@ -98,11 +110,12 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
     setLoading(false)
   }
 
-  const initials = (form.firstName[0] ?? '?') + (form.lastName[0] ?? '?')
+  const initials = (form.firstName[0] ?? '?').toUpperCase() + (form.lastName[0] ?? '?').toUpperCase()
   const age = form.dateOfBirth
     ? Math.floor((Date.now() - new Date(form.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
   const hasName = form.firstName.trim() || form.lastName.trim()
+  const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
   return (
     <>
@@ -118,16 +131,16 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={handleClose}>
           <div
-            className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10"
+            className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-2xl border border-white/10"
             style={{ background: 'var(--card-bg)' }}
             onClick={e => e.stopPropagation()}
           >
 
             {/* ── Modal header ── */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 z-10" style={{ background: 'var(--card-bg)' }}>
               <div>
                 <h2 className="text-base font-semibold text-white">Add Player</h2>
-                <p className="text-xs text-white/30 mt-0.5">Fill in the player card below</p>
+                <p className="text-xs text-white/30 mt-0.5">Fill in the player card below — all fields optional except name</p>
               </div>
               <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-white/30 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
@@ -141,34 +154,33 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
               <div className="flex items-center gap-4 p-5 border-b border-white/5">
                 <div className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold text-black flex-shrink-0"
                   style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 0 16px rgba(0,200,150,0.3)' }}>
-                  {initials.toUpperCase()}
+                  {initials}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                     <input autoFocus value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="First name *"
-                      className="text-lg font-bold bg-transparent focus:outline-none text-white placeholder-white/20 border-b border-transparent focus:border-[#00c896] transition-colors w-[140px]"
-                      style={{ caretColor: '#00c896' }} />
+                      className="text-lg font-bold bg-transparent focus:outline-none text-white placeholder-white/20 border-b border-transparent focus:border-[#00c896] transition-colors"
+                      style={{ caretColor: '#00c896', width: 140 }} />
+                    <input value={form.middleName} onChange={e => set('middleName', e.target.value)} placeholder="Middle"
+                      className="text-lg font-bold bg-transparent focus:outline-none text-white placeholder-white/20 border-b border-transparent focus:border-[#00c896] transition-colors"
+                      style={{ caretColor: '#00c896', width: 90 }} />
                     <input value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="Last name *"
-                      className="text-lg font-bold bg-transparent focus:outline-none text-white placeholder-white/20 border-b border-transparent focus:border-[#00c896] transition-colors w-[140px]"
-                      style={{ caretColor: '#00c896' }} />
+                      className="text-lg font-bold bg-transparent focus:outline-none text-white placeholder-white/20 border-b border-transparent focus:border-[#00c896] transition-colors"
+                      style={{ caretColor: '#00c896', width: 140 }} />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="relative">
-                      <input value={form.position} onChange={e => set('position', e.target.value)} placeholder="Position"
-                        className="text-xs px-2 py-0.5 rounded-full font-medium focus:outline-none placeholder-[#00c89660] transition-colors"
-                        style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630', caretColor: '#00c896', width: form.position ? `${Math.max(70, form.position.length * 8)}px` : '80px' }} />
-                    </div>
+                    <input value={form.position} onChange={e => set('position', e.target.value)} placeholder="Position"
+                      className="text-xs px-2 py-0.5 rounded-full font-medium focus:outline-none placeholder-[#00c89660] transition-colors"
+                      style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630', caretColor: '#00c896', width: form.position ? `${Math.max(70, form.position.length * 8)}px` : '80px' }} />
                     {form.clubName    && <span className="text-xs text-white/50">{form.clubName}</span>}
                     {form.nationality && <span className="text-xs text-white/30">{form.nationality}</span>}
                     {age !== null     && <span className="text-xs text-white/30">{age} yrs</span>}
                   </div>
                 </div>
-                <div className="flex-shrink-0">
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896' }}>New Player</span>
-                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896' }}>New Player</span>
               </div>
 
-              {/* 3-column body */}
+              {/* ── 3-column body ── */}
               <div className="grid grid-cols-3">
 
                 {/* Physical */}
@@ -179,23 +191,18 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                       <CardInput value={form.nationality} onChange={v => set('nationality', v)} placeholder="e.g. Spanish" />
                     </CardRow>
                     <CardRow label="Date of Birth">
-                      <input type="date" value={form.dateOfBirth} onChange={e => set('dateOfBirth', e.target.value)}
-                        className="text-[11px] font-medium text-right bg-transparent focus:outline-none text-white/70 placeholder-white/20 transition-all rounded px-1.5 py-0.5 focus:bg-[rgba(0,200,150,0.06)] focus:border-[rgba(0,200,150,0.35)]"
-                        style={{ width: 110, border: '1px solid transparent', caretColor: '#00c896', colorScheme: 'dark' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
-                      />
-                    </CardRow>
-                    <CardRow label="Height (cm)">
-                      <CardInput value={form.heightCm} onChange={v => set('heightCm', v)} placeholder="e.g. 182" type="number" />
+                      <DateInput value={form.dateOfBirth} onChange={v => set('dateOfBirth', v)} />
                     </CardRow>
                     <CardRow label="Age">
                       <span className="text-[11px] font-medium text-white/40">{age !== null ? `${age} yrs` : '—'}</span>
                     </CardRow>
+                    <CardRow label="Height (cm)">
+                      <CardInput value={form.heightCm} onChange={v => set('heightCm', v)} placeholder="e.g. 182" type="number" />
+                    </CardRow>
                     <CardRow label="Preferred Foot">
                       <select value={form.foot} onChange={e => set('foot', e.target.value)}
                         className="text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5"
-                        style={{ width: 90, color: form.foot ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.2)', border: '1px solid transparent', caretColor: '#00c896', colorScheme: 'dark', background: 'transparent' }}
+                        style={{ width: 90, color: form.foot ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.2)', border: '1px solid transparent', colorScheme: 'dark', background: 'transparent' }}
                         onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
                         onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
                       >
@@ -207,6 +214,9 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     </CardRow>
                     <CardRow label="Passports">
                       <CardInput value={form.passports} onChange={v => set('passports', v)} placeholder="e.g. ES, IT" />
+                    </CardRow>
+                    <CardRow label="Player Phone">
+                      <CardInput value={form.playerPhone} onChange={v => set('playerPhone', v)} placeholder="+1 …" />
                     </CardRow>
                   </div>
                 </div>
@@ -222,20 +232,10 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                       <CardInput value={form.league} onChange={v => set('league', v)} placeholder="e.g. Premier League" />
                     </CardRow>
                     <CardRow label="Joining Date">
-                      <input type="date" value={form.joiningDate} onChange={e => set('joiningDate', e.target.value)}
-                        className="text-[11px] font-medium text-right bg-transparent focus:outline-none text-white/70 transition-all rounded px-1.5 py-0.5"
-                        style={{ width: 110, border: '1px solid transparent', caretColor: '#00c896', colorScheme: 'dark' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
-                      />
+                      <DateInput value={form.joiningDate} onChange={v => set('joiningDate', v)} />
                     </CardRow>
                     <CardRow label="Contract Expiry">
-                      <input type="date" value={form.contractExpiry} onChange={e => set('contractExpiry', e.target.value)}
-                        className="text-[11px] font-medium text-right bg-transparent focus:outline-none text-white/70 transition-all rounded px-1.5 py-0.5"
-                        style={{ width: 110, border: '1px solid transparent', caretColor: '#00c896', colorScheme: 'dark' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
-                      />
+                      <DateInput value={form.contractExpiry} onChange={v => set('contractExpiry', v)} />
                     </CardRow>
                     <CardRow label="Market Value (€M)" highlight>
                       <CardInput value={form.marketValue} onChange={v => set('marketValue', v)} placeholder="e.g. 25" type="number" highlight />
@@ -246,8 +246,14 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="Fee Expectation">
                       <CardInput value={form.transferFeeExpect} onChange={v => set('transferFeeExpect', v)} placeholder="e.g. 20M" />
                     </CardRow>
+                    <CardRow label="Fee (Real)">
+                      <CardInput value={form.transferFeeReal} onChange={v => set('transferFeeReal', v)} placeholder="e.g. 18M" />
+                    </CardRow>
                     <CardRow label="Salary Expectation">
                       <CardInput value={form.salaryExpect} onChange={v => set('salaryExpect', v)} placeholder="e.g. 80K/w" />
+                    </CardRow>
+                    <CardRow label="Salary (Real)">
+                      <CardInput value={form.salaryReal} onChange={v => set('salaryReal', v)} placeholder="e.g. 72K/w" />
                     </CardRow>
                   </div>
                 </div>
@@ -256,13 +262,31 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                 <div className="p-4">
                   <p className="text-[10px] uppercase tracking-widest mb-3 font-medium text-white/25">Scout Info</p>
                   <div className="space-y-2.5">
-                    <CardRow label="Position">
-                      <CardInput value={form.position} onChange={v => set('position', v)} placeholder="e.g. CAM" />
-                    </CardRow>
                     <CardRow label="Added">
-                      <span className="text-[11px] font-medium text-white/40">
-                        {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </span>
+                      <span className="text-[11px] font-medium text-white/40">{today}</span>
+                    </CardRow>
+                    <CardRow label="Agent">
+                      <CardInput value={form.agentName} onChange={v => set('agentName', v)} placeholder="Agent name" />
+                    </CardRow>
+                    <CardRow label="Agent Phone">
+                      <CardInput value={form.agentPhone} onChange={v => set('agentPhone', v)} placeholder="+1 …" />
+                    </CardRow>
+                    <CardRow label="Referral">
+                      <CardInput value={form.sentBy} onChange={v => set('sentBy', v)} placeholder="Who sent this lead" />
+                    </CardRow>
+                    <CardRow label="Plays National">
+                      <button
+                        type="button"
+                        onClick={() => set('playsNational', !form.playsNational)}
+                        className="text-[11px] font-medium px-2 py-0.5 rounded transition-all"
+                        style={{
+                          background: form.playsNational ? 'rgba(0,200,150,0.12)' : 'rgba(255,255,255,0.04)',
+                          color: form.playsNational ? '#00c896' : 'rgba(255,255,255,0.3)',
+                          border: `1px solid ${form.playsNational ? 'rgba(0,200,150,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                        }}
+                      >
+                        {form.playsNational ? 'Yes' : 'No'}
+                      </button>
                     </CardRow>
                     <CardRow label="Recent Form">
                       <CardInput value={form.recentForm} onChange={v => set('recentForm', v)} placeholder="e.g. WWDLW" />
@@ -273,6 +297,9 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="Sofascore">
                       <CardInput value={form.sofascoreUrl} onChange={v => set('sofascoreUrl', v)} placeholder="https://…" />
                     </CardRow>
+                    <CardRow label="FMInside">
+                      <CardInput value={form.fmInsideUrl} onChange={v => set('fmInsideUrl', v)} placeholder="https://…" />
+                    </CardRow>
                     <CardRow label="Instagram">
                       <CardInput value={form.instagram} onChange={v => set('instagram', v)} placeholder="@username" />
                     </CardRow>
@@ -282,26 +309,53 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="TikTok">
                       <CardInput value={form.tiktok} onChange={v => set('tiktok', v)} placeholder="https://tiktok.com/…" />
                     </CardRow>
-                    <CardRow label="Player Phone">
-                      <CardInput value={form.playerPhone} onChange={v => set('playerPhone', v)} placeholder="+1 …" />
-                    </CardRow>
-                    <CardRow label="Agent Phone">
-                      <CardInput value={form.agentPhone} onChange={v => set('agentPhone', v)} placeholder="+1 …" />
-                    </CardRow>
                     <CardRow label="Highlights">
                       <CardInput value={form.highlights} onChange={v => set('highlights', v)} placeholder="https://…" />
                     </CardRow>
+                    <div className="pt-1">
+                      <span className="text-[11px] text-white/30 block mb-1">Description</span>
+                      <textarea
+                        value={form.description}
+                        onChange={e => set('description', e.target.value)}
+                        placeholder="Notes on this player…"
+                        rows={2}
+                        className="w-full text-[11px] rounded-lg px-2 py-1.5 focus:outline-none resize-none placeholder-white/15"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--text-primary)', caretColor: '#00c896' }}
+                        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.05)' }}
+                        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* FM Attributes — full-width textarea */}
-              <div className="p-4 border-t border-white/5">
-                <p className="text-[10px] uppercase tracking-widest mb-2 font-medium text-white/25">FM Attributes</p>
-                <FMAttributesEditor
-                  value={form.fmAttributes}
-                  onChange={v => set('fmAttributes', v)}
-                />
+              {/* ── Bottom section — Heat Map | Season Stats | FM Attributes ── */}
+              <div className="border-t border-white/5 grid grid-cols-3 divide-x divide-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+
+                {/* Heat Map */}
+                <div className="p-4 flex flex-col gap-2">
+                  <p className="text-[10px] uppercase tracking-widest font-medium text-white/25">Heat Map</p>
+                  <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 60, border: '1px dashed rgba(255,255,255,0.08)' }}>
+                    <span className="text-[10px] text-white/20">Sofascore · coming soon</span>
+                  </div>
+                </div>
+
+                {/* Season Stats */}
+                <div className="p-4 flex flex-col gap-2">
+                  <p className="text-[10px] uppercase tracking-widest font-medium text-white/25">Season Stats</p>
+                  <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 60, border: '1px dashed rgba(255,255,255,0.08)' }}>
+                    <span className="text-[10px] text-white/20">Transfermarkt · coming soon</span>
+                  </div>
+                </div>
+
+                {/* FM Attributes */}
+                <div className="p-4 flex flex-col gap-2">
+                  <p className="text-[10px] uppercase tracking-widest font-medium text-white/25">FM Attributes</p>
+                  <FMAttributesEditor
+                    value={form.fmAttributes}
+                    onChange={v => set('fmAttributes', v)}
+                  />
+                </div>
               </div>
             </div>
 
@@ -315,7 +369,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                 <button onClick={handleSubmit} disabled={loading || !form.firstName.trim() || !form.lastName.trim()}
                   className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-40 transition-all"
                   style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
-                  {loading ? 'Adding...' : `Add ${hasName ? (form.firstName + ' ' + form.lastName).trim() : 'Player'}`}
+                  {loading ? 'Adding...' : `Add ${hasName ? [form.firstName, form.middleName, form.lastName].filter(Boolean).join(' ') : 'Player'}`}
                 </button>
               </div>
             </div>
@@ -344,10 +398,21 @@ function CardInput({ value, onChange, placeholder, type = 'text', highlight = fa
 }) {
   return (
     <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder ?? '—'}
-      className={`text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5 placeholder-white/20 ${
+      className={`text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5 placeholder-white/15 ${
         highlight ? 'text-[#00c896]' : value ? 'text-white/80' : 'text-white/25'
       }`}
       style={{ width: 110, border: '1px solid transparent', caretColor: '#00c896' }}
+      onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
+      onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
+    />
+  )
+}
+
+function DateInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <input type="date" value={value} onChange={e => onChange(e.target.value)}
+      className="text-[11px] font-medium text-right bg-transparent focus:outline-none text-white/70 transition-all rounded px-1.5 py-0.5"
+      style={{ width: 120, border: '1px solid transparent', caretColor: '#00c896', colorScheme: 'dark' }}
       onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
       onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
     />
