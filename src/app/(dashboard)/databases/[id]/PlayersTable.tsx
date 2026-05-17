@@ -28,6 +28,7 @@ interface Player {
   heightCm: number | null
   marketValue: number | null
   playsNational: boolean
+  available: boolean
   customFields: CustomFieldEntry[]
 }
 
@@ -126,6 +127,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const [editingPlayer,  setEditingPlayer]  = useState<Player | null>(null)
   const [deletingPlayer, setDeletingPlayer] = useState<Player | null>(null)
   const [showReport,     setShowReport]     = useState(false)
+  const [availOverride,  setAvailOverride]  = useState<Record<string, boolean>>({})
   const [visibleParams,  setVisibleParams]  = useState<Set<string>>(() =>
     columnConfig !== null ? new Set(columnConfig) : new Set()
   )
@@ -188,6 +190,16 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
 
   function clearFilterByKey(key: FilterKey) { updateFilter(clearFilterForKey(key)) }
 
+  async function toggleAvailable(player: Player) {
+    const next = !(availOverride[player.id] ?? player.available)
+    setAvailOverride(prev => ({ ...prev, [player.id]: next }))
+    await fetch(`/api/databases/${databaseId}/players/${player.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ available: next, changedFields: [] }),
+    })
+  }
+
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortKey(key); setSortDir('asc') }
@@ -215,7 +227,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const hasFilters  = isFilterActive(filters)
   const activeChips = getActiveChips(filters)
 
-  const visibleColCount = 1 +
+  const visibleColCount = 2 +
     (show('position') ? 1 : 0) + (show('team') ? 1 : 0) + (show('league') ? 1 : 0) +
     (show('nationality') ? 1 : 0) + (showDob ? 1 : 0) + (show('height') ? 1 : 0) +
     (show('marketValue') ? 1 : 0) + (show('contractExpiry') ? 1 : 0) +
@@ -248,7 +260,10 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
           <table style={{ minWidth: '600px', width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr className="border-b border-white/5">
-                <ColHeader label="Player"       sortKey="name"          currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={200} sticky="left" />
+                <th className="px-3 py-3 text-left" style={{ minWidth: 100, position: 'sticky', left: 0, top: 0, background: 'var(--card-solid)', zIndex: 4 }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Status</span>
+                </th>
+                <ColHeader label="Player"       sortKey="name"          currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={200} />
                 {show('position')    && <ColHeader label="Position"     sortKey="position"     currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
                 {show('team')        && <ColHeader label="Club"         sortKey="club"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={150} />}
                 {show('league')      && <ColHeader label="League"       sortKey="league"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={140} />}
@@ -274,7 +289,26 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                 const rowBgSolid = i % 2 !== 0 ? 'var(--row-odd-solid)' : 'var(--card-solid)'
                 return (
                   <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group" style={{ background: rowBg }}>
-                    <td className="px-6 py-3" style={{ position: 'sticky', left: 0, background: rowBgSolid, zIndex: 3, maxWidth: 280, boxShadow: '4px 0 8px -2px rgba(0,0,0,0.4)' }}>
+                    <td className="px-3 py-3" style={{ position: 'sticky', left: 0, background: rowBgSolid, zIndex: 3 }}>
+                      {(() => {
+                        const isAvail = availOverride[player.id] ?? player.available
+                        return (
+                          <button
+                            onClick={() => toggleAvailable(player)}
+                            title={isAvail ? 'Mark Not Available' : 'Mark Available'}
+                            className="text-[10px] font-semibold px-2 py-1 rounded-full transition-all whitespace-nowrap"
+                            style={{
+                              background: isAvail ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
+                              color: isAvail ? '#00c896' : '#ff6464',
+                              border: `1px solid ${isAvail ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+                            }}
+                          >
+                            {isAvail ? 'Available' : 'Not Available'}
+                          </button>
+                        )
+                      })()}
+                    </td>
+                    <td className="px-6 py-3" style={{ maxWidth: 280, boxShadow: '4px 0 8px -2px rgba(0,0,0,0.4)' }}>
                       <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3 overflow-hidden">
                         <PlayerAvatar player={player} photoEnabled={photoEnabled} />
                         <p

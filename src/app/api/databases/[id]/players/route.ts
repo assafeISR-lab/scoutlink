@@ -35,6 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       marketValue: body.marketValue ?? null,
       agentName: body.agentName?.trim() || null,
       playsNational: body.playsNational ?? false,
+      available:    body.available ?? true,
     },
   })
 

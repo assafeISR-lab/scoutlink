@@ -72,6 +72,7 @@ interface PlayerEditData {
   fmAttributes: string
   description: string
   // Scout-added fields
+  available: boolean
   transferFeeExpect: string
   transferFeeReal: string
   salaryExpect: string
@@ -597,6 +598,7 @@ const FIELD_PARAM_KEY: Record<string, string> = {
   'TikTok':                 'tiktokLink',
   'Highlights':             'highlightsLink',
   'Description':            'description',
+  'Availability':           'availability',
 }
 
 function formatContractDate(iso: string): string {
@@ -640,6 +642,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
     contractExpiry: player.contractUntil ?? '',
     fmAttributes: player.fmAttributes ?? '',
     description: player.description ?? '',
+    available: true,
     transferFeeExpect: '',
     transferFeeReal: '',
     salaryExpect: '',
@@ -815,6 +818,24 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
         <div className="p-4">
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Scout Info</p>
           <div className="space-y-2.5">
+            {/* Availability toggle — always visible */}
+            {show('availability') && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Availability</span>
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); const next = { ...editData, available: !editData.available }; setEditData(next); onDataChange(next) }}
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
+                  style={{
+                    background: editData.available ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
+                    color: editData.available ? '#00c896' : '#ff6464',
+                    border: `1px solid ${editData.available ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+                  }}
+                >
+                  {editData.available ? 'Available' : 'Not Available'}
+                </button>
+              </div>
+            )}
             {/* Added — always visible */}
             <CardField label="Added" value={dateAdded} />
             {show('sentBy')            && <CardField label="Sent by / Scout Name" value={userName} />}
@@ -1217,6 +1238,7 @@ function ImportModal({ players, databases, editedData, onClose }: {
       clubName:    firstEd?.clubName?.trim()    || clubName    || null,
       nationality: firstEd?.nationality?.trim() || pickBest(getSources(players, p => p.nationality)) || null,
       agentName:   firstEd?.agentName?.trim()   || null,
+      available:   firstEd?.available ?? true,
       dateOfBirth: firstEd?.dateOfBirth?.trim() || pickBest(getSources(players, p => p.dateOfBirth)) || null,
       heightCm:    heightStr ? parseInt(heightStr) : null,
       marketValue: parseMarketValueToNumber(mktStr || null),

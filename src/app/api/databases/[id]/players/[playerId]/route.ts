@@ -33,6 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       heightCm: body.heightCm != null && body.heightCm !== '' ? parseFloat(body.heightCm) : null,
       marketValue: body.marketValue != null && body.marketValue !== '' ? parseFloat(body.marketValue) * 1_000_000 : null,
       playsNational: body.playsNational ?? undefined,
+      available:    body.available ?? undefined,
     },
   })
 
@@ -48,6 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       heightCm:      body.heightCm !== '' && body.heightCm != null ? String(parseFloat(body.heightCm)) : null,
       marketValue:   body.marketValue !== '' && body.marketValue != null ? String(parseFloat(body.marketValue) * 1_000_000) : null,
       playsNational: String(body.playsNational ?? false),
+      available:    String(body.available ?? true),
     }
 
     for (const fieldName of changedFields) {

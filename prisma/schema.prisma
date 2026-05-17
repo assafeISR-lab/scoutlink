@@ -83,6 +83,7 @@ model Player {
   agentName    String?
   nationality  String?
   playsNational Boolean @default(false)
+  available    Boolean @default(true)
   marketValue  Float?
 
   // Relations

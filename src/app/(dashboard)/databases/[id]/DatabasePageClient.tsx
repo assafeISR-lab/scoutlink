@@ -22,6 +22,7 @@ interface Player {
   heightCm: number | null
   marketValue: number | null
   playsNational: boolean
+  available: boolean
   createdAt: string
   customFields: { fieldName: string; value: string }[]
 }

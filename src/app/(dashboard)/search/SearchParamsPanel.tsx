@@ -25,6 +25,8 @@ export const PARAM_KEYS = [
   'transferFeeReal',
   'salaryExpect',
   'salaryReal',
+  // Availability
+  'availability',
   // Scouting data
   'heatMap',
   'fmAttributes',
@@ -70,6 +72,8 @@ export const PARAM_LABELS: Record<ParamKey, string> = {
   transferFeeReal:      'Transfer Fee (Real)',
   salaryExpect:         'Salary Expectation',
   salaryReal:           'Salary (Real)',
+  // Availability
+  availability:         'Availability',
   // Scouting data
   heatMap:              'Heat Map',
   fmAttributes:         'FM Attributes (Top 7 / Low 7)',
@@ -113,6 +117,8 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   transferFeeReal:      '',
   salaryExpect:         '',
   salaryReal:           '',
+  // Availability
+  availability:         '',
   // Scouting data
   heatMap:              'Sofascore',
   fmAttributes:         'FMInside',

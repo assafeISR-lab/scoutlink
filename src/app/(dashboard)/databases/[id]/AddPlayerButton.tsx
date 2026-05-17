@@ -17,6 +17,7 @@ interface Form {
   marketValue: string
   agentName: string
   playsNational: boolean
+  available: boolean
   // Custom fields (stored in CustomField table)
   foot: string
   passports: string
@@ -46,7 +47,7 @@ interface Form {
 const EMPTY: Form = {
   firstName: '', middleName: '', lastName: '', position: '', clubName: '',
   nationality: '', dateOfBirth: '', heightCm: '', marketValue: '',
-  agentName: '', playsNational: false,
+  agentName: '', playsNational: false, available: true,
   foot: '', passports: '', league: '', joiningDate: '', contractExpiry: '',
   fmWages: '', transferFeeExpect: '', transferFeeReal: '',
   salaryExpect: '', salaryReal: '', recentForm: '',
@@ -101,6 +102,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
         marketValue:  form.marketValue ? parseFloat(form.marketValue) * 1_000_000 : null,
         agentName:    form.agentName.trim() || null,
         playsNational: form.playsNational,
+        available:    form.available,
         customFields,
       }),
     })
@@ -261,6 +263,20 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                 <div className="p-4">
                   <p className="text-[10px] uppercase tracking-widest mb-3 font-medium text-white/25">Scout Info</p>
                   <div className="space-y-2.5">
+                    <CardRow label="Availability">
+                      <button
+                        type="button"
+                        onClick={() => set('available', !form.available)}
+                        className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
+                        style={{
+                          background: form.available ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
+                          color: form.available ? '#00c896' : '#ff6464',
+                          border: `1px solid ${form.available ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+                        }}
+                      >
+                        {form.available ? 'Available' : 'Not Available'}
+                      </button>
+                    </CardRow>
                     <CardRow label="Added">
                       <span className="text-[11px] font-medium text-white/40">{today}</span>
                     </CardRow>

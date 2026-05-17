@@ -41,6 +41,7 @@ interface PlayerData {
   marketValue: number | null
   agentName: string | null
   playsNational: boolean
+  available: boolean
   createdAt: Date
   fieldSources: FieldSource[]
   customFields: CustomFieldEntry[]
@@ -85,6 +86,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     marketValue:   player.marketValue != null ? (player.marketValue / 1_000_000).toString() : '',
     agentName:     player.agentName      ?? '',
     playsNational: player.playsNational,
+    available:     player.available,
     // Custom fields
     foot:              cf('foot'),
     passports:         cf('passports'),
@@ -123,7 +125,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     setSaveError('')
 
     // Split changed fields into DB fields and custom fields
-    const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational'])
+    const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','available'])
     const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','description','sentBy','playerPhone','agentPhone']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
@@ -320,6 +322,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="p-4">
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Scout Info</p>
           <div className="space-y-2.5">
+            <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Available'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={v => setField('available', v)} onQuickSave={canWrite ? handleSave : undefined} highlight={form.available as boolean} />
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Referral"        display={form.sentBy || null}           manual={cfGreen('sentBy')}      isEditing={false} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} onQuickSave={canWrite ? handleSave : undefined} />
