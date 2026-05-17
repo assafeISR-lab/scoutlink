@@ -624,6 +624,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
   const show = (key: string) => visibleParams.size === 0 || visibleParams.has(key)
 
   const [editMode, setEditMode] = useState(false)
+  const [localActiveFm, setLocalActiveFm] = useState(false)
   const [editData, setEditData] = useState<PlayerEditData>({
     position: player.position ?? '',
     nationality: player.nationality ?? '',
@@ -900,24 +901,34 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           {/* Col 3: FM Attributes radar (aligns with Physical column) */}
           {show('fmAttributes') && (
             <div className="p-4 flex flex-col gap-2">
-              <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: editMode ? 'rgba(0,200,150,0.8)' : 'var(--text-faint)' }}>FM Attributes</p>
-              {editMode ? (
+              <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: (editMode || localActiveFm) ? 'rgba(0,200,150,0.8)' : 'var(--text-faint)' }}>FM Attributes</p>
+              {(editMode || localActiveFm) ? (
                 <textarea
+                  autoFocus={localActiveFm}
                   value={editData.fmAttributes}
                   onChange={e => { const next = { ...editData, fmAttributes: e.target.value }; setEditData(next); onDataChange(next) }}
                   onClick={e => e.stopPropagation()}
+                  onBlur={() => setLocalActiveFm(false)}
                   placeholder="e.g. Pace V15, Shoot V12 / Def V8, Head V6"
                   rows={4}
                   className="flex-1 text-[11px] rounded-lg p-2 focus:outline-none resize-none"
                   style={{ background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--text-primary)', caretColor: '#00c896' }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'; e.currentTarget.style.background = 'rgba(0,200,150,0.12)' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.3)'; e.currentTarget.style.background = 'rgba(0,200,150,0.07)' }}
                 />
               ) : editData.fmAttributes ? (
-                <FMRadarChart fmAttributes={editData.fmAttributes} />
+                <div className="group relative cursor-text" onClick={e => { e.stopPropagation(); setLocalActiveFm(true) }}>
+                  <FMRadarChart fmAttributes={editData.fmAttributes} />
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#00c896"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                  </div>
+                </div>
               ) : (
-                <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-                  <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>FMInside · no data</span>
+                <div
+                  className="flex-1 rounded-lg flex items-center justify-center cursor-text group"
+                  style={{ minHeight: 80, border: '1px dashed var(--border)' }}
+                  onClick={e => { e.stopPropagation(); setLocalActiveFm(true) }}
+                >
+                  <span className="text-[10px] group-hover:opacity-0 transition-opacity" style={{ color: 'var(--text-faint)' }}>Click to add FM Attributes</span>
                 </div>
               )}
             </div>
