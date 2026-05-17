@@ -485,7 +485,7 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
   const canInline = !!onQuickSave && !isBool
   return (
     <div
-      className={`flex items-center justify-between gap-2${canInline ? ' group' : ''}`}
+      className={`flex items-center justify-between gap-2 py-0.5${canInline ? ' group' : ''}`}
       onClick={canInline ? () => setLocalActive(true) : undefined}
       style={{ cursor: canInline ? 'text' : 'default' }}
     >
@@ -540,14 +540,18 @@ function LinkRow({ label, display, isEditing, inputValue, onChange, onQuickSave 
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 group">
-      <span
-        className="text-[11px] flex-shrink-0"
-        style={{ color: 'var(--text-muted)', cursor: onQuickSave ? 'text' : 'default' }}
-        onClick={() => { if (onQuickSave) setLocalActive(true) }}
-      >{label}</span>
+    <div
+      className={`flex items-center justify-between gap-2 py-0.5 group${onQuickSave ? ' cursor-text' : ''}`}
+      onClick={() => { if (onQuickSave) setLocalActive(true) }}
+    >
+      <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
       {isValid ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-medium flex items-center gap-0.5 hover:underline" style={{ color: '#00c896' }}>
+        <a
+          href={url} target="_blank" rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          className="text-[11px] font-medium flex items-center gap-0.5 hover:underline"
+          style={{ color: '#00c896' }}
+        >
           {label} ↗
         </a>
       ) : (
@@ -604,7 +608,7 @@ function DescRow({ label, display, manual = false, isEditing, inputValue, onChan
   const canInline = !!onQuickSave
   return (
     <div
-      className={`flex flex-col gap-1${canInline ? ' group cursor-text' : ''}`}
+      className={`flex flex-col gap-1 py-0.5${canInline ? ' group cursor-text' : ''}`}
       onClick={canInline ? () => setLocalActive(true) : undefined}
     >
       <div className="flex items-center gap-1">
