@@ -84,12 +84,19 @@ Work through the relevant checklist below, then run `npx tsc --noEmit` — TypeS
 
 ## B — Adding a MANUAL-ONLY field (phone, social links, fees, etc.)
 
-Only 4 files needed:
+5 files needed — **do not skip `SearchClient.tsx`**, that is how the field gap between the search card and the profile card was introduced:
 
 1. **`PlayerProfileCard.tsx`** — `initialForm`, `customFieldKeys`, UI `<Row>` or `<LinkRow>`
 2. **`AddPlayerButton.tsx`** — `Form` interface, `EMPTY`, `CUSTOM_FIELD_KEYS`, UI
 3. **`ImportPlayersModal.tsx`** — `IMPORT_FIELDS`, `AUTO_MAP`
 4. **`ColumnPicker.tsx`** — add to `GROUPS` (not `TABLE_COLUMNS`), add label to `EXTRA_LABELS` if needed
+5. **`SearchClient.tsx`** — this file must mirror every field that `PlayerProfileCard` shows:
+   - Add field to `PlayerEditData` interface
+   - Add to `editData` initializer (`useState<PlayerEditData>({...})`)
+   - Add `'Label': 'paramKey'` to `FIELD_PARAM_KEY` map
+   - Add `show('key') && <EditableField .../>` in the matching card column (Physical / Contract & Value / Scout Info)
+   - Add to `handleImport`: scout-entered fields go into `edCf` loop; DB fields (e.g. `agentName`) go into `body`
+   - If it is a new DB field: also add `body.field?.trim() || null` to the `prisma.player.create` data block in `src/app/api/databases/[id]/players/route.ts`
 
 ---
 
