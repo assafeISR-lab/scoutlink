@@ -66,6 +66,10 @@ function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
   if (f.heightMin !== null || f.heightMax !== null) checks.push(() => { const h = player.heightCm ?? 0; return (f.heightMin === null || h >= f.heightMin) && (f.heightMax === null || h <= f.heightMax) })
   if (f.league)           checks.push(() => getCF(player, 'league').toLowerCase().includes(f.league.toLowerCase()))
   if (f.preferredFeet.length) checks.push(() => f.preferredFeet.some(foot => getCF(player, 'foot').toLowerCase() === foot.toLowerCase()))
+  if (f.availabilities.length) checks.push(() => {
+    const label = (player as any).available ? 'Available' : 'Not Available'
+    return f.availabilities.includes(label)
+  })
   if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) checks.push(() => { const cy = contractYear ?? 0; return (f.contractExpiryYearMin === null || cy >= f.contractExpiryYearMin) && (f.contractExpiryYearMax === null || cy <= f.contractExpiryYearMax) })
   if (f.fmWagesMin !== null || f.fmWagesMax !== null) checks.push(() => { const w = fmWages ?? 0; return (f.fmWagesMin === null || w >= f.fmWagesMin) && (f.fmWagesMax === null || w <= f.fmWagesMax) })
 
@@ -117,6 +121,7 @@ export default function SearchAllLists() {
     position:     uniquePositions,
     nationality:  uniqueNationalities,
     preferredFoot: uniqueFeet.length ? uniqueFeet : ['Right', 'Left', 'Both'],
+    availability: ['Available', 'Not Available'],
   }
 
   const rangeBounds: Record<string, RangeBound> = {
