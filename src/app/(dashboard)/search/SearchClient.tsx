@@ -70,16 +70,24 @@ interface PlayerEditData {
   joiningDate: string
   contractExpiry: string
   fmAttributes: string
+  description: string
   // Scout-added fields
   transferFeeExpect: string
   transferFeeReal: string
   salaryExpect: string
   salaryReal: string
+  playerPhone: string
+  agentName: string
+  agentPhone: string
+  sentBy: string
   recentForm: string
   highlights: string
   tmUrl: string
   scUrl: string
+  fmUrl: string
   igUrl: string
+  twitterUrl: string
+  tiktokUrl: string
   customExtras: { key: string; value: string }[]
 }
 
@@ -621,15 +629,23 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
     joiningDate: player.joiningDate ?? '',
     contractExpiry: player.contractUntil ?? '',
     fmAttributes: player.fmAttributes ?? '',
+    description: player.description ?? '',
     transferFeeExpect: '',
     transferFeeReal: '',
     salaryExpect: '',
     salaryReal: '',
+    playerPhone: '',
+    agentName: '',
+    agentPhone: '',
+    sentBy: '',
     recentForm: '',
     highlights: '',
     tmUrl: player.transfermarktUrl ?? '',
     scUrl: player.sofascoreUrl ?? '',
+    fmUrl: player.fmInsideUrl ?? '',
     igUrl: '',
+    twitterUrl: '',
+    tiktokUrl: '',
     customExtras: [],
   })
 
@@ -764,6 +780,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
             {show('preferredFoot') && <EditableField label="Foot"         editMode={editMode} displayValue={editData.preferredFoot || null} editValue={editData.preferredFoot} onChange={v => updateField('preferredFoot', v)} />}
             {show('nationality')   && <EditableField label="Nationality"  editMode={editMode} displayValue={editData.nationality || null}   editValue={editData.nationality}  onChange={v => updateField('nationality', v)} />}
             {show('passports')     && <EditableField label="Passports"    editMode={editMode} displayValue={editData.passports || null}     editValue={editData.passports}    onChange={v => updateField('passports', v)} />}
+            {show('playerPhone')   && <EditableField label="Player Phone" editMode={editMode} displayValue={editData.playerPhone || null}  editValue={editData.playerPhone}  onChange={v => updateField('playerPhone', v)} />}
           </div>
         </div>
 
@@ -791,11 +808,18 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
             {/* Added — always visible */}
             <CardField label="Added" value={dateAdded} />
             {show('sentBy')            && <CardField label="Sent by / Scout Name" value={userName} />}
+            {show('sentBy')            && <EditableField label="Referral"     editMode={editMode} displayValue={editData.sentBy || null}     editValue={editData.sentBy}     onChange={v => updateField('sentBy', v)} />}
+            {show('agentName')         && <EditableField label="Agent"        editMode={editMode} displayValue={editData.agentName || null}  editValue={editData.agentName}  onChange={v => updateField('agentName', v)} />}
+            {show('agentPhone')        && <EditableField label="Agent Phone"  editMode={editMode} displayValue={editData.agentPhone || null} editValue={editData.agentPhone} onChange={v => updateField('agentPhone', v)} />}
             {show('recentForm')        && <EditableField label="Recent Form"   editMode={editMode} displayValue={editData.recentForm || null}  editValue={editData.recentForm}  onChange={v => updateField('recentForm', v)} />}
             {show('transfermarktLink') && <EditableField label="Transfermarkt" editMode={editMode} displayValue={editData.tmUrl || null}      editValue={editData.tmUrl}      onChange={v => updateField('tmUrl', v)} isLink />}
             {show('sofascoreLink')     && <EditableField label="Sofascore"     editMode={editMode} displayValue={editData.scUrl || null}      editValue={editData.scUrl}      onChange={v => updateField('scUrl', v)} isLink />}
+            {show('fmInsideLink')      && <EditableField label="FMInside"      editMode={editMode} displayValue={editData.fmUrl || null}      editValue={editData.fmUrl}      onChange={v => updateField('fmUrl', v)} isLink />}
             {show('instagramLink')     && <EditableField label="Instagram"     editMode={editMode} displayValue={editData.igUrl || null}      editValue={editData.igUrl}      onChange={v => updateField('igUrl', v)} isLink />}
+            {show('twitterLink')       && <EditableField label="Twitter / X"   editMode={editMode} displayValue={editData.twitterUrl || null} editValue={editData.twitterUrl} onChange={v => updateField('twitterUrl', v)} isLink />}
+            {show('tiktokLink')        && <EditableField label="TikTok"        editMode={editMode} displayValue={editData.tiktokUrl || null}  editValue={editData.tiktokUrl}  onChange={v => updateField('tiktokUrl', v)} isLink />}
             {show('highlightsLink')    && <EditableField label="Highlights"    editMode={editMode} displayValue={editData.highlights || null} editValue={editData.highlights} onChange={v => updateField('highlights', v)} isLink />}
+            {show('description')       && <EditableField label="Description"   editMode={editMode} displayValue={editData.description || null} editValue={editData.description} onChange={v => updateField('description', v)} />}
           </div>
 
           {/* Custom extras — only in edit mode */}
@@ -833,12 +857,6 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
             </div>
           )}
 
-          {show('description') && player.description && (
-            <div className="mt-4 pt-3 border-t border-white/5">
-              <p className="text-[10px] uppercase tracking-widest mb-1.5 font-medium" style={{ color: 'rgba(255,255,255,0.2)' }}>Bio</p>
-              <p className="text-[11px] leading-relaxed line-clamp-3" style={{ color: 'var(--text-muted)' }}>{player.description}</p>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1093,6 +1111,11 @@ function ImportModal({ players, databases, editedData, onClose }: {
       if (ed.transferFeeReal)   edCf.transferFeeReal   = ed.transferFeeReal
       if (ed.salaryExpect)      edCf.salaryExpect       = ed.salaryExpect
       if (ed.salaryReal)        edCf.salaryReal         = ed.salaryReal
+      if (ed.playerPhone)       edCf.playerPhone        = ed.playerPhone
+      if (ed.agentPhone)        edCf.agentPhone         = ed.agentPhone
+      if (ed.sentBy)            edCf.sentBy             = ed.sentBy
+      if (ed.twitterUrl)        edCf.twitter            = ed.twitterUrl
+      if (ed.tiktokUrl)         edCf.tiktok             = ed.tiktokUrl
       if (ed.recentForm)        edCf.recentForm         = ed.recentForm
       if (ed.highlights)        edCf.highlights         = ed.highlights
       if (ed.igUrl)             edCf.instagram          = ed.igUrl
@@ -1103,7 +1126,7 @@ function ImportModal({ players, databases, editedData, onClose }: {
 
     const tmUrl    = firstEd?.tmUrl?.trim()  || pickBest(getSources(players, p => p.transfermarktUrl))
     const scUrl    = firstEd?.scUrl?.trim()  || pickBest(getSources(players, p => p.sofascoreUrl))
-    const fmUrl    = pickBest(getSources(players, p => p.fmInsideUrl))
+    const fmUrl    = firstEd?.fmUrl?.trim()  || pickBest(getSources(players, p => p.fmInsideUrl))
     const sourceUrl = tmUrl || scUrl || fmUrl || undefined
 
     const customFields = {
@@ -1114,7 +1137,7 @@ function ImportModal({ players, databases, editedData, onClose }: {
       ...addCf('contractExpiry',p => p.contractUntil,   firstEd?.contractExpiry),
       ...addCf('fmWages',       p => p.fmWages,         firstEd?.fmWages),
       ...addCf('fmAttributes',  p => p.fmAttributes,    firstEd?.fmAttributes),
-      ...addCf('description',   p => p.description),
+      ...addCf('description',   p => p.description,    firstEd?.description),
       ...(tmUrl ? { transfermarktUrl: tmUrl } : {}),
       ...(scUrl ? { sofascoreUrl: scUrl } : {}),
       ...(fmUrl ? { fmInsideUrl: fmUrl } : {}),
@@ -1132,6 +1155,7 @@ function ImportModal({ players, databases, editedData, onClose }: {
       position:    normalizePos(firstEd?.position?.trim() || position || '') || null,
       clubName:    firstEd?.clubName?.trim()    || clubName    || null,
       nationality: firstEd?.nationality?.trim() || pickBest(getSources(players, p => p.nationality)) || null,
+      agentName:   firstEd?.agentName?.trim()   || null,
       dateOfBirth: firstEd?.dateOfBirth?.trim() || pickBest(getSources(players, p => p.dateOfBirth)) || null,
       heightCm:    heightStr ? parseInt(heightStr) : null,
       marketValue: parseMarketValueToNumber(mktStr || null),

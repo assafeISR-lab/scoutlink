@@ -33,6 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       heightCm: body.heightCm ?? null,
       weightKg: body.weightKg ?? null,
       marketValue: body.marketValue ?? null,
+      agentName: body.agentName?.trim() || null,
     },
   })
 
