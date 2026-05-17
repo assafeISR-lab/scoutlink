@@ -33,7 +33,7 @@ Work through the relevant checklist below, then run `npx tsc --noEmit` — TypeS
 - Add field to `PlayerResult` interface
 - Add field to `PlayerEditData` interface
 - Add to `editData` initializer (`useState<PlayerEditData>({...})`)
-- Add `case 'key': return results.some(p => !!p.key)` in `paramHasCoverage()`
+- Add `case 'key': return results.some(p => !!p.key)` in the `isFound()` switch inside the `CoveragePanel` section
 - Add `'Label': 'paramKey'` to `FIELD_PARAM_KEY` map
 - Add `show('key') && <EditableField .../>` in the correct card column
 - Add to import payload: `...addCf('key', p => p.scraperField, firstEd?.editField)` in `customFields` inside `handleImport` (or to `body` if DB field)
@@ -84,7 +84,7 @@ Work through the relevant checklist below, then run `npx tsc --noEmit` — TypeS
 
 ## B — Adding a MANUAL-ONLY field (phone, social links, fees, etc.)
 
-5 files needed — **do not skip `SearchClient.tsx`**, that is how the field gap between the search card and the profile card was introduced:
+6 files needed — **do not skip `SearchParamsPanel.tsx` and `SearchClient.tsx`**, that is how the field gap between the search card and the profile card was introduced:
 
 1. **`PlayerProfileCard.tsx`** — `initialForm`, `customFieldKeys`, UI `<Row>` or `<LinkRow>`
 2. **`AddPlayerButton.tsx`** — `Form` interface, `EMPTY`, `CUSTOM_FIELD_KEYS`, UI
@@ -110,7 +110,8 @@ Work through the relevant checklist below, then run `npx tsc --noEmit` — TypeS
 
 Work through all files from A or B above. Easy-to-miss spots:
 
-- **`SearchClient.tsx`** — `PlayerResult`, `PlayerEditData`, `paramHasCoverage`, `FIELD_PARAM_KEY`, editData init, card display, import payload
+- **`SearchParamsPanel.tsx`** — remove from `PARAM_KEYS`, `PARAM_LABELS`, `PARAM_SOURCES`
+- **`SearchClient.tsx`** — `PlayerResult`, `PlayerEditData`, `isFound()`, `FIELD_PARAM_KEY`, editData init, card display, import payload
 - **`PlayerFilterBar.tsx`** — `FilterKey` type, `Filters` interface, `DEFAULT_FILTERS`, `FILTER_PARAMS`, `getActiveChips`, `clearFilterForKey`, `chipValueSummary`, FilterPanel rangeMin/rangeMax init, `handleApply`
 - **`PlayersTable.tsx`** — `SortKey` type, sort logic, `visibleColCount`, `<ColHeader>`, `<td>` row cell, filter check, range useMemo
 - **`SearchAllLists.tsx`** — filter check + rangeBounds
