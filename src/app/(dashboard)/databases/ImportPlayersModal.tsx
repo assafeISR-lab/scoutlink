@@ -21,15 +21,10 @@ const SCOUTLINK_FIELDS: FieldDef[] = [
   { key: 'position',       label: 'Position',                group: 'Club / Career' },
   { key: 'clubName',       label: 'Club',                    group: 'Club / Career' },
   { key: 'agentName',      label: 'Agent Name',              group: 'Club / Career' },
-  { key: 'yearsInProClub', label: 'Years in Pro Club',       group: 'Club / Career' },
   { key: 'cf_league',      label: 'League',                  group: 'Club / Career' },
   { key: 'cf_contractExpiry', label: 'Contract Expiry',      group: 'Club / Career' },
   { key: 'marketValue',    label: 'Market Value (€)',        group: 'Financial' },
   { key: 'cf_fmWages',     label: 'FM Wages (£/w)',          group: 'Financial' },
-  { key: 'goalsThisYear',  label: 'Goals This Year',         group: 'Stats' },
-  { key: 'totalGoals',     label: 'Total Goals',             group: 'Stats' },
-  { key: 'totalGames',     label: 'Total Games',             group: 'Stats' },
-  { key: 'nationalGames',  label: 'National Team Games',     group: 'Stats' },
   { key: 'playsNational',  label: 'Plays National Team',     group: 'Stats' },
   { key: 'cf_foot',             label: 'Preferred Foot',          group: 'Identity' },
   { key: 'cf_passports',        label: 'Passports',               group: 'Identity' },
@@ -91,11 +86,6 @@ const AUTO_MAP: Record<string, string> = {
   'agent phone': 'cf_agentPhone', 'agent mobile': 'cf_agentPhone', 'agent number': 'cf_agentPhone',
   'highlights': 'cf_highlights', 'highlights link': 'cf_highlights', 'video': 'cf_highlights',
   'photo': 'cf_photo', 'photo url': 'cf_photo', 'image': 'cf_photo', 'picture': 'cf_photo',
-  'goals': 'goalsThisYear', 'goals this year': 'goalsThisYear', 'goals this season': 'goalsThisYear',
-  'total goals': 'totalGoals', 'career goals': 'totalGoals',
-  'games': 'totalGames', 'total games': 'totalGames', 'appearances': 'totalGames',
-  'national games': 'nationalGames', 'international games': 'nationalGames',
-  'years in pro club': 'yearsInProClub', 'pro experience': 'yearsInProClub',
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -107,9 +97,8 @@ interface ParsedRow { [col: string]: string }
 interface MappedPlayer {
   firstName: string; lastName: string; middleName?: string
   position?: string; clubName?: string; nationality?: string; agentName?: string
-  dateOfBirth?: string; heightCm?: number | null; weightKg?: number | null
-  marketValue?: number | null; goalsThisYear?: number | null; totalGoals?: number | null
-  totalGames?: number | null; nationalGames?: number | null; yearsInProClub?: number | null
+  dateOfBirth?: string; heightCm?: number | null
+  marketValue?: number | null
   playsNational?: boolean; customFields?: Record<string, string>
   conflictAction?: 'skip' | 'overwrite'
 }
@@ -614,7 +603,7 @@ function applyMapping(row: ParsedRow, mapping: Record<string, string>): MappedPl
       continue
     }
 
-    if (['heightCm','weightKg','marketValue','goalsThisYear','totalGoals','totalGames','nationalGames','yearsInProClub'].includes(fieldKey)) {
+    if (['heightCm','marketValue'].includes(fieldKey)) {
       const n = parseFloat(raw.replace(/[^0-9.-]/g, ''))
       out[fieldKey] = isNaN(n) ? null : n
       continue

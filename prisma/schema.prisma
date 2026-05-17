@@ -77,18 +77,12 @@ model Player {
   middleName   String?
   dateOfBirth  DateTime?
   heightCm     Float?
-  weightKg     Float?
   salaryCurrency Float?
   clubName     String?
   position     String?
   agentName    String?
-  goalsThisYear Int?
-  yearsInProClub Int?
   nationality  String?
   playsNational Boolean @default(false)
-  nationalGames Int?
-  totalGoals   Int?
-  totalGames   Int?
   marketValue  Float?
 
   // Relations

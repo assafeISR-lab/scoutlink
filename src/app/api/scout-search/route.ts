@@ -42,7 +42,7 @@ marketValue values are in euros. contractExpiryYearMax is the latest year the co
 Return no text outside the JSON object.`
 
 const RANK_SYSTEM = `You are an expert football scout analyst. Given a scout's player description and a list of candidate players, score and rank the best matches.
-Each player may include: name, position, nationality, club, league, age, heightCm, weightKg, marketValue, foot, passports, contractExpiry, fmWages, transferFeeExpect, transferFeeReal, salaryExpect, salaryReal, recentForm, goalsThisYear, totalGoals, totalGames, nationalGames, yearsInProClub, playsNational, agentName, description, fmAttributes.
+Each player may include: name, position, nationality, club, league, age, heightCm, marketValue, foot, passports, contractExpiry, fmWages, transferFeeExpect, transferFeeReal, salaryExpect, salaryReal, recentForm, playsNational, agentName, description, fmAttributes.
 Use every available field to judge fit. Pay special attention to description and recentForm as they contain scout context.
 Return ONLY a valid JSON array of up to 10 objects, sorted by score descending:
 [{"playerId": "...", "score": 85, "explanation": "..."}]
@@ -182,15 +182,9 @@ export async function POST(req: NextRequest) {
       club: p.clubName,
       age: calcAge(p.dateOfBirth),
       heightCm: p.heightCm,
-      weightKg: p.weightKg,
       marketValue: p.marketValue,
       agentName: p.agentName,
       playsNational: p.playsNational || null,
-      goalsThisYear: p.goalsThisYear,
-      totalGoals: p.totalGoals,
-      totalGames: p.totalGames,
-      nationalGames: p.nationalGames,
-      yearsInProClub: p.yearsInProClub,
     }
     for (const field of CF_FIELDS) {
       const val = getCF(p.customFields, field)

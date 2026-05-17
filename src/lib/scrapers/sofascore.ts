@@ -36,7 +36,6 @@ export const sofascoreScraper: SiteScraper = {
       const teamBasic = p.team as Record<string, unknown> | null
 
       let heightCm: number | null = null
-      let weightKg: number | null = null
       let dateOfBirth: string | null = null
       let marketValue: string | null = null
       let preferredFoot: string | null = null
@@ -53,7 +52,6 @@ export const sofascoreScraper: SiteScraper = {
           const pl = (profileData.player ?? profileData) as Record<string, unknown>
 
           heightCm = pl.height as number ?? null
-          weightKg = pl.weight as number ?? null
 
           if (typeof pl.dateOfBirthTimestamp === 'number') {
             dateOfBirth = new Date((pl.dateOfBirthTimestamp as number) * 1000).toISOString().split('T')[0]
@@ -92,7 +90,6 @@ export const sofascoreScraper: SiteScraper = {
         position,
         dateOfBirth,
         heightCm,
-        weightKg,
         preferredFoot,
         contractUntil,
         passports: null,

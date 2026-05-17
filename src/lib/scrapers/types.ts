@@ -7,7 +7,6 @@ export interface ScrapedPlayer {
   position: string | null
   dateOfBirth: string | null
   heightCm: number | null
-  weightKg: number | null
   preferredFoot: string | null
   contractUntil: string | null
   passports: string | null
@@ -39,7 +38,6 @@ export interface MergedPlayer {
   position: string | null
   dateOfBirth: string | null
   heightCm: number | null
-  weightKg: number | null
   preferredFoot: string | null
   contractUntil: string | null
   passports: string | null

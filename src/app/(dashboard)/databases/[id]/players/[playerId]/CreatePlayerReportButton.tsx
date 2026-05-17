@@ -17,16 +17,10 @@ interface PlayerSnapshot {
   nationality: string | null
   age: number | null
   heightCm: number | null
-  weightKg: number | null
   marketValue: number | null
   agentName: string | null
   fmAttributes: string | null
   playsNational: boolean
-  goalsThisYear: number | null
-  totalGoals: number | null
-  totalGames: number | null
-  nationalGames: number | null
-  yearsInProClub: number | null
   notes: Note[]
 }
 

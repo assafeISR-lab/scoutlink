@@ -32,7 +32,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       nationality: body.nationality?.trim() || null,
       dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
       heightCm: body.heightCm ?? null,
-      weightKg: body.weightKg ?? null,
       marketValue: body.marketValue ?? null,
       agentName: body.agentName?.trim() || null,
       playsNational: body.playsNational ?? false,
@@ -56,7 +55,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       nationality: body.nationality?.trim() || null,
       dateOfBirth: body.dateOfBirth ?? null,
       heightCm: body.heightCm != null ? String(body.heightCm) : null,
-      weightKg: body.weightKg != null ? String(body.weightKg) : null,
     }
     const sources = Object.entries(fieldMap)
       .filter(([, v]) => v !== null)

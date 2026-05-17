@@ -26,7 +26,6 @@ interface PlayerResult {
   position: string | null
   dateOfBirth: string | null
   heightCm: number | null
-  weightKg: number | null
   preferredFoot: string | null
   contractUntil: string | null
   passports: string | null
@@ -155,7 +154,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
           id: `manual-${query.trim()}`,
           name: query.trim(),
           nationality: null, team: null, league: null, position: null,
-          dateOfBirth: null, heightCm: null, weightKg: null, preferredFoot: null,
+          dateOfBirth: null, heightCm: null, preferredFoot: null,
           contractUntil: null, passports: null, joiningDate: null,
           photo: null, description: null, marketValue: null, fmWages: null,
           fmAttributes: null, transfermarktUrl: null, sofascoreUrl: null,
@@ -170,7 +169,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
         id: `manual-${query.trim()}`,
         name: query.trim(),
         nationality: null, team: null, league: null, position: null,
-        dateOfBirth: null, heightCm: null, weightKg: null, preferredFoot: null,
+        dateOfBirth: null, heightCm: null, preferredFoot: null,
         contractUntil: null, passports: null, joiningDate: null,
         photo: null, description: null, marketValue: null, fmWages: null,
         fmAttributes: null, transfermarktUrl: null, sofascoreUrl: null,

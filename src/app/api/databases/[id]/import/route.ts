@@ -87,13 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       agentName: row.agentName?.trim() || null,
       dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
       heightCm: row.heightCm ?? null,
-      weightKg: row.weightKg ?? null,
       marketValue: row.marketValue ?? null,
-      goalsThisYear: row.goalsThisYear ?? null,
-      totalGoals: row.totalGoals ?? null,
-      totalGames: row.totalGames ?? null,
-      nationalGames: row.nationalGames ?? null,
-      yearsInProClub: row.yearsInProClub ?? null,
       playsNational: row.playsNational ?? false,
     }))
 
@@ -145,13 +139,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             middleName: row.middleName?.trim() || undefined,
             dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : undefined,
             heightCm: row.heightCm ?? undefined,
-            weightKg: row.weightKg ?? undefined,
             marketValue: row.marketValue ?? undefined,
-            goalsThisYear: row.goalsThisYear ?? undefined,
-            totalGoals: row.totalGoals ?? undefined,
-            totalGames: row.totalGames ?? undefined,
-            nationalGames: row.nationalGames ?? undefined,
-            yearsInProClub: row.yearsInProClub ?? undefined,
             playsNational: row.playsNational ?? undefined,
           },
         })
@@ -191,13 +179,7 @@ interface ImportRow {
   agentName?: string
   dateOfBirth?: string
   heightCm?: number | null
-  weightKg?: number | null
   marketValue?: number | null
-  goalsThisYear?: number | null
-  totalGoals?: number | null
-  totalGames?: number | null
-  nationalGames?: number | null
-  yearsInProClub?: number | null
   playsNational?: boolean
   customFields?: Record<string, string>
   conflictAction?: 'skip' | 'overwrite'

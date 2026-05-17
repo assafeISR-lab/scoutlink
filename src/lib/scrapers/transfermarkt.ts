@@ -60,7 +60,6 @@ export const transfermarktScraper: SiteScraper = {
         position,
         dateOfBirth: null,
         heightCm: null,
-        weightKg: null,
         preferredFoot: null,
         contractUntil: null,
         passports: null,
@@ -96,9 +95,6 @@ export const transfermarktScraper: SiteScraper = {
               : parseInt(raw)
           }
 
-          const weightMatch = profileHtml.match(/(\d{2,3})\s*kg/i)
-          const weightKg = weightMatch ? parseInt(weightMatch[1]) : null
-
           const dobMatch = profileHtml.match(/(\d{2})\.(\d{2})\.(\d{4})/)
           const dateOfBirth = dobMatch ? `${dobMatch[3]}-${dobMatch[2]}-${dobMatch[1]}` : p.dateOfBirth
 
@@ -119,7 +115,7 @@ export const transfermarktScraper: SiteScraper = {
             joiningDate = `${year}-${month}-${day}`
           }
 
-          const result = { ...p, heightCm, weightKg, dateOfBirth, passports, joiningDate }
+          const result = { ...p, heightCm, dateOfBirth, passports, joiningDate }
           delete (result as ScrapedPlayer & { _profileUrl?: string })._profileUrl
           return result
         } catch {

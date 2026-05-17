@@ -24,7 +24,6 @@ interface Player {
   nationality: string | null
   dateOfBirth: string | null
   heightCm: number | null
-  weightKg: number | null
   marketValue: number | null
   customFields: CustomFieldEntry[]
 }

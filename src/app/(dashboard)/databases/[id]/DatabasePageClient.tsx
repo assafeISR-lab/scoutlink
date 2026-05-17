@@ -20,13 +20,7 @@ interface Player {
   agentName: string | null
   dateOfBirth: string | null
   heightCm: number | null
-  weightKg: number | null
   marketValue: number | null
-  goalsThisYear: number | null
-  totalGoals: number | null
-  totalGames: number | null
-  nationalGames: number | null
-  yearsInProClub: number | null
   playsNational: boolean
   createdAt: string
   customFields: { fieldName: string; value: string }[]

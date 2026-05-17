@@ -17,16 +17,10 @@ interface Player {
   position?: string | null
   nationality?: string | null
   heightCm?: number | null
-  weightKg?: number | null
   marketValue?: number | null
   agentName?: string | null
   fmAttributes?: string | null
   playsNational?: boolean
-  goalsThisYear?: number | null
-  totalGoals?: number | null
-  totalGames?: number | null
-  nationalGames?: number | null
-  yearsInProClub?: number | null
   notes?: PlayerNote[]
 }
 
@@ -48,7 +42,7 @@ export default function ReportView({ report }: { report: ReportData }) {
   }
 
   function handleDownloadCSV() {
-    const headers = ['Name', 'Position', 'Club', 'Nationality', 'Age', 'Height (cm)', 'Market Value', 'Agent', 'FM Attributes', 'Goals (Year)', 'Total Goals', 'Total Games', 'National Games', 'Pro Years', 'National Team']
+    const headers = ['Name', 'Position', 'Club', 'Nationality', 'Age', 'Height (cm)', 'Market Value', 'Agent', 'FM Attributes', 'National Team']
     const rows = report.players.map(p => [
       p.name ?? '',
       p.position ?? '',
@@ -59,11 +53,6 @@ export default function ReportView({ report }: { report: ReportData }) {
       p.marketValue != null ? `€${(p.marketValue / 1_000_000).toFixed(1)}M` : '',
       p.agentName ?? '',
       p.fmAttributes ?? '',
-      p.goalsThisYear ?? '',
-      p.totalGoals ?? '',
-      p.totalGames ?? '',
-      p.nationalGames ?? '',
-      p.yearsInProClub ?? '',
       p.playsNational ? 'Yes' : '',
     ])
     const csv = [headers, ...rows]
@@ -97,11 +86,6 @@ export default function ReportView({ report }: { report: ReportData }) {
     { key: 'marketValue', label: 'Market Value' },
     { key: 'agentName', label: 'Agent' },
     { key: 'fmAttributes', label: 'FM Attributes' },
-    { key: 'goalsThisYear', label: 'Goals (Year)' },
-    { key: 'totalGoals', label: 'Total Goals' },
-    { key: 'totalGames', label: 'Total Games' },
-    { key: 'nationalGames', label: 'National Games' },
-    { key: 'yearsInProClub', label: 'Pro Years' },
     { key: 'playsNational', label: 'National Team' },
   ]
 
@@ -201,7 +185,6 @@ export default function ReportView({ report }: { report: ReportData }) {
                     const v = player[col.key]
                     let display: React.ReactNode
                     if (col.key === 'heightCm') display = v != null ? `${v} cm` : null
-                    else if (col.key === 'weightKg') display = v != null ? `${v} kg` : null
                     else if (col.key === 'marketValue') display = v != null ? `€${((v as number) / 1_000_000).toFixed(1)}M` : null
                     else if (col.key === 'playsNational') display = v ? 'Yes' : null
                     else display = v != null ? String(v) : null

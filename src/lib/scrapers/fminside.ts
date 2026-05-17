@@ -78,7 +78,6 @@ export const fmInsideScraper: SiteScraper = {
         position: posMatch ? normalizePosition(posMatch[1]) : null,
         dateOfBirth: null,
         heightCm: null,
-        weightKg: null,
         preferredFoot: null,
         contractUntil: null,
         passports: null,
