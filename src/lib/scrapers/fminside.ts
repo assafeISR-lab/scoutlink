@@ -137,13 +137,13 @@ function parseAttributes(profileHtml: string): string | null {
     if (name && !isNaN(value)) attrs.push({ name, value })
   }
 
-  if (attrs.length < 6) return null
+  if (attrs.length < 2) return null
 
   attrs.sort((a, b) => b.value - a.value)
-  const top3 = attrs.slice(0, 3).map(a => `${a.name} ${a.value}`).join(', ')
-  const bot3 = attrs.slice(-3).reverse().map(a => `${a.name} ${a.value}`).join(', ')
+  const top7 = attrs.slice(0, 7).map(a => `${a.name} ${a.value}`).join(', ')
+  const bot7 = attrs.slice(-7).reverse().map(a => `${a.name} ${a.value}`).join(', ')
 
-  return `${top3} / ${bot3}`
+  return `${top7} / ${bot7}`
 }
 
 function normalizePosition(pos: string): string {

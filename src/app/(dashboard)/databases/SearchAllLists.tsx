@@ -65,7 +65,6 @@ function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
   if (f.ageMin !== null || f.ageMax !== null) checks.push(() => { const a = age ?? 0; return (f.ageMin === null || a >= f.ageMin) && (f.ageMax === null || a <= f.ageMax) })
   if (f.marketValueMin !== null || f.marketValueMax !== null) checks.push(() => { const v = player.marketValue ?? 0; return (f.marketValueMin === null || v >= f.marketValueMin) && (f.marketValueMax === null || v <= f.marketValueMax) })
   if (f.heightMin !== null || f.heightMax !== null) checks.push(() => { const h = player.heightCm ?? 0; return (f.heightMin === null || h >= f.heightMin) && (f.heightMax === null || h <= f.heightMax) })
-  if (f.weightMin !== null || f.weightMax !== null) checks.push(() => { const w = player.weightKg ?? 0; return (f.weightMin === null || w >= f.weightMin) && (f.weightMax === null || w <= f.weightMax) })
   if (f.league)           checks.push(() => getCF(player, 'league').toLowerCase().includes(f.league.toLowerCase()))
   if (f.preferredFeet.length) checks.push(() => f.preferredFeet.some(foot => getCF(player, 'foot').toLowerCase() === foot.toLowerCase()))
   if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) checks.push(() => { const cy = contractYear ?? 0; return (f.contractExpiryYearMin === null || cy >= f.contractExpiryYearMin) && (f.contractExpiryYearMax === null || cy <= f.contractExpiryYearMax) })
@@ -124,7 +123,6 @@ export default function SearchAllLists() {
   const rangeBounds: Record<string, RangeBound> = {
     age:            { min: ages.length ? Math.min(...ages) : 15,   max: ages.length ? Math.max(...ages) : 45,   unit: 'y' },
     height:         { min: 150, max: 210, unit: 'cm' },
-    weight:         { min: 50,  max: 120, unit: 'kg' },
     marketValue:    { min: 0,   max: 200_000_000, unit: '€M', scale: 1_000_000 },
     contractExpiry: { min: cyears.length ? Math.min(...cyears) : new Date().getFullYear(), max: cyears.length ? Math.max(...cyears) : new Date().getFullYear() + 8 },
     fmWages:        { min: 0,   max: wages.length ? Math.max(...wages) : 200_000, unit: '£/w' },

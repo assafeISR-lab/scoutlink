@@ -47,7 +47,7 @@ export default function ReportView({ report }: { report: ReportData }) {
   }
 
   function handleDownloadCSV() {
-    const headers = ['Name', 'Position', 'Club', 'Nationality', 'Age', 'Height (cm)', 'Weight (kg)', 'Market Value', 'Agent', 'Goals (Year)', 'Total Goals', 'Total Games', 'National Games', 'Pro Years', 'National Team']
+    const headers = ['Name', 'Position', 'Club', 'Nationality', 'Age', 'Height (cm)', 'Market Value', 'Agent', 'Goals (Year)', 'Total Goals', 'Total Games', 'National Games', 'Pro Years', 'National Team']
     const rows = report.players.map(p => [
       p.name ?? '',
       p.position ?? '',
@@ -55,7 +55,6 @@ export default function ReportView({ report }: { report: ReportData }) {
       p.nationality ?? '',
       p.age ?? '',
       p.heightCm ?? '',
-      p.weightKg ?? '',
       p.marketValue != null ? `€${(p.marketValue / 1_000_000).toFixed(1)}M` : '',
       p.agentName ?? '',
       p.goalsThisYear ?? '',
@@ -93,7 +92,6 @@ export default function ReportView({ report }: { report: ReportData }) {
     { key: 'nationality', label: 'Nationality' },
     { key: 'age', label: 'Age' },
     { key: 'heightCm', label: 'Height' },
-    { key: 'weightKg', label: 'Weight' },
     { key: 'marketValue', label: 'Market Value' },
     { key: 'agentName', label: 'Agent' },
     { key: 'goalsThisYear', label: 'Goals (Year)' },

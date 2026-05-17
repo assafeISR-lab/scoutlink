@@ -139,11 +139,15 @@ export const transfermarktScraper: SiteScraper = {
 function normalizePosition(pos: string): string {
   const map: Record<string, string> = {
     GK: 'Goalkeeper', TW: 'Goalkeeper',
-    CB: 'Defender', RB: 'Defender', LB: 'Defender', RWB: 'Defender', LWB: 'Defender',
-    LA: 'Defender', RA: 'Defender',
-    CDM: 'Midfielder', DM: 'Midfielder', CM: 'Midfielder', ZM: 'Midfielder',
-    CAM: 'Midfielder', OM: 'Midfielder', AM: 'Midfielder', RM: 'Midfielder', LM: 'Midfielder',
-    RW: 'Forward', LW: 'Forward', ST: 'Forward', CF: 'Forward', SS: 'Forward',
+    CB: 'Centre-Back', DC: 'Centre-Back',
+    RB: 'Right-Back', LB: 'Left-Back',
+    RWB: 'Right Wing-Back', LWB: 'Left Wing-Back',
+    LA: 'Left Wing-Back', RA: 'Right Wing-Back',
+    CDM: 'Defensive Mid', DM: 'Defensive Mid',
+    CM: 'Midfielder', ZM: 'Midfielder', OM: 'Midfielder', AM: 'Attacking Mid', CAM: 'Attacking Mid',
+    RM: 'Right Mid', LM: 'Left Mid',
+    RW: 'Right Winger', LW: 'Left Winger',
+    ST: 'Striker', CF: 'Centre-Forward', SS: 'Second Striker',
   }
   return map[pos.toUpperCase()] ?? pos
 }

@@ -13,7 +13,7 @@ import {
 
 const TABLE_COLUMNS = new Set([
   'position', 'team', 'league', 'nationality',
-  'age', 'dateOfBirth', 'height', 'weight',
+  'age', 'dateOfBirth', 'height',
   'marketValue', 'contractExpiry', 'preferredFoot', 'fmWages',
 ])
 
@@ -22,7 +22,7 @@ const TABLE_COLUMNS = new Set([
 const GROUPS: { label: string; keys: string[] }[] = [
   {
     label: 'Identity',
-    keys: ['photo', 'nationality', 'passports', 'preferredFoot', 'age', 'dateOfBirth', 'height', 'weight'],
+    keys: ['photo', 'nationality', 'passports', 'preferredFoot', 'age', 'dateOfBirth', 'height'],
   },
   {
     label: 'Club / Career',
@@ -38,13 +38,24 @@ const GROUPS: { label: string; keys: string[] }[] = [
   },
   {
     label: 'Links & Meta',
-    keys: ['transfermarktLink', 'sofascoreLink', 'instagramLink', 'highlightsLink', 'sentBy'],
+    keys: ['transfermarktLink', 'sofascoreLink', 'instagramLink', 'twitterLink', 'tiktokLink', 'highlightsLink', 'sentBy'],
+  },
+  {
+    label: 'Contact',
+    keys: ['playerPhone', 'agentPhone'],
   },
 ]
 
-// Label lookup — PARAM_LABELS covers built-ins; custom keys use themselves as the label
+const EXTRA_LABELS: Record<string, string> = {
+  twitterLink: 'Twitter / X',
+  tiktokLink:  'TikTok',
+  playerPhone: 'Player Phone',
+  agentPhone:  'Agent Phone',
+}
+
+// Label lookup — PARAM_LABELS covers built-ins; EXTRA_LABELS covers new profile-only fields
 function getLabel(key: string): string {
-  return (PARAM_LABELS as Record<string, string>)[key] ?? key
+  return EXTRA_LABELS[key] ?? (PARAM_LABELS as Record<string, string>)[key] ?? key
 }
 
 interface Props {

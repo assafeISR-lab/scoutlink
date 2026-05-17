@@ -11,7 +11,6 @@ export const PARAM_KEYS = [
   'age',
   'dateOfBirth',
   'height',
-  'weight',
   // Club / Career
   'team',
   'league',
@@ -50,7 +49,6 @@ export const PARAM_LABELS: Record<ParamKey, string> = {
   age:                  'Age',
   dateOfBirth:          'Date of Birth',
   height:               'Height',
-  weight:               'Weight',
   // Club / Career
   team:                 'Team / Club',
   league:               'League',
@@ -67,7 +65,7 @@ export const PARAM_LABELS: Record<ParamKey, string> = {
   salaryReal:           'Salary (Real)',
   // Scouting data
   heatMap:              'Heat Map',
-  fmAttributes:         'Attributes Top3 / Low3',
+  fmAttributes:         'FM Attributes (Top 7 / Low 7)',
   recentForm:           'Recent Form',
   description:          'Bio / Description',
   // Links & meta
@@ -87,7 +85,6 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   age:                  'Transfermarkt',
   dateOfBirth:          'Transfermarkt',
   height:               'Transfermarkt',
-  weight:               'Transfermarkt',
   // Club / Career
   team:                 'Transfermarkt',
   league:               'Sofascore',

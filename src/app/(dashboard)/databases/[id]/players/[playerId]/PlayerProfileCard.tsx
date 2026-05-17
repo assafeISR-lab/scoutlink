@@ -84,7 +84,6 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     // DB fields
     position:      player.position       ?? '',
     heightCm:      player.heightCm?.toString()  ?? '',
-    weightKg:      player.weightKg?.toString()  ?? '',
     dateOfBirth:   toDateStr(player.dateOfBirth),
     nationality:   player.nationality    ?? '',
     clubName:      player.clubName       ?? '',
@@ -112,10 +111,14 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     sofascoreUrl:      cf('sofascoreUrl')     || player.fieldSources.find(s => s.sourceName === 'Sofascore'     && s.isActive)?.sourceUrl || '',
     fmInsideUrl:       cf('fmInsideUrl'),
     instagram:         cf('instagram'),
+    twitter:           cf('twitter'),
+    tiktok:            cf('tiktok'),
     highlights:        cf('highlights'),
     fmAttributes:      cf('fmAttributes'),
     description:       cf('description'),
     sentBy:            cf('sentBy'),
+    playerPhone:       cf('playerPhone'),
+    agentPhone:        cf('agentPhone'),
   })
 
   const [form, setForm] = useState(initialForm)
@@ -145,8 +148,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     setSaveError('')
 
     // Split changed fields into DB fields and custom fields
-    const dbFields = new Set(['position','heightCm','weightKg','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','goalsThisYear','totalGoals','totalGames','nationalGames','yearsInProClub'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','highlights','fmAttributes','description','sentBy']
+    const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','goalsThisYear','totalGoals','totalGames','nationalGames','yearsInProClub'])
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','description','sentBy','playerPhone','agentPhone']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -197,6 +200,14 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   }
 
   // ── Display helpers ───────────────────────────────────────────────────────
+  const POSITION_ALIASES: Record<string, string> = {
+    DC: 'Centre-Back', CB: 'Centre-Back',
+    RB: 'Right-Back', LB: 'Left-Back',
+    RWB: 'Right Wing-Back', LWB: 'Left Wing-Back',
+  }
+  const displayPosition = (pos: string | null) =>
+    pos ? (POSITION_ALIASES[pos.toUpperCase()] ?? pos) : null
+
   const dobDate = player.dateOfBirth ? new Date(player.dateOfBirth) : null
   const age = dobDate && !isNaN(dobDate.getTime())
     ? ((Date.now() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)).toFixed(1)
@@ -249,7 +260,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold leading-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>{fullName}</h1>
           <div className="flex items-center gap-2 flex-wrap">
-            {player.position && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{player.position}</span>}
+            {player.position && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{displayPosition(player.position)}</span>}
             {player.clubName    && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{player.clubName}</span>}
             {player.nationality && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{player.nationality}</span>}
             {age                && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{age} yrs</span>}
@@ -304,14 +315,14 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Physical</p>
           <div className="space-y-2.5">
-            <Row label="Position"      display={player.position}  manual={isManual('position')}    isEditing={isEditing} inputValue={form.position}    onChange={v => setField('position', v)} />
+            <Row label="Position"      display={displayPosition(player.position)}  manual={isManual('position')}    isEditing={isEditing} inputValue={form.position}    onChange={v => setField('position', v)} />
             <Row label="Height"        display={player.heightCm ? `${player.heightCm} cm` : null}   manual={isManual('heightCm')}    isEditing={isEditing} inputValue={form.heightCm}    onChange={v => setField('heightCm', v)}  inputType="number" />
-            <Row label="Weight"        display={player.weightKg ? `${player.weightKg} kg` : null}   manual={isManual('weightKg')}    isEditing={isEditing} inputValue={form.weightKg}    onChange={v => setField('weightKg', v)}  inputType="number" />
             <Row label="Age"           display={age ? `${age} yrs` : null} isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Date of Birth" display={player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null} manual={isManual('dateOfBirth')} isEditing={isEditing} inputValue={form.dateOfBirth} onChange={v => setField('dateOfBirth', v)} inputType="date" />
             <Row label="Foot"          display={cf('foot') || null}       manual={cfGreen('foot')}       isEditing={isEditing} inputValue={form.foot}          onChange={v => setField('foot', v)} />
             <Row label="Nationality"   display={player.nationality}       manual={isManual('nationality')} isEditing={isEditing} inputValue={form.nationality}  onChange={v => setField('nationality', v)} />
             <Row label="Passports"     display={cf('passports') || null}  manual={cfGreen('passports')}  isEditing={isEditing} inputValue={form.passports}     onChange={v => setField('passports', v)} />
+            <Row label="Player Phone"  display={cf('playerPhone') || null} manual={cfGreen('playerPhone')} isEditing={isEditing} inputValue={form.playerPhone}  onChange={v => setField('playerPhone', v)} />
           </div>
         </div>
 
@@ -340,12 +351,15 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Referral"        display={cf('sentBy') || null}      manual={cfGreen('sentBy')}      isEditing={isEditing} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} />
             <Row label="Agent"           display={player.agentName}               manual={isManual('agentName')}   isEditing={isEditing} inputValue={form.agentName}   onChange={v => setField('agentName', v)} />
+            <Row label="Agent Phone"     display={cf('agentPhone') || null}       manual={cfGreen('agentPhone')}   isEditing={isEditing} inputValue={form.agentPhone}  onChange={v => setField('agentPhone', v)} />
             <Row label="Plays National"  display={player.playsNational ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={isEditing} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
             <Row label="Recent Form"     display={cf('recentForm') || null}       manual={cfGreen('recentForm')}   isEditing={isEditing} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} />
             <LinkRow label="Transfermarkt" display={tmUrl}           isEditing={isEditing} inputValue={form.transfermarktUrl} onChange={v => setField('transfermarktUrl', v)} />
             <LinkRow label="Sofascore"     display={scUrl}           isEditing={isEditing} inputValue={form.sofascoreUrl}     onChange={v => setField('sofascoreUrl', v)} />
             <LinkRow label="FMInside"      display={fmUrl}           isEditing={isEditing} inputValue={form.fmInsideUrl}      onChange={v => setField('fmInsideUrl', v)} />
             <LinkRow label="Instagram"     display={cf('instagram')} isEditing={isEditing} inputValue={form.instagram}        onChange={v => setField('instagram', v)} />
+            <LinkRow label="Twitter / X"   display={cf('twitter')}   isEditing={isEditing} inputValue={form.twitter}          onChange={v => setField('twitter', v)} />
+            <LinkRow label="TikTok"        display={cf('tiktok')}    isEditing={isEditing} inputValue={form.tiktok}           onChange={v => setField('tiktok', v)} />
             <LinkRow label="Highlights"    display={cf('highlights')} isEditing={isEditing} inputValue={form.highlights}      onChange={v => setField('highlights', v)} />
             <DescRow label="Description"   display={cf('description') || null} manual={cfGreen('description')} isEditing={isEditing} inputValue={form.description} onChange={v => setField('description', v)} />
           </div>

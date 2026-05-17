@@ -9,6 +9,13 @@ import FMRadarChart from '@/components/FMRadarChart'
 // Params that are planned but not yet scraped — always shown as "coming soon"
 const COMING_SOON = new Set<string>(['heatMap', 'seasonStats'])
 
+const POS_ALIASES: Record<string, string> = {
+  DC: 'Centre-Back', CB: 'Centre-Back',
+  RB: 'Right-Back', LB: 'Left-Back',
+  RWB: 'Right Wing-Back', LWB: 'Left Wing-Back',
+}
+const normalizePos = (pos: string) => POS_ALIASES[pos.toUpperCase()] ?? pos
+
 interface PlayerResult {
   id: string
   name: string
@@ -57,7 +64,6 @@ interface PlayerEditData {
   dateOfBirth: string
   preferredFoot: string
   heightCm: string
-  weightKg: string
   passports: string
   marketValue: string
   fmWages: string
@@ -133,11 +139,35 @@ export default function SearchClient({ databases, userName }: { databases: Datab
         body: JSON.stringify({ q: query, paramSources: effectiveSources }),
       })
       const data = res.ok ? await res.json() : {}
-      setResults(data.players || [])
+      const players: PlayerResult[] = data.players || []
+      // No scraped results — inject a blank stub so the user can fill in and import manually
+      if (players.length === 0 && !data.noSitesSelected) {
+        players.push({
+          id: `manual-${query.trim()}`,
+          name: query.trim(),
+          nationality: null, team: null, league: null, position: null,
+          dateOfBirth: null, heightCm: null, weightKg: null, preferredFoot: null,
+          contractUntil: null, passports: null, joiningDate: null,
+          photo: null, description: null, marketValue: null, fmWages: null,
+          fmAttributes: null, transfermarktUrl: null, sofascoreUrl: null,
+          fmInsideUrl: null, sources: [],
+        })
+      }
+      setResults(players)
       setSiteStats(data.siteStats || [])
       setNoSitesSelected(!!data.noSitesSelected)
     } catch {
-      setResults([])
+      const stub: PlayerResult = {
+        id: `manual-${query.trim()}`,
+        name: query.trim(),
+        nationality: null, team: null, league: null, position: null,
+        dateOfBirth: null, heightCm: null, weightKg: null, preferredFoot: null,
+        contractUntil: null, passports: null, joiningDate: null,
+        photo: null, description: null, marketValue: null, fmWages: null,
+        fmAttributes: null, transfermarktUrl: null, sofascoreUrl: null,
+        fmInsideUrl: null, sources: [],
+      }
+      setResults([stub])
       setSiteStats([])
     } finally {
       setLoading(false)
@@ -248,11 +278,11 @@ export default function SearchClient({ databases, userName }: { databases: Datab
                   </div>
                 )}
 
-                {/* No results */}
-                {!loading && !noSitesSelected && results.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center">
-                    <p className="text-white/40 text-sm mb-1">No players found for "{query}"</p>
-                    <p className="text-white/20 text-xs">Try a different name or check the spelling</p>
+                {/* Scrape-error notice — shown when all sites failed but we still show a blank card */}
+                {!loading && searched && siteStats.length > 0 && siteStats.filter(s => !s.noScraper).every(s => s.error) && (
+                  <div className="rounded-xl px-4 py-2.5 text-xs flex items-center gap-2" style={{ background: 'rgba(255,100,100,0.08)', border: '1px solid rgba(255,100,100,0.2)', color: 'rgba(255,150,150,0.8)' }}>
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    Search sites returned errors — no data was scraped. Fill in the card manually and import.
                   </div>
                 )}
 
@@ -309,7 +339,6 @@ function isFound(results: PlayerResult[], key: string): boolean {
     case 'age':
     case 'dateOfBirth':       return results.some(p => !!p.dateOfBirth)
     case 'height':            return results.some(p => p.heightCm != null)
-    case 'weight':            return results.some(p => p.weightKg != null)
     case 'team':              return results.some(p => !!p.team)
     case 'position':          return results.some(p => !!p.position)
     case 'marketValue':       return results.some(p => !!p.marketValue)
@@ -530,7 +559,6 @@ function CoveragePanel({ siteStats, results, loading, noSitesSelected, paramsByS
 const FIELD_PARAM_KEY: Record<string, string> = {
   'Position':               'position',
   'Height':                 'height',
-  'Weight':                 'weight',
   'Age':                    'age',
   'Date of Birth':          'dateOfBirth',
   'Foot':                   'preferredFoot',
@@ -587,7 +615,6 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
     dateOfBirth: player.dateOfBirth ?? '',
     preferredFoot: player.preferredFoot ?? '',
     heightCm: player.heightCm?.toString() ?? '',
-    weightKg: player.weightKg?.toString() ?? '',
     passports: player.passports ?? '',
     marketValue: player.marketValue ?? '',
     fmWages: player.fmWages ?? '',
@@ -674,7 +701,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           <h3 className="text-base font-bold text-white leading-tight mb-1.5">{player.name}</h3>
           <div className="flex items-center gap-2 flex-wrap">
             {(editData.position || player.position) && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{editData.position || player.position}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{normalizePos(editData.position || player.position || '')}</span>
             )}
             {(editData.clubName || player.team)         && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{editData.clubName || player.team}</span>}
             {(editData.nationality || player.nationality) && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{editData.nationality || player.nationality}</span>}
@@ -730,9 +757,8 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
         <div className="p-4">
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Physical</p>
           <div className="space-y-2.5">
-            {show('position')      && <EditableField label="Position"     editMode={editMode} displayValue={editData.position || null}      editValue={editData.position}     onChange={v => updateField('position', v)} />}
+            {show('position')      && <EditableField label="Position"     editMode={editMode} displayValue={normalizePos(editData.position) || null} editValue={editData.position}     onChange={v => updateField('position', v)} />}
             {show('height')        && <EditableField label="Height"       editMode={editMode} displayValue={editData.heightCm ? `${editData.heightCm} cm` : null} editValue={editData.heightCm} onChange={v => updateField('heightCm', v)} />}
-            {show('weight')        && <EditableField label="Weight"       editMode={editMode} displayValue={editData.weightKg ? `${editData.weightKg} kg` : null} editValue={editData.weightKg} onChange={v => updateField('weightKg', v)} />}
             {show('age')           && <CardField label="Age"              value={age ? `${age} yrs` : null} />}
             {show('dateOfBirth')   && <EditableField label="Date of Birth" editMode={editMode} displayValue={formatDateStr(editData.dateOfBirth)} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} />}
             {show('preferredFoot') && <EditableField label="Foot"         editMode={editMode} displayValue={editData.preferredFoot || null} editValue={editData.preferredFoot} onChange={v => updateField('preferredFoot', v)} />}
@@ -1057,6 +1083,7 @@ function ImportModal({ players, databases, editedData, onClose }: {
       ...addCf('contractExpiry',p => p.contractUntil,   firstEd?.contractExpiry),
       ...addCf('fmWages',       p => p.fmWages,         firstEd?.fmWages),
       ...addCf('fmAttributes',  p => p.fmAttributes,    firstEd?.fmAttributes),
+      ...addCf('description',   p => p.description),
       ...(tmUrl ? { transfermarktUrl: tmUrl } : {}),
       ...(scUrl ? { sofascoreUrl: scUrl } : {}),
       ...(fmUrl ? { fmInsideUrl: fmUrl } : {}),
@@ -1065,19 +1092,17 @@ function ImportModal({ players, databases, editedData, onClose }: {
     }
 
     const heightStr = firstEd?.heightCm?.trim() || pickBest(getSources(players, p => p.heightCm?.toString()))
-    const weightStr = firstEd?.weightKg?.trim() || pickBest(getSources(players, p => p.weightKg?.toString()))
     const mktStr    = firstEd?.marketValue?.trim() || pickBest(getSources(players, p => p.marketValue))
 
     const sourceName = [...new Set(players.flatMap(p => p.sources))].join(', ')
     const body = {
       firstName:   firstName  || '-',
       lastName:    lastName   || '-',
-      position:    firstEd?.position?.trim()    || position    || null,
+      position:    normalizePos(firstEd?.position?.trim() || position || '') || null,
       clubName:    firstEd?.clubName?.trim()    || clubName    || null,
       nationality: firstEd?.nationality?.trim() || pickBest(getSources(players, p => p.nationality)) || null,
       dateOfBirth: firstEd?.dateOfBirth?.trim() || pickBest(getSources(players, p => p.dateOfBirth)) || null,
       heightCm:    heightStr ? parseInt(heightStr) : null,
-      weightKg:    weightStr ? parseInt(weightStr) : null,
       marketValue: parseMarketValueToNumber(mktStr || null),
       sourceName,
       sourceUrl,

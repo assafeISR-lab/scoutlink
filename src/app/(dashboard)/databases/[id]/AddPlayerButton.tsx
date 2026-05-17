@@ -12,7 +12,6 @@ interface Form {
   nationality: string
   dateOfBirth: string
   heightCm: string
-  weightKg: string
   marketValue: string
   // Custom fields (stored in CustomField table)
   foot: string
@@ -29,22 +28,28 @@ interface Form {
   transfermarktUrl: string
   sofascoreUrl: string
   instagram: string
+  twitter: string
+  tiktok: string
   highlights: string
+  playerPhone: string
+  agentPhone: string
 }
 
 const EMPTY: Form = {
   firstName: '', lastName: '', position: '', clubName: '',
-  nationality: '', dateOfBirth: '', heightCm: '', weightKg: '', marketValue: '',
+  nationality: '', dateOfBirth: '', heightCm: '', marketValue: '',
   foot: '', passports: '', league: '', joiningDate: '', contractExpiry: '',
   fmWages: '', transferFeeExpect: '', transferFeeReal: '',
   salaryExpect: '', salaryReal: '', recentForm: '',
-  transfermarktUrl: '', sofascoreUrl: '', instagram: '', highlights: '',
+  transfermarktUrl: '', sofascoreUrl: '', instagram: '', twitter: '', tiktok: '',
+  highlights: '', playerPhone: '', agentPhone: '',
 }
 
 const CUSTOM_FIELD_KEYS: (keyof Form)[] = [
   'foot', 'passports', 'league', 'joiningDate', 'contractExpiry',
   'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
-  'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'instagram', 'highlights',
+  'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'instagram', 'twitter', 'tiktok',
+  'highlights', 'playerPhone', 'agentPhone',
 ]
 
 export default function AddPlayerButton({ databaseId }: { databaseId: string }) {
@@ -82,7 +87,6 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
         nationality: form.nationality.trim() || null,
         dateOfBirth: form.dateOfBirth || null,
         heightCm:    form.heightCm    ? parseFloat(form.heightCm)    : null,
-        weightKg:    form.weightKg    ? parseFloat(form.weightKg)     : null,
         marketValue: form.marketValue ? parseFloat(form.marketValue) * 1_000_000 : null,
         customFields,
       }),
@@ -183,9 +187,6 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="Height (cm)">
                       <CardInput value={form.heightCm} onChange={v => set('heightCm', v)} placeholder="e.g. 182" type="number" />
                     </CardRow>
-                    <CardRow label="Weight (kg)">
-                      <CardInput value={form.weightKg} onChange={v => set('weightKg', v)} placeholder="e.g. 76" type="number" />
-                    </CardRow>
                     <CardRow label="Age">
                       <span className="text-[11px] font-medium text-white/40">{age !== null ? `${age} yrs` : '—'}</span>
                     </CardRow>
@@ -272,6 +273,18 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     </CardRow>
                     <CardRow label="Instagram">
                       <CardInput value={form.instagram} onChange={v => set('instagram', v)} placeholder="@username" />
+                    </CardRow>
+                    <CardRow label="Twitter / X">
+                      <CardInput value={form.twitter} onChange={v => set('twitter', v)} placeholder="https://x.com/…" />
+                    </CardRow>
+                    <CardRow label="TikTok">
+                      <CardInput value={form.tiktok} onChange={v => set('tiktok', v)} placeholder="https://tiktok.com/…" />
+                    </CardRow>
+                    <CardRow label="Player Phone">
+                      <CardInput value={form.playerPhone} onChange={v => set('playerPhone', v)} placeholder="+1 …" />
+                    </CardRow>
+                    <CardRow label="Agent Phone">
+                      <CardInput value={form.agentPhone} onChange={v => set('agentPhone', v)} placeholder="+1 …" />
                     </CardRow>
                     <CardRow label="Highlights">
                       <CardInput value={form.highlights} onChange={v => set('highlights', v)} placeholder="https://…" />

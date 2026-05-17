@@ -45,7 +45,6 @@ export default function EditPlayerButton({ databaseId, playerId, player }: {
     agentName: player.agentName ?? '',
     dateOfBirth: toDateStr(player.dateOfBirth),
     heightCm: player.heightCm?.toString() ?? '',
-    weightKg: player.weightKg?.toString() ?? '',
     marketValue: player.marketValue != null ? (player.marketValue / 1_000_000).toString() : '',
     goalsThisYear: player.goalsThisYear?.toString() ?? '',
     totalGoals: player.totalGoals?.toString() ?? '',
@@ -117,10 +116,9 @@ export default function EditPlayerButton({ databaseId, playerId, player }: {
                 <Field label="Agent Name" value={form.agentName} onChange={v => set('agentName', v)} />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Field label="Date of Birth" value={form.dateOfBirth} onChange={v => set('dateOfBirth', v)} type="date" />
                 <Field label="Height (cm)" value={form.heightCm} onChange={v => set('heightCm', v)} type="number" placeholder="170" />
-                <Field label="Weight (kg)" value={form.weightKg} onChange={v => set('weightKg', v)} type="number" placeholder="72" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

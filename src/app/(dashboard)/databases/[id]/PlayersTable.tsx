@@ -37,7 +37,7 @@ interface Player {
   customFields: CustomFieldEntry[]
 }
 
-type SortKey = 'name' | 'position' | 'club' | 'nationality' | 'age' | 'marketValue' | 'height' | 'weight' | 'league' | 'contractExpiry' | 'fmWages'
+type SortKey = 'name' | 'position' | 'club' | 'nationality' | 'age' | 'marketValue' | 'height' | 'league' | 'contractExpiry' | 'fmWages'
 type SortDir = 'asc' | 'desc'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -99,7 +99,6 @@ function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
   if (f.ageMin !== null || f.ageMax !== null) checks.push(() => { const a = age ?? 0; return (f.ageMin === null || a >= f.ageMin) && (f.ageMax === null || a <= f.ageMax) })
   if (f.marketValueMin !== null || f.marketValueMax !== null) checks.push(() => { const v = player.marketValue ?? 0; return (f.marketValueMin === null || v >= f.marketValueMin) && (f.marketValueMax === null || v <= f.marketValueMax) })
   if (f.heightMin !== null || f.heightMax !== null) checks.push(() => { const h = player.heightCm ?? 0; return (f.heightMin === null || h >= f.heightMin) && (f.heightMax === null || h <= f.heightMax) })
-  if (f.weightMin !== null || f.weightMax !== null) checks.push(() => { const w = player.weightKg ?? 0; return (f.weightMin === null || w >= f.weightMin) && (f.weightMax === null || w <= f.weightMax) })
   if (f.league)          checks.push(() => getCF(player, 'league').toLowerCase().includes(f.league.toLowerCase()))
   if (f.preferredFeet.length) checks.push(() => f.preferredFeet.some(foot => getCF(player, 'foot').toLowerCase() === foot.toLowerCase()))
   if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) checks.push(() => { const cy = contractYear ?? 0; return (f.contractExpiryYearMin === null || cy >= f.contractExpiryYearMin) && (f.contractExpiryYearMax === null || cy <= f.contractExpiryYearMax) })
@@ -133,15 +132,10 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const [editingPlayer,  setEditingPlayer]  = useState<Player | null>(null)
   const [deletingPlayer, setDeletingPlayer] = useState<Player | null>(null)
   const [showReport,     setShowReport]     = useState(false)
-  const [visibleParams,  setVisibleParams]  = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set()
-    if (columnConfig !== null) return new Set(columnConfig)
-    return new Set([...loadActive(), ...loadCustomActive()])
-  })
-  const [photoEnabled, setPhotoEnabled] = useState(() => {
-    if (typeof window === 'undefined') return true
-    return loadActive().has('photo')
-  })
+  const [visibleParams,  setVisibleParams]  = useState<Set<string>>(() =>
+    columnConfig !== null ? new Set(columnConfig) : new Set()
+  )
+  const [photoEnabled, setPhotoEnabled] = useState(false)
 
   useImperativeHandle(ref, () => ({ openCreateReport: () => setShowReport(true) }))
 
@@ -175,8 +169,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const ageRange      = { min: ages.length ? Math.min(...ages) : 15, max: ages.length ? Math.max(...ages) : 45 }
   const heights       = useMemo(() => players.map(p => p.heightCm).filter(Boolean) as number[], [players])
   const heightRange   = { min: heights.length ? Math.min(...heights) : 150, max: heights.length ? Math.max(...heights) : 210 }
-  const weights       = useMemo(() => players.map(p => p.weightKg).filter(Boolean) as number[], [players])
-  const weightRange   = { min: weights.length ? Math.min(...weights) : 50, max: weights.length ? Math.max(...weights) : 120 }
+
   const cyears        = useMemo(() => players.map(p => getContractYear(p)).filter(Boolean) as number[], [players])
   const contractRange = { min: cyears.length ? Math.min(...cyears) : new Date().getFullYear(), max: cyears.length ? Math.max(...cyears) : new Date().getFullYear() + 8 }
   const wagesVals     = useMemo(() => players.map(p => getFmWages(p)).filter(Boolean) as number[], [players])
@@ -191,7 +184,6 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const rangeBounds: Record<string, { min: number; max: number; unit?: string; scale?: number }> = {
     age:           { ...ageRange,      unit: 'y' },
     height:        { ...heightRange,   unit: 'cm' },
-    weight:        { ...weightRange,   unit: 'kg' },
     marketValue:   { min: 0, max: 200_000_000, unit: '€M', scale: 1_000_000 },
     contractExpiry:{ ...contractRange },
     fmWages:       { ...wagesRange,    unit: '£/w' },
@@ -218,7 +210,6 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
     if (sortKey === 'age')           { av = calcAge(a.dateOfBirth) ?? -1; bv = calcAge(b.dateOfBirth) ?? -1 }
     if (sortKey === 'marketValue')   { av = a.marketValue ?? -1; bv = b.marketValue ?? -1 }
     if (sortKey === 'height')        { av = a.heightCm ?? -1; bv = b.heightCm ?? -1 }
-    if (sortKey === 'weight')        { av = a.weightKg ?? -1; bv = b.weightKg ?? -1 }
     if (sortKey === 'league')        { av = getCF(a, 'league'); bv = getCF(b, 'league') }
     if (sortKey === 'contractExpiry') { av = getContractYear(a) ?? -1; bv = getContractYear(b) ?? -1 }
     if (sortKey === 'fmWages')       { av = getFmWages(a) ?? -1; bv = getFmWages(b) ?? -1 }
@@ -233,7 +224,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const visibleColCount = 1 +
     (show('position') ? 1 : 0) + (show('team') ? 1 : 0) + (show('league') ? 1 : 0) +
     (show('nationality') ? 1 : 0) + (showDob ? 1 : 0) + (show('height') ? 1 : 0) +
-    (show('weight') ? 1 : 0) + (show('marketValue') ? 1 : 0) + (show('contractExpiry') ? 1 : 0) +
+    (show('marketValue') ? 1 : 0) + (show('contractExpiry') ? 1 : 0) +
     (show('preferredFoot') ? 1 : 0) + (show('fmWages') ? 1 : 0) + (canEdit ? 1 : 0)
 
   return (
@@ -270,7 +261,6 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                 {show('nationality') && <ColHeader label="Nationality"  sortKey="nationality"  currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={120} />}
                 {showDob             && <ColHeader label="Date of Birth" sortKey="age"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={130} />}
                 {show('height')      && <ColHeader label="Height"       sortKey="height"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={90} />}
-                {show('weight')      && <ColHeader label="Weight"       sortKey="weight"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={90} />}
                 {show('marketValue') && <ColHeader label="Market Value" sortKey="marketValue"  currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={130} />}
                 {show('contractExpiry') && <ColHeader label="Contract"  sortKey="contractExpiry" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
                 {show('preferredFoot') && <ColHeader label="Foot"       sortKey="name"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={80} noSort />}
@@ -320,7 +310,6 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                       </td>
                     )}
                     {show('height')      && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={player.heightCm ? `${player.heightCm} cm` : ''} /></td>}
-                    {show('weight')      && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={player.weightKg ? `${player.weightKg} kg` : ''} /></td>}
                     {show('marketValue') && (() => {
                       const val = player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(1)}M` : ''
                       return (
@@ -426,7 +415,6 @@ function EditModal({ player, databaseId, onClose }: { player: Player; databaseId
     agentName:     player.agentName ?? '',
     dateOfBirth:   toDateStr(player.dateOfBirth),
     heightCm:      player.heightCm?.toString() ?? '',
-    weightKg:      player.weightKg?.toString() ?? '',
     marketValue:   player.marketValue != null ? (player.marketValue / 1_000_000).toString() : '',
     goalsThisYear: player.goalsThisYear?.toString() ?? '',
     totalGoals:    player.totalGoals?.toString() ?? '',
@@ -468,10 +456,9 @@ function EditModal({ player, databaseId, onClose }: { player: Player; databaseId
             <Field label="Nationality" value={form.nationality} onChange={v => set('nationality', v)} />
             <Field label="Agent Name"  value={form.agentName}   onChange={v => set('agentName', v)} />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Date of Birth" value={form.dateOfBirth} onChange={v => set('dateOfBirth', v)} type="date" />
             <Field label="Height (cm)"   value={form.heightCm}    onChange={v => set('heightCm', v)}    type="number" />
-            <Field label="Weight (kg)"   value={form.weightKg}    onChange={v => set('weightKg', v)}    type="number" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Market Value (€M)" value={form.marketValue} onChange={v => set('marketValue', v)} type="number" />

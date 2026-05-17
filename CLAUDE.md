@@ -1,1 +1,2 @@
 @AGENTS.md
+@PARAM_GUIDE.md

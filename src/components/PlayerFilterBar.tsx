@@ -7,7 +7,7 @@ import { useState, useMemo, useEffect, useRef, useId } from 'react'
 export type FilterMode = 'AND' | 'OR'
 export type FilterKey =
   | 'name' | 'position' | 'club' | 'nationality'
-  | 'age' | 'marketValue' | 'height' | 'weight'
+  | 'age' | 'marketValue' | 'height'
   | 'league' | 'preferredFoot' | 'contractExpiry' | 'fmWages'
 export type FilterParamType = 'text' | 'range' | 'multi'
 
@@ -23,7 +23,6 @@ export interface Filters {
   ageMin: number | null; ageMax: number | null
   marketValueMin: number | null; marketValueMax: number | null
   heightMin: number | null; heightMax: number | null
-  weightMin: number | null; weightMax: number | null
   league: string; preferredFeet: string[]
   contractExpiryYearMin: number | null; contractExpiryYearMax: number | null
   fmWagesMin: number | null; fmWagesMax: number | null
@@ -32,7 +31,7 @@ export interface Filters {
 export const DEFAULT_FILTERS: Filters = {
   name: '', positions: [], club: '', nationalities: [],
   ageMin: null, ageMax: null, marketValueMin: null, marketValueMax: null,
-  heightMin: null, heightMax: null, weightMin: null, weightMax: null,
+  heightMin: null, heightMax: null,
   league: '', preferredFeet: [],
   contractExpiryYearMin: null, contractExpiryYearMax: null,
   fmWagesMin: null, fmWagesMax: null,
@@ -43,7 +42,6 @@ export const FILTER_PARAMS: FilterParam[] = [
   { key: 'preferredFoot', label: 'Preferred Foot', group: 'Identity',      type: 'multi' },
   { key: 'age',           label: 'Age',            group: 'Identity',      type: 'range' },
   { key: 'height',        label: 'Height',         group: 'Identity',      type: 'range' },
-  { key: 'weight',        label: 'Weight',         group: 'Identity',      type: 'range' },
   { key: 'name',          label: 'Player Name',    group: 'Club / Career', type: 'text'  },
   { key: 'club',          label: 'Club',           group: 'Club / Career', type: 'text'  },
   { key: 'league',        label: 'League',         group: 'Club / Career', type: 'text'  },
@@ -64,7 +62,6 @@ export function getActiveChips(f: Filters): FilterKey[] {
   if (f.ageMin !== null || f.ageMax !== null) keys.push('age')
   if (f.marketValueMin !== null || f.marketValueMax !== null) keys.push('marketValue')
   if (f.heightMin !== null || f.heightMax !== null) keys.push('height')
-  if (f.weightMin !== null || f.weightMax !== null) keys.push('weight')
   if (f.league) keys.push('league')
   if (f.preferredFeet.length) keys.push('preferredFoot')
   if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) keys.push('contractExpiry')
@@ -85,7 +82,6 @@ export function clearFilterForKey(key: FilterKey): Partial<Filters> {
   if (key === 'age')            { p.ageMin = null; p.ageMax = null }
   if (key === 'marketValue')    { p.marketValueMin = null; p.marketValueMax = null }
   if (key === 'height')         { p.heightMin = null; p.heightMax = null }
-  if (key === 'weight')         { p.weightMin = null; p.weightMax = null }
   if (key === 'league')         p.league = ''
   if (key === 'preferredFoot')  p.preferredFeet = []
   if (key === 'contractExpiry') { p.contractExpiryYearMin = null; p.contractExpiryYearMax = null }
@@ -105,7 +101,6 @@ function chipValueSummary(key: FilterKey, f: Filters): string {
     case 'preferredFoot': return f.preferredFeet.join(', ')
     case 'age':           return f.ageMin !== null && f.ageMax !== null ? `${f.ageMin}–${f.ageMax}` : f.ageMin !== null ? `≥${f.ageMin}` : `≤${f.ageMax}`
     case 'height':        return f.heightMin !== null && f.heightMax !== null ? `${f.heightMin}–${f.heightMax} cm` : f.heightMin !== null ? `≥${f.heightMin} cm` : `≤${f.heightMax} cm`
-    case 'weight':        return f.weightMin !== null && f.weightMax !== null ? `${f.weightMin}–${f.weightMax} kg` : f.weightMin !== null ? `≥${f.weightMin} kg` : `≤${f.weightMax} kg`
     case 'marketValue':   return f.marketValueMin !== null && f.marketValueMax !== null ? `${fmtMV(f.marketValueMin)}–${fmtMV(f.marketValueMax)}` : f.marketValueMin !== null ? `≥${fmtMV(f.marketValueMin)}` : `≤${fmtMV(f.marketValueMax!)}`
     case 'contractExpiry':return f.contractExpiryYearMin !== null && f.contractExpiryYearMax !== null ? `${f.contractExpiryYearMin}–${f.contractExpiryYearMax}` : f.contractExpiryYearMin !== null ? `≥${f.contractExpiryYearMin}` : `≤${f.contractExpiryYearMax}`
     case 'fmWages':       return f.fmWagesMin !== null && f.fmWagesMax !== null ? `${fmtW(f.fmWagesMin)}–${fmtW(f.fmWagesMax)}/w` : f.fmWagesMin !== null ? `≥${fmtW(f.fmWagesMin)}/w` : `≤${fmtW(f.fmWagesMax!)}/w`
@@ -338,11 +333,11 @@ function FilterInputPanel({ filterKey, filters, multiOptions, rangeBounds, onApp
   const [multiSelected, setMultiSelected] = useState<string[]>(() =>
     filterKey === 'position' ? filters.positions : filterKey === 'nationality' ? filters.nationalities : filters.preferredFeet)
   const [rangeMin, setRangeMin] = useState(() => {
-    const v = filterKey === 'age' ? filters.ageMin : filterKey === 'height' ? filters.heightMin : filterKey === 'weight' ? filters.weightMin : filterKey === 'marketValue' ? filters.marketValueMin : filterKey === 'contractExpiry' ? filters.contractExpiryYearMin : filters.fmWagesMin
+    const v = filterKey === 'age' ? filters.ageMin : filterKey === 'height' ? filters.heightMin : filterKey === 'marketValue' ? filters.marketValueMin : filterKey === 'contractExpiry' ? filters.contractExpiryYearMin : filters.fmWagesMin
     return v !== null ? String(v / scale) : ''
   })
   const [rangeMax, setRangeMax] = useState(() => {
-    const v = filterKey === 'age' ? filters.ageMax : filterKey === 'height' ? filters.heightMax : filterKey === 'weight' ? filters.weightMax : filterKey === 'marketValue' ? filters.marketValueMax : filterKey === 'contractExpiry' ? filters.contractExpiryYearMax : filters.fmWagesMax
+    const v = filterKey === 'age' ? filters.ageMax : filterKey === 'height' ? filters.heightMax : filterKey === 'marketValue' ? filters.marketValueMax : filterKey === 'contractExpiry' ? filters.contractExpiryYearMax : filters.fmWagesMax
     return v !== null ? String(v / scale) : ''
   })
 
@@ -362,7 +357,6 @@ function FilterInputPanel({ filterKey, filters, multiOptions, rangeBounds, onApp
       const hi = rangeMax !== '' ? parseFloat(rangeMax) * scale : null
       if (filterKey === 'age')            return onApply({ ageMin: lo, ageMax: hi })
       if (filterKey === 'height')         return onApply({ heightMin: lo, heightMax: hi })
-      if (filterKey === 'weight')         return onApply({ weightMin: lo, weightMax: hi })
       if (filterKey === 'marketValue')    return onApply({ marketValueMin: lo, marketValueMax: hi })
       if (filterKey === 'contractExpiry') return onApply({ contractExpiryYearMin: lo !== null ? Math.round(lo) : null, contractExpiryYearMax: hi !== null ? Math.round(hi) : null })
       if (filterKey === 'fmWages')        return onApply({ fmWagesMin: lo, fmWagesMax: hi })
