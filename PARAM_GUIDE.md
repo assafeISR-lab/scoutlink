@@ -90,11 +90,17 @@ Work through the relevant checklist below, then run `npx tsc --noEmit` — TypeS
 2. **`AddPlayerButton.tsx`** — `Form` interface, `EMPTY`, `CUSTOM_FIELD_KEYS`, UI
 3. **`ImportPlayersModal.tsx`** — `IMPORT_FIELDS`, `AUTO_MAP`
 4. **`ColumnPicker.tsx`** — add to `GROUPS` (not `TABLE_COLUMNS`), add label to `EXTRA_LABELS` if needed
-5. **`SearchClient.tsx`** — this file must mirror every field that `PlayerProfileCard` shows:
+5. **`SearchParamsPanel.tsx`** — the visibility gate for every field on the search card:
+   - Add key to `PARAM_KEYS` array (in the right group)
+   - Add `key: 'Label'` to `PARAM_LABELS`
+   - Add `key: ''` to `PARAM_SOURCES` (empty string = manual-only, not scraped)
+   - The auto-activation logic in `loadActive()` will enable the key for existing users automatically
+
+6. **`SearchClient.tsx`** — this file must mirror every field that `PlayerProfileCard` shows:
    - Add field to `PlayerEditData` interface
    - Add to `editData` initializer (`useState<PlayerEditData>({...})`)
    - Add `'Label': 'paramKey'` to `FIELD_PARAM_KEY` map
-   - Add `show('key') && <EditableField .../>` in the matching card column (Physical / Contract & Value / Scout Info)
+   - Add `show('key') && <EditableField .../>` in the matching card column (Physical / Contract & Value / Scout Info) — `show('key')` uses the key from step 5
    - Add to `handleImport`: scout-entered fields go into `edCf` loop; DB fields (e.g. `agentName`) go into `body`
    - If it is a new DB field: also add `body.field?.trim() || null` to the `prisma.player.create` data block in `src/app/api/databases/[id]/players/route.ts`
 
