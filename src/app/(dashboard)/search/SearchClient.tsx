@@ -942,11 +942,24 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
   highlight?: boolean
   isLink?: boolean
 }) {
-  if (!editMode) {
+  const [localActive, setLocalActive] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (localActive && inputRef.current) inputRef.current.focus()
+  }, [localActive])
+
+  const showInput = editMode || localActive
+
+  if (!showInput) {
     if (isLink && displayValue && displayValue.startsWith('http')) {
       return (
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+        <div className="flex items-center justify-between gap-2 group">
+          <span
+            className="text-[11px] flex-shrink-0 cursor-text"
+            style={{ color: 'var(--text-muted)' }}
+            onClick={e => { e.stopPropagation(); setLocalActive(true) }}
+          >{label}</span>
           <a
             href={displayValue} target="_blank" rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
@@ -958,16 +971,35 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
         </div>
       )
     }
-    return <CardField label={label} value={displayValue} highlight={highlight} />
+    const hasValue = displayValue != null && displayValue !== ''
+    return (
+      <div
+        className="flex items-center justify-between gap-2 group cursor-text"
+        onClick={e => { e.stopPropagation(); setLocalActive(true) }}
+      >
+        <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-[11px] font-medium text-right" style={{ color: hasValue ? (highlight ? '#00c896' : 'var(--text-primary)') : 'var(--text-faint)' }}>
+            {displayValue ?? '—'}
+          </span>
+          <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0" viewBox="0 0 24 24" fill="#00c896">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          </svg>
+        </div>
+      </div>
+    )
   }
+
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(0,200,150,0.8)' }}>{label}</span>
       <input
+        ref={inputRef}
         type="text"
         value={editValue}
         onChange={e => onChange(e.target.value)}
         onClick={e => e.stopPropagation()}
+        onBlur={() => setLocalActive(false)}
         className="text-[11px] font-medium text-right focus:outline-none rounded px-1.5 py-0.5"
         style={{
           flex: 1, maxWidth: 130,
@@ -977,7 +1009,6 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
           caretColor: '#00c896',
         }}
         onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'; e.currentTarget.style.background = 'rgba(0,200,150,0.12)' }}
-        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.3)'; e.currentTarget.style.background = 'rgba(0,200,150,0.07)' }}
       />
     </div>
   )

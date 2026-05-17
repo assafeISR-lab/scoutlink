@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import NotesSection from './NotesSection'
 import FMRadarChart from '@/components/FMRadarChart'
@@ -208,6 +208,10 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   const displayPosition = (pos: string | null) =>
     pos ? (POSITION_ALIASES[pos.toUpperCase()] ?? pos) : null
 
+  // Format a YYYY-MM-DD string for display
+  const fmtDate = (s: string | null | undefined): string | null =>
+    s ? new Date(s + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null
+
   const dobDate = player.dateOfBirth ? new Date(player.dateOfBirth) : null
   const age = dobDate && !isNaN(dobDate.getTime())
     ? ((Date.now() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)).toFixed(1)
@@ -215,10 +219,10 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
   const dateAdded = new Date(player.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  // Source chips: custom field URLs take priority over FieldSource URLs
-  const tmUrl = cf('transfermarktUrl') || player.fieldSources.find(s => s.sourceName === 'Transfermarkt' && s.isActive)?.sourceUrl || ''
-  const scUrl = cf('sofascoreUrl')     || player.fieldSources.find(s => s.sourceName === 'Sofascore'     && s.isActive)?.sourceUrl || ''
-  const fmUrl = cf('fmInsideUrl')      || ''
+  // Source chips: form values take priority (optimistic), then saved custom fields, then FieldSource URLs
+  const tmUrl = form.transfermarktUrl || cf('transfermarktUrl') || player.fieldSources.find(s => s.sourceName === 'Transfermarkt' && s.isActive)?.sourceUrl || ''
+  const scUrl = form.sofascoreUrl     || cf('sofascoreUrl')     || player.fieldSources.find(s => s.sourceName === 'Sofascore'     && s.isActive)?.sourceUrl || ''
+  const fmUrl = form.fmInsideUrl      || cf('fmInsideUrl')      || ''
 
   const sourceChips: { name: string; url: string }[] = [
     tmUrl ? { name: 'Transfermarkt', url: tmUrl } : null,
@@ -260,9 +264,9 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold leading-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>{fullName}</h1>
           <div className="flex items-center gap-2 flex-wrap">
-            {player.position && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{displayPosition(player.position)}</span>}
-            {player.clubName    && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{player.clubName}</span>}
-            {player.nationality && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{player.nationality}</span>}
+            {(form.position || player.position) && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{displayPosition(form.position || player.position)}</span>}
+            {(form.clubName || player.clubName) && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{form.clubName || player.clubName}</span>}
+            {(form.nationality || player.nationality) && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{form.nationality || player.nationality}</span>}
             {age                && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{age} yrs</span>}
           </div>
         </div>
@@ -315,14 +319,14 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Physical</p>
           <div className="space-y-2.5">
-            <Row label="Position"      display={displayPosition(player.position)}  manual={isManual('position')}    isEditing={isEditing} inputValue={form.position}    onChange={v => setField('position', v)} />
-            <Row label="Height"        display={player.heightCm ? `${player.heightCm} cm` : null}   manual={isManual('heightCm')}    isEditing={isEditing} inputValue={form.heightCm}    onChange={v => setField('heightCm', v)}  inputType="number" />
+            <Row label="Position"      display={displayPosition(form.position || player.position || '')}  manual={isManual('position')}    isEditing={isEditing} inputValue={form.position}    onChange={v => setField('position', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Height"        display={form.heightCm ? `${form.heightCm} cm` : player.heightCm ? `${player.heightCm} cm` : null}   manual={isManual('heightCm')}    isEditing={isEditing} inputValue={form.heightCm}    onChange={v => setField('heightCm', v)}  inputType="number" onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Age"           display={age ? `${age} yrs` : null} isEditing={false} inputValue="" onChange={() => {}} />
-            <Row label="Date of Birth" display={player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null} manual={isManual('dateOfBirth')} isEditing={isEditing} inputValue={form.dateOfBirth} onChange={v => setField('dateOfBirth', v)} inputType="date" />
-            <Row label="Foot"          display={cf('foot') || null}       manual={cfGreen('foot')}       isEditing={isEditing} inputValue={form.foot}          onChange={v => setField('foot', v)} />
-            <Row label="Nationality"   display={player.nationality}       manual={isManual('nationality')} isEditing={isEditing} inputValue={form.nationality}  onChange={v => setField('nationality', v)} />
-            <Row label="Passports"     display={cf('passports') || null}  manual={cfGreen('passports')}  isEditing={isEditing} inputValue={form.passports}     onChange={v => setField('passports', v)} />
-            <Row label="Player Phone"  display={cf('playerPhone') || null} manual={cfGreen('playerPhone')} isEditing={isEditing} inputValue={form.playerPhone}  onChange={v => setField('playerPhone', v)} />
+            <Row label="Date of Birth" display={fmtDate(form.dateOfBirth)} manual={isManual('dateOfBirth')} isEditing={isEditing} inputValue={form.dateOfBirth} onChange={v => setField('dateOfBirth', v)} inputType="date" onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Foot"          display={form.foot || null}       manual={cfGreen('foot')}       isEditing={isEditing} inputValue={form.foot}          onChange={v => setField('foot', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Nationality"   display={form.nationality || player.nationality || null}       manual={isManual('nationality')} isEditing={isEditing} inputValue={form.nationality}  onChange={v => setField('nationality', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Passports"     display={form.passports || null}  manual={cfGreen('passports')}  isEditing={isEditing} inputValue={form.passports}     onChange={v => setField('passports', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Player Phone"  display={form.playerPhone || null} manual={cfGreen('playerPhone')} isEditing={isEditing} inputValue={form.playerPhone}  onChange={v => setField('playerPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
           </div>
         </div>
 
@@ -330,16 +334,16 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Contract & Value</p>
           <div className="space-y-2.5">
-            <Row label="Club"            display={player.clubName}         manual={isManual('clubName')}    isEditing={isEditing} inputValue={form.clubName}       onChange={v => setField('clubName', v)} />
-            <Row label="League"          display={cf('league') || null}    manual={cfGreen('league')}       isEditing={isEditing} inputValue={form.league}         onChange={v => setField('league', v)} />
-            <Row label="Joining Date"    display={cf('joiningDate') || null} manual={cfGreen('joiningDate')} isEditing={isEditing} inputValue={form.joiningDate}  onChange={v => setField('joiningDate', v)} inputType="date" />
-            <Row label="Contract Expiry" display={cf('contractExpiry') || null} manual={cfGreen('contractExpiry')} isEditing={isEditing} inputValue={form.contractExpiry} onChange={v => setField('contractExpiry', v)} inputType="date" />
-            <Row label="Market Value"    display={player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(2)}m` : null} highlight manual={isManual('marketValue')} isEditing={isEditing} inputValue={form.marketValue} onChange={v => setField('marketValue', v)} inputType="number" />
-            <Row label="FM Wages"        display={cf('fmWages') || null}   manual={cfGreen('fmWages')}      isEditing={isEditing} inputValue={form.fmWages}        onChange={v => setField('fmWages', v)} inputType="number" />
-            <Row label="Fee Expectation" display={cf('transferFeeExpect') || null} manual={cfGreen('transferFeeExpect')} isEditing={isEditing} inputValue={form.transferFeeExpect} onChange={v => setField('transferFeeExpect', v)} />
-            <Row label="Fee (Real)"      display={cf('transferFeeReal') || null}   manual={cfGreen('transferFeeReal')}   isEditing={isEditing} inputValue={form.transferFeeReal}    onChange={v => setField('transferFeeReal', v)} />
-            <Row label="Salary Expectation" display={cf('salaryExpect') || null}   manual={cfGreen('salaryExpect')}      isEditing={isEditing} inputValue={form.salaryExpect}       onChange={v => setField('salaryExpect', v)} />
-            <Row label="Salary (Real)"   display={cf('salaryReal') || null}        manual={cfGreen('salaryReal')}        isEditing={isEditing} inputValue={form.salaryReal}         onChange={v => setField('salaryReal', v)} />
+            <Row label="Club"            display={form.clubName || player.clubName || null}         manual={isManual('clubName')}    isEditing={isEditing} inputValue={form.clubName}       onChange={v => setField('clubName', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="League"          display={form.league || null}    manual={cfGreen('league')}       isEditing={isEditing} inputValue={form.league}         onChange={v => setField('league', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Joining Date"    display={fmtDate(form.joiningDate)} manual={cfGreen('joiningDate')} isEditing={isEditing} inputValue={form.joiningDate}  onChange={v => setField('joiningDate', v)} inputType="date" onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Contract Expiry" display={fmtDate(form.contractExpiry)} manual={cfGreen('contractExpiry')} isEditing={isEditing} inputValue={form.contractExpiry} onChange={v => setField('contractExpiry', v)} inputType="date" onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Market Value"    display={form.marketValue ? `€${parseFloat(form.marketValue).toFixed(2)}m` : player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(2)}m` : null} highlight manual={isManual('marketValue')} isEditing={isEditing} inputValue={form.marketValue} onChange={v => setField('marketValue', v)} inputType="number" onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="FM Wages"        display={form.fmWages || null}   manual={cfGreen('fmWages')}      isEditing={isEditing} inputValue={form.fmWages}        onChange={v => setField('fmWages', v)} inputType="number" onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Fee Expectation" display={form.transferFeeExpect || null} manual={cfGreen('transferFeeExpect')} isEditing={isEditing} inputValue={form.transferFeeExpect} onChange={v => setField('transferFeeExpect', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Fee (Real)"      display={form.transferFeeReal || null}   manual={cfGreen('transferFeeReal')}   isEditing={isEditing} inputValue={form.transferFeeReal}    onChange={v => setField('transferFeeReal', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Salary Expectation" display={form.salaryExpect || null}   manual={cfGreen('salaryExpect')}      isEditing={isEditing} inputValue={form.salaryExpect}       onChange={v => setField('salaryExpect', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Salary (Real)"   display={form.salaryReal || null}        manual={cfGreen('salaryReal')}        isEditing={isEditing} inputValue={form.salaryReal}         onChange={v => setField('salaryReal', v)} onQuickSave={canWrite ? handleSave : undefined} />
           </div>
         </div>
 
@@ -349,19 +353,19 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
           <div className="space-y-2.5">
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
-            <Row label="Referral"        display={cf('sentBy') || null}      manual={cfGreen('sentBy')}      isEditing={isEditing} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} />
-            <Row label="Agent"           display={player.agentName}               manual={isManual('agentName')}   isEditing={isEditing} inputValue={form.agentName}   onChange={v => setField('agentName', v)} />
-            <Row label="Agent Phone"     display={cf('agentPhone') || null}       manual={cfGreen('agentPhone')}   isEditing={isEditing} inputValue={form.agentPhone}  onChange={v => setField('agentPhone', v)} />
-            <Row label="Plays National"  display={player.playsNational ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={isEditing} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
-            <Row label="Recent Form"     display={cf('recentForm') || null}       manual={cfGreen('recentForm')}   isEditing={isEditing} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} />
-            <LinkRow label="Transfermarkt" display={tmUrl}           isEditing={isEditing} inputValue={form.transfermarktUrl} onChange={v => setField('transfermarktUrl', v)} />
-            <LinkRow label="Sofascore"     display={scUrl}           isEditing={isEditing} inputValue={form.sofascoreUrl}     onChange={v => setField('sofascoreUrl', v)} />
-            <LinkRow label="FMInside"      display={fmUrl}           isEditing={isEditing} inputValue={form.fmInsideUrl}      onChange={v => setField('fmInsideUrl', v)} />
-            <LinkRow label="Instagram"     display={cf('instagram')} isEditing={isEditing} inputValue={form.instagram}        onChange={v => setField('instagram', v)} />
-            <LinkRow label="Twitter / X"   display={cf('twitter')}   isEditing={isEditing} inputValue={form.twitter}          onChange={v => setField('twitter', v)} />
-            <LinkRow label="TikTok"        display={cf('tiktok')}    isEditing={isEditing} inputValue={form.tiktok}           onChange={v => setField('tiktok', v)} />
-            <LinkRow label="Highlights"    display={cf('highlights')} isEditing={isEditing} inputValue={form.highlights}      onChange={v => setField('highlights', v)} />
-            <DescRow label="Description"   display={cf('description') || null} manual={cfGreen('description')} isEditing={isEditing} inputValue={form.description} onChange={v => setField('description', v)} />
+            <Row label="Referral"        display={form.sentBy || null}           manual={cfGreen('sentBy')}      isEditing={isEditing} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Agent"           display={form.agentName || player.agentName || null}   manual={isManual('agentName')}   isEditing={isEditing} inputValue={form.agentName}   onChange={v => setField('agentName', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Agent Phone"     display={form.agentPhone || null}       manual={cfGreen('agentPhone')}   isEditing={isEditing} inputValue={form.agentPhone}  onChange={v => setField('agentPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Plays National"  display={(form.playsNational as boolean) ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={isEditing} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
+            <Row label="Recent Form"     display={form.recentForm || null}       manual={cfGreen('recentForm')}   isEditing={isEditing} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <LinkRow label="Transfermarkt" display={form.transfermarktUrl || tmUrl || null} isEditing={isEditing} inputValue={form.transfermarktUrl} onChange={v => setField('transfermarktUrl', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <LinkRow label="Sofascore"     display={form.sofascoreUrl || scUrl || null}     isEditing={isEditing} inputValue={form.sofascoreUrl}     onChange={v => setField('sofascoreUrl', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <LinkRow label="FMInside"      display={form.fmInsideUrl || fmUrl || null}      isEditing={isEditing} inputValue={form.fmInsideUrl}      onChange={v => setField('fmInsideUrl', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <LinkRow label="Instagram"     display={form.instagram || cf('instagram') || null} isEditing={isEditing} inputValue={form.instagram}        onChange={v => setField('instagram', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <LinkRow label="Twitter / X"   display={form.twitter || cf('twitter') || null}     isEditing={isEditing} inputValue={form.twitter}          onChange={v => setField('twitter', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <LinkRow label="TikTok"        display={form.tiktok || cf('tiktok') || null}       isEditing={isEditing} inputValue={form.tiktok}           onChange={v => setField('tiktok', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <LinkRow label="Highlights"    display={form.highlights || cf('highlights') || null} isEditing={isEditing} inputValue={form.highlights}      onChange={v => setField('highlights', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <DescRow label="Description"   display={form.description || null} manual={cfGreen('description')} isEditing={isEditing} inputValue={form.description} onChange={v => setField('description', v)} onQuickSave={canWrite ? handleSave : undefined} />
           </div>
         </div>
       </div>
@@ -433,15 +437,24 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
 // ── Row: static display ↔ inline input ────────────────────────────────────────
 
-function Row({ label, display, manual = false, highlight = false, isEditing, inputValue, onChange, inputType = 'text', isBool = false, boolValue, onBoolChange }: {
+function Row({ label, display, manual = false, highlight = false, isEditing, inputValue, onChange, inputType = 'text', isBool = false, boolValue, onBoolChange, onQuickSave }: {
   label: string; display: string | null | undefined; manual?: boolean; highlight?: boolean
   isEditing: boolean; inputValue: string; onChange: (v: string) => void; inputType?: string
   isBool?: boolean; boolValue?: boolean; onBoolChange?: (v: boolean) => void
+  onQuickSave?: () => void
 }) {
   const hasValue = display != null && display !== ''
   const isGreen  = highlight || manual
+  const [localActive, setLocalActive] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  if (isEditing) {
+  useEffect(() => {
+    if (localActive && inputRef.current) inputRef.current.focus()
+  }, [localActive])
+
+  const showInput = isEditing || localActive
+
+  if (showInput) {
     if (isBool) {
       return (
         <div className="flex items-center justify-between gap-2">
@@ -456,21 +469,40 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
     return (
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
-        <input type={inputType} value={inputValue} onChange={e => onChange(e.target.value)} placeholder="—"
+        <input
+          ref={inputRef}
+          type={inputType}
+          value={inputValue}
+          onChange={e => onChange(e.target.value)}
+          placeholder="—"
           className="text-[11px] font-medium text-right focus:outline-none rounded px-2 py-1 transition-all"
           style={{ width: inputType === 'date' ? 120 : 100, color: 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }}
           onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-          onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'} />
+          onBlur={e => {
+            e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'
+            if (localActive) { setLocalActive(false); onQuickSave?.() }
+          }}
+        />
       </div>
     )
   }
 
+  const canInline = !!onQuickSave && !isBool
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div
+      className={`flex items-center justify-between gap-2${canInline ? ' group' : ''}`}
+      onClick={canInline ? () => setLocalActive(true) : undefined}
+      style={{ cursor: canInline ? 'text' : 'default' }}
+    >
       <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
       <div className="flex items-center gap-1">
         {manual && hasValue && <span title="Manually edited" style={{ color: '#00c896', fontSize: 9 }}>✎</span>}
         <span className="text-[11px] font-medium text-right" style={{ color: hasValue ? (isGreen ? '#00c896' : 'var(--text-primary)') : 'var(--text-faint)' }}>{display ?? '—'}</span>
+        {canInline && (
+          <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-30 transition-opacity flex-shrink-0" viewBox="0 0 24 24" fill="#00c896">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          </svg>
+        )}
       </div>
     </div>
   )
@@ -478,77 +510,121 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
 
 // ── Link row: always visible input, label becomes clickable when valid ─────────
 
-function LinkRow({ label, display, isEditing, inputValue, onChange }: {
+function LinkRow({ label, display, isEditing, inputValue, onChange, onQuickSave }: {
   label: string; display: string | null | undefined; isEditing: boolean; inputValue: string; onChange: (v: string) => void
+  onQuickSave?: () => void
 }) {
-  const url = (isEditing ? inputValue : display) ?? ''
+  const [localActive, setLocalActive] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (localActive && inputRef.current) inputRef.current.focus()
+  }, [localActive])
+
+  const showInput = isEditing || localActive
+  const url = (showInput ? inputValue : display) ?? ''
   const isValid = url.startsWith('http')
 
-  if (!isEditing) {
+  if (showInput) {
     return (
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
-        {isValid ? (
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-medium flex items-center gap-0.5 hover:underline" style={{ color: '#00c896' }}>
-            {label} ↗
-          </a>
-        ) : (
-          <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
-        )}
+        <input
+          ref={inputRef}
+          type="text" value={inputValue} onChange={e => onChange(e.target.value)} placeholder="https://…"
+          className="text-[11px] text-right focus:outline-none rounded px-2 py-1 transition-all flex-1 min-w-0 ml-2"
+          style={{ color: isValid ? '#00c896' : 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }}
+          onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+          onBlur={e => {
+            e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'
+            if (localActive) { setLocalActive(false); onQuickSave?.() }
+          }}
+        />
       </div>
     )
   }
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <input type="text" value={inputValue} onChange={e => onChange(e.target.value)} placeholder="https://…"
-        className="text-[11px] text-right focus:outline-none rounded px-2 py-1 transition-all flex-1 min-w-0 ml-2"
-        style={{ color: isValid ? '#00c896' : 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }}
-        onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-        onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'} />
+    <div className="flex items-center justify-between gap-2 group">
+      <span
+        className="text-[11px] flex-shrink-0"
+        style={{ color: 'var(--text-muted)', cursor: onQuickSave ? 'text' : 'default' }}
+        onClick={() => { if (onQuickSave) setLocalActive(true) }}
+      >{label}</span>
+      {isValid ? (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-medium flex items-center gap-0.5 hover:underline" style={{ color: '#00c896' }}>
+          {label} ↗
+        </a>
+      ) : (
+        <div className="flex items-center gap-1">
+          <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+          {onQuickSave && (
+            <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-30 transition-opacity flex-shrink-0" viewBox="0 0 24 24" fill="#00c896">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            </svg>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Description row: multi-line textarea when editing ──────────────────────────
 
-function DescRow({ label, display, manual = false, isEditing, inputValue, onChange }: {
+function DescRow({ label, display, manual = false, isEditing, inputValue, onChange, onQuickSave }: {
   label: string; display: string | null | undefined; manual?: boolean
   isEditing: boolean; inputValue: string; onChange: (v: string) => void
+  onQuickSave?: () => void
 }) {
   const hasValue = display != null && display !== ''
+  const [localActive, setLocalActive] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  if (isEditing) {
+  useEffect(() => {
+    if (localActive && textareaRef.current) textareaRef.current.focus()
+  }, [localActive])
+
+  const showInput = isEditing || localActive
+
+  if (showInput) {
     return (
       <div className="flex flex-col gap-1">
         <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{label}</span>
-        <textarea value={inputValue} onChange={e => onChange(e.target.value)} placeholder="—"
+        <textarea
+          ref={textareaRef}
+          value={inputValue} onChange={e => onChange(e.target.value)} placeholder="—"
           rows={3}
           className="text-[11px] focus:outline-none rounded px-2 py-1 resize-none transition-all"
           style={{ color: 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }}
           onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-          onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'} />
+          onBlur={e => {
+            e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'
+            if (localActive) { setLocalActive(false); onQuickSave?.() }
+          }}
+        />
       </div>
     )
   }
 
-  if (!hasValue) {
-    return (
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
-        <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
-      </div>
-    )
-  }
-
+  const canInline = !!onQuickSave
   return (
-    <div className="flex flex-col gap-1">
+    <div
+      className={`flex flex-col gap-1${canInline ? ' group cursor-text' : ''}`}
+      onClick={canInline ? () => setLocalActive(true) : undefined}
+    >
       <div className="flex items-center gap-1">
-        {manual && <span title="Manually edited" style={{ color: '#00c896', fontSize: 9 }}>✎</span>}
+        {manual && hasValue && <span title="Manually edited" style={{ color: '#00c896', fontSize: 9 }}>✎</span>}
         <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{label}</span>
+        {canInline && (
+          <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-30 transition-opacity" viewBox="0 0 24 24" fill="#00c896">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          </svg>
+        )}
       </div>
-      <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>{display}</p>
+      {hasValue
+        ? <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>{display}</p>
+        : <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+      }
     </div>
   )
 }
