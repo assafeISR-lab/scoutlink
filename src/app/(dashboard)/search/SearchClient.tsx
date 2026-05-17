@@ -785,7 +785,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           <div className="space-y-2.5">
             {show('position')      && <EditableField label="Position"     editMode={editMode} displayValue={normalizePos(editData.position) || null} editValue={editData.position}     onChange={v => updateField('position', v)} />}
             {show('height')        && <EditableField label="Height"       editMode={editMode} displayValue={editData.heightCm ? `${editData.heightCm} cm` : null} editValue={editData.heightCm} onChange={v => updateField('heightCm', v)} />}
-            {show('age')           && <CardField label="Age"              value={age ? `${age} yrs` : null} />}
+            {show('age')           && <EditableField label="Age"           editMode={editMode} displayValue={age ? `${age} yrs` : null} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} />}
             {show('dateOfBirth')   && <EditableField label="Date of Birth" editMode={editMode} displayValue={formatDateStr(editData.dateOfBirth)} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} />}
             {show('preferredFoot') && <EditableField label="Foot"         editMode={editMode} displayValue={editData.preferredFoot || null} editValue={editData.preferredFoot} onChange={v => updateField('preferredFoot', v)} />}
             {show('nationality')   && <EditableField label="Nationality"  editMode={editMode} displayValue={editData.nationality || null}   editValue={editData.nationality}  onChange={v => updateField('nationality', v)} />}
