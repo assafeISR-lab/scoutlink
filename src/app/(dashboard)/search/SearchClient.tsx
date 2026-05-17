@@ -578,6 +578,7 @@ const FIELD_PARAM_KEY: Record<string, string> = {
   'Contract Expiry':        'contractExpiry',
   'Market Value':           'marketValue',
   'FM Wages':               'fmWages',
+  'FM Attributes':          'fmAttributes',
   'Fee Expectation':        'transferFeeExpect',
   'Fee (Real)':             'transferFeeReal',
   'Salary Expectation':     'salaryExpect',

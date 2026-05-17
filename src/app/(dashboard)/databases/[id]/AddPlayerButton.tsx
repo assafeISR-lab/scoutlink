@@ -33,6 +33,7 @@ interface Form {
   highlights: string
   playerPhone: string
   agentPhone: string
+  fmAttributes: string
 }
 
 const EMPTY: Form = {
@@ -42,14 +43,14 @@ const EMPTY: Form = {
   fmWages: '', transferFeeExpect: '', transferFeeReal: '',
   salaryExpect: '', salaryReal: '', recentForm: '',
   transfermarktUrl: '', sofascoreUrl: '', instagram: '', twitter: '', tiktok: '',
-  highlights: '', playerPhone: '', agentPhone: '',
+  highlights: '', playerPhone: '', agentPhone: '', fmAttributes: '',
 }
 
 const CUSTOM_FIELD_KEYS: (keyof Form)[] = [
   'foot', 'passports', 'league', 'joiningDate', 'contractExpiry',
   'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
   'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'instagram', 'twitter', 'tiktok',
-  'highlights', 'playerPhone', 'agentPhone',
+  'highlights', 'playerPhone', 'agentPhone', 'fmAttributes',
 ]
 
 export default function AddPlayerButton({ databaseId }: { databaseId: string }) {
@@ -291,6 +292,21 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     </CardRow>
                   </div>
                 </div>
+              </div>
+
+              {/* FM Attributes — full-width textarea */}
+              <div className="p-4 border-t border-white/5">
+                <p className="text-[10px] uppercase tracking-widest mb-2 font-medium text-white/25">FM Attributes</p>
+                <textarea
+                  value={form.fmAttributes}
+                  onChange={e => set('fmAttributes', e.target.value)}
+                  placeholder="e.g. Pace V15, Shoot V12 / Def V8, Head V6"
+                  rows={3}
+                  className="w-full text-[11px] rounded-lg p-2 focus:outline-none resize-none"
+                  style={{ background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.15)', color: 'var(--text-primary)', caretColor: '#00c896' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.4)'; e.currentTarget.style.background = 'rgba(0,200,150,0.12)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.15)'; e.currentTarget.style.background = 'rgba(0,200,150,0.07)' }}
+                />
               </div>
             </div>
 

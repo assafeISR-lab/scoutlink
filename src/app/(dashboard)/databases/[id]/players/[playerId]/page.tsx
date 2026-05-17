@@ -77,6 +77,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
                 weightKg: player.weightKg,
                 marketValue: player.marketValue,
                 agentName: player.agentName,
+                fmAttributes: player.customFields.find(cf => cf.fieldName === 'fmAttributes')?.value ?? null,
                 playsNational: player.playsNational,
                 goalsThisYear: player.goalsThisYear,
                 totalGoals: player.totalGoals,

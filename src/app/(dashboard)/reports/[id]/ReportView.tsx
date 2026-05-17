@@ -20,6 +20,7 @@ interface Player {
   weightKg?: number | null
   marketValue?: number | null
   agentName?: string | null
+  fmAttributes?: string | null
   playsNational?: boolean
   goalsThisYear?: number | null
   totalGoals?: number | null
@@ -47,7 +48,7 @@ export default function ReportView({ report }: { report: ReportData }) {
   }
 
   function handleDownloadCSV() {
-    const headers = ['Name', 'Position', 'Club', 'Nationality', 'Age', 'Height (cm)', 'Market Value', 'Agent', 'Goals (Year)', 'Total Goals', 'Total Games', 'National Games', 'Pro Years', 'National Team']
+    const headers = ['Name', 'Position', 'Club', 'Nationality', 'Age', 'Height (cm)', 'Market Value', 'Agent', 'FM Attributes', 'Goals (Year)', 'Total Goals', 'Total Games', 'National Games', 'Pro Years', 'National Team']
     const rows = report.players.map(p => [
       p.name ?? '',
       p.position ?? '',
@@ -57,6 +58,7 @@ export default function ReportView({ report }: { report: ReportData }) {
       p.heightCm ?? '',
       p.marketValue != null ? `€${(p.marketValue / 1_000_000).toFixed(1)}M` : '',
       p.agentName ?? '',
+      p.fmAttributes ?? '',
       p.goalsThisYear ?? '',
       p.totalGoals ?? '',
       p.totalGames ?? '',
@@ -94,6 +96,7 @@ export default function ReportView({ report }: { report: ReportData }) {
     { key: 'heightCm', label: 'Height' },
     { key: 'marketValue', label: 'Market Value' },
     { key: 'agentName', label: 'Agent' },
+    { key: 'fmAttributes', label: 'FM Attributes' },
     { key: 'goalsThisYear', label: 'Goals (Year)' },
     { key: 'totalGoals', label: 'Total Goals' },
     { key: 'totalGames', label: 'Total Games' },

@@ -20,6 +20,7 @@ interface PlayerSnapshot {
   weightKg: number | null
   marketValue: number | null
   agentName: string | null
+  fmAttributes: string | null
   playsNational: boolean
   goalsThisYear: number | null
   totalGoals: number | null
