@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import NotesSection from './NotesSection'
 import FMRadarChart from '@/components/FMRadarChart'
+import FMAttributesEditor from '@/components/FMAttributesEditor'
 import { loadActive } from '@/app/(dashboard)/search/SearchParamsPanel'
 
 interface FieldSource {
@@ -372,16 +373,11 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="p-4 flex flex-col gap-2">
           <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-faint)' }}>FM Attributes</p>
           {localActiveFm ? (
-            <textarea
-              autoFocus
-              value={form.fmAttributes}
-              onChange={e => setField('fmAttributes', e.target.value)}
+            <FMAttributesEditor
+              value={form.fmAttributes ?? ''}
+              onChange={v => setField('fmAttributes', v)}
               onBlur={() => { setLocalActiveFm(false); if (canWrite) handleSave() }}
-              placeholder="e.g. Speed 80, Technique 75 / Jumping 45, Strength 42"
-              rows={4}
-              className="text-[11px] px-2 py-1.5 rounded-lg resize-none focus:outline-none"
-              style={{ color: 'var(--text-primary)', background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', caretColor: '#00c896' }}
-              onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+              autoFocus
             />
           ) : form.fmAttributes ? (
             <div className="group relative cursor-text" onClick={() => { if (canWrite) setLocalActiveFm(true) }}>

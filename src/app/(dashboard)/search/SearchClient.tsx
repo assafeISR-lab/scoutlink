@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import ScoutLinkBallLoader from '@/components/ScoutLinkBallLoader'
 import { PARAM_KEYS, PARAM_LABELS, PARAM_SOURCES, type ParamKey, loadActive, loadCustomActive, loadParamSources, buildParamsBySource } from './SearchParamsPanel'
 import FMRadarChart from '@/components/FMRadarChart'
+import FMAttributesEditor from '@/components/FMAttributesEditor'
 
 // Params that are planned but not yet scraped — always shown as "coming soon"
 const COMING_SOON = new Set<string>(['heatMap', 'seasonStats'])
@@ -903,17 +904,11 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
             <div className="p-4 flex flex-col gap-2">
               <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: (editMode || localActiveFm) ? 'rgba(0,200,150,0.8)' : 'var(--text-faint)' }}>FM Attributes</p>
               {(editMode || localActiveFm) ? (
-                <textarea
-                  autoFocus={localActiveFm}
+                <FMAttributesEditor
                   value={editData.fmAttributes}
-                  onChange={e => { const next = { ...editData, fmAttributes: e.target.value }; setEditData(next); onDataChange(next) }}
-                  onClick={e => e.stopPropagation()}
+                  onChange={v => { const next = { ...editData, fmAttributes: v }; setEditData(next); onDataChange(next) }}
                   onBlur={() => setLocalActiveFm(false)}
-                  placeholder="e.g. Pace V15, Shoot V12 / Def V8, Head V6"
-                  rows={4}
-                  className="flex-1 text-[11px] rounded-lg p-2 focus:outline-none resize-none"
-                  style={{ background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--text-primary)', caretColor: '#00c896' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'; e.currentTarget.style.background = 'rgba(0,200,150,0.12)' }}
+                  autoFocus={localActiveFm}
                 />
               ) : editData.fmAttributes ? (
                 <div className="group relative cursor-text" onClick={e => { e.stopPropagation(); setLocalActiveFm(true) }}>
