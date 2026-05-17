@@ -829,7 +829,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
             {show('twitterLink')       && <EditableField label="Twitter / X"   editMode={editMode} displayValue={editData.twitterUrl || null} editValue={editData.twitterUrl} onChange={v => updateField('twitterUrl', v)} isLink />}
             {show('tiktokLink')        && <EditableField label="TikTok"        editMode={editMode} displayValue={editData.tiktokUrl || null}  editValue={editData.tiktokUrl}  onChange={v => updateField('tiktokUrl', v)} isLink />}
             {show('highlightsLink')    && <EditableField label="Highlights"    editMode={editMode} displayValue={editData.highlights || null} editValue={editData.highlights} onChange={v => updateField('highlights', v)} isLink />}
-            {show('description')       && <EditableField label="Description"   editMode={editMode} displayValue={editData.description || null} editValue={editData.description} onChange={v => updateField('description', v)} />}
+            {show('description')       && <EditableField label="Description"   editMode={editMode} displayValue={editData.description || null} editValue={editData.description} onChange={v => updateField('description', v)} multiline />}
           </div>
 
           {/* Custom extras — only in edit mode */}
@@ -965,7 +965,7 @@ function CardField({ label, value, highlight = false, inline = false }: {
 }
 
 
-function EditableField({ label, editMode, displayValue, editValue, onChange, highlight, isLink, inputType, placeholder }: {
+function EditableField({ label, editMode, displayValue, editValue, onChange, highlight, isLink, inputType, placeholder, multiline }: {
   label: string
   editMode: boolean
   displayValue: string | null | undefined
@@ -975,12 +975,17 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
   isLink?: boolean
   inputType?: string
   placeholder?: string
+  multiline?: boolean
 }) {
   const [localActive, setLocalActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (localActive && inputRef.current) inputRef.current.focus()
+    if (localActive) {
+      inputRef.current?.focus()
+      textareaRef.current?.focus()
+    }
   }, [localActive])
 
   const showInput = editMode || localActive
@@ -1005,6 +1010,21 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
       )
     }
     const hasValue = displayValue != null && displayValue !== ''
+    if (multiline) {
+      return (
+        <div className="flex flex-col gap-1 group cursor-text" onClick={e => { e.stopPropagation(); setLocalActive(true) }}>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+            <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-40 transition-opacity" viewBox="0 0 24 24" fill="#00c896">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+            </svg>
+          </div>
+          <p className="text-[11px] whitespace-pre-wrap" style={{ color: hasValue ? 'var(--text-primary)' : 'var(--text-faint)' }}>
+            {displayValue ?? '—'}
+          </p>
+        </div>
+      )
+    }
     return (
       <div
         className="flex items-center justify-between gap-2 group cursor-text"
@@ -1023,6 +1043,37 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
     )
   }
 
+  const inputStyle = {
+    background: 'rgba(0,200,150,0.07)',
+    border: '1px solid rgba(0,200,150,0.3)',
+    color: 'var(--text-primary)',
+    caretColor: '#00c896',
+    colorScheme: 'dark' as const,
+  }
+  const onFocusStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'
+    e.currentTarget.style.background = 'rgba(0,200,150,0.12)'
+  }
+
+  if (multiline) {
+    return (
+      <div className="flex flex-col gap-1" onClick={e => e.stopPropagation()}>
+        <span className="text-[11px]" style={{ color: 'rgba(0,200,150,0.8)' }}>{label}</span>
+        <textarea
+          ref={textareaRef}
+          value={editValue}
+          placeholder={placeholder ?? 'Add description…'}
+          rows={3}
+          onChange={e => onChange(e.target.value)}
+          onBlur={() => setLocalActive(false)}
+          className="text-[11px] focus:outline-none rounded px-1.5 py-1 resize-none"
+          style={{ ...inputStyle, width: '100%' }}
+          onFocus={onFocusStyle}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(0,200,150,0.8)' }}>{label}</span>
@@ -1035,15 +1086,8 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
         onClick={e => e.stopPropagation()}
         onBlur={() => setLocalActive(false)}
         className="text-[11px] font-medium text-right focus:outline-none rounded px-1.5 py-0.5"
-        style={{
-          flex: 1, maxWidth: inputType === 'date' ? 150 : 130,
-          background: 'rgba(0,200,150,0.07)',
-          border: '1px solid rgba(0,200,150,0.3)',
-          color: 'var(--text-primary)',
-          caretColor: '#00c896',
-          colorScheme: 'dark',
-        }}
-        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'; e.currentTarget.style.background = 'rgba(0,200,150,0.12)' }}
+        style={{ ...inputStyle, flex: 1, maxWidth: inputType === 'date' ? 150 : 130 }}
+        onFocus={onFocusStyle}
       />
     </div>
   )

@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
-import FMRadarChart from '@/components/FMRadarChart'
 
 interface Form {
   // DB model fields
