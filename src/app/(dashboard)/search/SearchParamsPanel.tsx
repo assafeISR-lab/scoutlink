@@ -30,12 +30,19 @@ export const PARAM_KEYS = [
   'fmAttributes',
   'recentForm',
   'description',
+  // Scout contact
+  'playerPhone',
+  'agentName',
+  'agentPhone',
+  'sentBy',
   // Links & meta
   'transfermarktLink',
   'sofascoreLink',
+  'fmInsideLink',
   'instagramLink',
+  'twitterLink',
+  'tiktokLink',
   'highlightsLink',
-  'sentBy',
 ] as const
 
 export type ParamKey = typeof PARAM_KEYS[number]
@@ -68,12 +75,19 @@ export const PARAM_LABELS: Record<ParamKey, string> = {
   fmAttributes:         'FM Attributes (Top 7 / Low 7)',
   recentForm:           'Recent Form',
   description:          'Bio / Description',
+  // Scout contact
+  playerPhone:          'Player Phone',
+  agentName:            'Agent Name',
+  agentPhone:           'Agent Phone',
+  sentBy:               'Sent By',
   // Links & meta
   transfermarktLink:    'Transfermarkt Link',
   sofascoreLink:        'Sofascore Link',
+  fmInsideLink:         'FMInside Link',
   instagramLink:        'Instagram Link',
+  twitterLink:          'Twitter / X Link',
+  tiktokLink:           'TikTok Link',
   highlightsLink:       'Highlights Link',
-  sentBy:               'Sent By',
 }
 
 export const PARAM_SOURCES: Record<ParamKey, string> = {
@@ -104,12 +118,19 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   fmAttributes:         'FMInside',
   recentForm:           '',
   description:          '',
+  // Scout contact
+  playerPhone:          '',
+  agentName:            '',
+  agentPhone:           '',
+  sentBy:               '',
   // Links & meta
   transfermarktLink:    '',
   sofascoreLink:        '',
+  fmInsideLink:         '',
   instagramLink:        '',
+  twitterLink:          '',
+  tiktokLink:           '',
   highlightsLink:       '',
-  sentBy:               '',
 }
 
 export const STORAGE_KEY        = 'scoutlink_search_params'

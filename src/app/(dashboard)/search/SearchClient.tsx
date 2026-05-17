@@ -582,12 +582,20 @@ const FIELD_PARAM_KEY: Record<string, string> = {
   'Fee (Real)':             'transferFeeReal',
   'Salary Expectation':     'salaryExpect',
   'Salary (Real)':          'salaryReal',
+  'Player Phone':           'playerPhone',
+  'Agent':                  'agentName',
+  'Agent Phone':            'agentPhone',
   'Sent by / Scout Name':   'sentBy',
+  'Referral':               'sentBy',
   'Recent Form':            'recentForm',
   'Transfermarkt':          'transfermarktLink',
   'Sofascore':              'sofascoreLink',
+  'FMInside':               'fmInsideLink',
   'Instagram':              'instagramLink',
+  'Twitter / X':            'twitterLink',
+  'TikTok':                 'tiktokLink',
   'Highlights':             'highlightsLink',
+  'Description':            'description',
 }
 
 function formatContractDate(iso: string): string {
