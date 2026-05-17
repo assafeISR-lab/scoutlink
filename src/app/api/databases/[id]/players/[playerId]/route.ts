@@ -31,13 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       agentName: body.agentName?.trim() || null,
       dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
       heightCm: body.heightCm != null && body.heightCm !== '' ? parseFloat(body.heightCm) : null,
-      weightKg: body.weightKg != null && body.weightKg !== '' ? parseFloat(body.weightKg) : null,
       marketValue: body.marketValue != null && body.marketValue !== '' ? parseFloat(body.marketValue) * 1_000_000 : null,
-      goalsThisYear: body.goalsThisYear != null && body.goalsThisYear !== '' ? parseInt(body.goalsThisYear) : null,
-      totalGoals: body.totalGoals != null && body.totalGoals !== '' ? parseInt(body.totalGoals) : null,
-      totalGames: body.totalGames != null && body.totalGames !== '' ? parseInt(body.totalGames) : null,
-      nationalGames: body.nationalGames != null && body.nationalGames !== '' ? parseInt(body.nationalGames) : null,
-      yearsInProClub: body.yearsInProClub != null && body.yearsInProClub !== '' ? parseInt(body.yearsInProClub) : null,
       playsNational: body.playsNational ?? undefined,
     },
   })
@@ -52,14 +46,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       agentName:     body.agentName?.trim()     || null,
       dateOfBirth:   body.dateOfBirth           || null,
       heightCm:      body.heightCm !== '' && body.heightCm != null ? String(parseFloat(body.heightCm)) : null,
-      weightKg:      body.weightKg !== '' && body.weightKg != null ? String(parseFloat(body.weightKg)) : null,
       marketValue:   body.marketValue !== '' && body.marketValue != null ? String(parseFloat(body.marketValue) * 1_000_000) : null,
       playsNational: String(body.playsNational ?? false),
-      goalsThisYear: body.goalsThisYear !== '' && body.goalsThisYear != null ? body.goalsThisYear : null,
-      totalGoals:    body.totalGoals    !== '' && body.totalGoals    != null ? body.totalGoals    : null,
-      totalGames:    body.totalGames    !== '' && body.totalGames    != null ? body.totalGames    : null,
-      nationalGames: body.nationalGames !== '' && body.nationalGames != null ? body.nationalGames : null,
-      yearsInProClub:body.yearsInProClub!== '' && body.yearsInProClub!= null ? body.yearsInProClub: null,
     }
 
     for (const fieldName of changedFields) {

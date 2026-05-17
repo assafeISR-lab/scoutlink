@@ -36,7 +36,6 @@ function buildMerged(group: ScrapedPlayer[], paramSources: Record<string, string
     position:      pick('position',       'position',      sc, tm, fm),
     dateOfBirth:   dob,
     heightCm:      pick('height',         'heightCm',      sc, tm),
-    weightKg:      pick('weight',         'weightKg',      sc, tm),
     preferredFoot: pick('preferredFoot',  'preferredFoot', sc, tm),
     contractUntil: pick('contractExpiry', 'contractUntil', sc, tm),
     passports:     pick('passports',      'passports',     tm),

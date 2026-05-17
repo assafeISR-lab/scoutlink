@@ -37,16 +37,10 @@ interface PlayerData {
   nationality: string | null
   dateOfBirth: Date | null
   heightCm: number | null
-  weightKg: number | null
   clubName: string | null
   marketValue: number | null
   agentName: string | null
   playsNational: boolean
-  goalsThisYear: number | null
-  totalGoals: number | null
-  totalGames: number | null
-  nationalGames: number | null
-  yearsInProClub: number | null
   createdAt: Date
   fieldSources: FieldSource[]
   customFields: CustomFieldEntry[]
@@ -91,11 +85,6 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     marketValue:   player.marketValue != null ? (player.marketValue / 1_000_000).toString() : '',
     agentName:     player.agentName      ?? '',
     playsNational: player.playsNational,
-    goalsThisYear: player.goalsThisYear?.toString()  ?? '',
-    totalGoals:    player.totalGoals?.toString()     ?? '',
-    totalGames:    player.totalGames?.toString()     ?? '',
-    nationalGames: player.nationalGames?.toString()  ?? '',
-    yearsInProClub:player.yearsInProClub?.toString() ?? '',
     // Custom fields
     foot:              cf('foot'),
     passports:         cf('passports'),
@@ -134,7 +123,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     setSaveError('')
 
     // Split changed fields into DB fields and custom fields
-    const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','goalsThisYear','totalGoals','totalGames','nationalGames','yearsInProClub'])
+    const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational'])
     const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','description','sentBy','playerPhone','agentPhone']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))

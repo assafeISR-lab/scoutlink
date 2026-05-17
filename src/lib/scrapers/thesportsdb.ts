@@ -36,7 +36,6 @@ export const theSportsDbScraper: SiteScraper = {
             position: p.strPosition ?? null,
             dateOfBirth: p.dateBorn ?? null,
             heightCm: parseHeightToCm(p.strHeight),
-            weightKg: parseWeightToKg(p.strWeight),
             photo: p.strThumb ?? p.strCutout ?? null,
             description: p.strDescriptionEN ? p.strDescriptionEN.slice(0, 400) + (p.strDescriptionEN.length > 400 ? '...' : '') : null,
             league: null,
@@ -72,12 +71,3 @@ function parseHeightToCm(raw: string | null | undefined): number | null {
   return null
 }
 
-// "146 lbs" → 66  |  "75 kg" → 75  |  "75kg" → 75
-function parseWeightToKg(raw: string | null | undefined): number | null {
-  if (!raw) return null
-  const num = parseFloat(raw)
-  if (isNaN(num)) return null
-  if (/lbs?/i.test(raw)) return Math.round(num * 0.453592)
-  if (/kg/i.test(raw)) return Math.round(num)
-  return null
-}

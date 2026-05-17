@@ -67,7 +67,6 @@ export const wikipediaScraper: SiteScraper = {
         position,
         dateOfBirth: null,
         heightCm: null,
-        weightKg: null,
         photo: s.thumbnail?.source ?? null,
         description: s.extract ? s.extract.slice(0, 400) + (s.extract.length > 400 ? '...' : '') : null,
         league: null,

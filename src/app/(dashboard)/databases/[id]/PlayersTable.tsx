@@ -26,13 +26,7 @@ interface Player {
   agentName: string | null
   dateOfBirth: string | null
   heightCm: number | null
-  weightKg: number | null
   marketValue: number | null
-  goalsThisYear: number | null
-  totalGoals: number | null
-  totalGames: number | null
-  nationalGames: number | null
-  yearsInProClub: number | null
   playsNational: boolean
   customFields: CustomFieldEntry[]
 }
@@ -416,11 +410,6 @@ function EditModal({ player, databaseId, onClose }: { player: Player; databaseId
     dateOfBirth:   toDateStr(player.dateOfBirth),
     heightCm:      player.heightCm?.toString() ?? '',
     marketValue:   player.marketValue != null ? (player.marketValue / 1_000_000).toString() : '',
-    goalsThisYear: player.goalsThisYear?.toString() ?? '',
-    totalGoals:    player.totalGoals?.toString() ?? '',
-    totalGames:    player.totalGames?.toString() ?? '',
-    nationalGames: player.nationalGames?.toString() ?? '',
-    yearsInProClub:player.yearsInProClub?.toString() ?? '',
     playsNational: player.playsNational,
   })
 
@@ -467,16 +456,6 @@ function EditModal({ player, databaseId, onClose }: { player: Player; databaseId
                 <input type="checkbox" checked={form.playsNational} onChange={e => set('playsNational', e.target.checked)} className="w-4 h-4 rounded accent-[#00c896]" />
                 <span className="text-sm text-white/60">Plays for national team</span>
               </label>
-            </div>
-          </div>
-          <div className="border-t border-white/5 pt-4">
-            <p className="text-xs uppercase tracking-widest text-white/30 mb-3">Career Statistics</p>
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Goals This Year"    value={form.goalsThisYear}  onChange={v => set('goalsThisYear', v)}  type="number" />
-              <Field label="Total Goals"        value={form.totalGoals}     onChange={v => set('totalGoals', v)}     type="number" />
-              <Field label="Total Games"        value={form.totalGames}     onChange={v => set('totalGames', v)}     type="number" />
-              <Field label="National Team Games" value={form.nationalGames} onChange={v => set('nationalGames', v)} type="number" />
-              <Field label="Years in Pro Club"  value={form.yearsInProClub} onChange={v => set('yearsInProClub', v)} type="number" />
             </div>
           </div>
           <p className="text-xs text-white/25">Extended fields (league, contract, links, etc.) can be edited from the player's profile page.</p>
@@ -542,8 +521,7 @@ function CreateReportModal({ players, databaseId, databaseName, onClose }: {
     const snapshot = players.map(p => ({
       id: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, clubName: p.clubName,
       nationality: p.nationality, age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null,
-      heightCm: p.heightCm, weightKg: p.weightKg, marketValue: p.marketValue,
-      goalsThisYear: p.goalsThisYear, totalGoals: p.totalGoals, totalGames: p.totalGames, playsNational: p.playsNational,
+      heightCm: p.heightCm, marketValue: p.marketValue, playsNational: p.playsNational,
     }))
     try {
       const res = await fetch('/api/reports', {
