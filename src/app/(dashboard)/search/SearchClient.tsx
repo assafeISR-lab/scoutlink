@@ -784,9 +784,9 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Physical</p>
           <div className="space-y-2.5">
             {show('position')      && <EditableField label="Position"     editMode={editMode} displayValue={normalizePos(editData.position) || null} editValue={editData.position}     onChange={v => updateField('position', v)} />}
-            {show('height')        && <EditableField label="Height"       editMode={editMode} displayValue={editData.heightCm ? `${editData.heightCm} cm` : null} editValue={editData.heightCm} onChange={v => updateField('heightCm', v)} />}
-            {show('age')           && <EditableField label="Age"           editMode={editMode} displayValue={age ? `${age} yrs` : null} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} />}
-            {show('dateOfBirth')   && <EditableField label="Date of Birth" editMode={editMode} displayValue={formatDateStr(editData.dateOfBirth)} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} />}
+            {show('height')        && <EditableField label="Height"       editMode={editMode} displayValue={editData.heightCm ? `${editData.heightCm} cm` : null} editValue={editData.heightCm} onChange={v => updateField('heightCm', v)} inputType="number" />}
+            {show('age')           && <EditableField label="Age"           editMode={editMode} displayValue={age ? `${age} yrs` : null} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} inputType="date" />}
+            {show('dateOfBirth')   && <EditableField label="Date of Birth" editMode={editMode} displayValue={formatDateStr(editData.dateOfBirth)} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} inputType="date" />}
             {show('preferredFoot') && <EditableField label="Foot"         editMode={editMode} displayValue={editData.preferredFoot || null} editValue={editData.preferredFoot} onChange={v => updateField('preferredFoot', v)} />}
             {show('nationality')   && <EditableField label="Nationality"  editMode={editMode} displayValue={editData.nationality || null}   editValue={editData.nationality}  onChange={v => updateField('nationality', v)} />}
             {show('passports')     && <EditableField label="Passports"    editMode={editMode} displayValue={editData.passports || null}     editValue={editData.passports}    onChange={v => updateField('passports', v)} />}
@@ -800,10 +800,10 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           <div className="space-y-2.5">
             {show('team')              && <EditableField label="Club"            editMode={editMode} displayValue={editData.clubName || null}       editValue={editData.clubName}       onChange={v => updateField('clubName', v)} />}
             {show('league')            && <EditableField label="League"          editMode={editMode} displayValue={editData.league || null}         editValue={editData.league}         onChange={v => updateField('league', v)} />}
-            {show('joiningDate')       && <EditableField label="Joining Date"    editMode={editMode} displayValue={formatDateStr(editData.joiningDate)}    editValue={editData.joiningDate}    onChange={v => updateField('joiningDate', v)} />}
-            {show('contractExpiry')    && <EditableField label="Contract Expiry" editMode={editMode} displayValue={formatDateStr(editData.contractExpiry)}  editValue={editData.contractExpiry} onChange={v => updateField('contractExpiry', v)} />}
+            {show('joiningDate')       && <EditableField label="Joining Date"    editMode={editMode} displayValue={formatDateStr(editData.joiningDate)}    editValue={editData.joiningDate}    onChange={v => updateField('joiningDate', v)} inputType="date" />}
+            {show('contractExpiry')    && <EditableField label="Contract Expiry" editMode={editMode} displayValue={formatDateStr(editData.contractExpiry)}  editValue={editData.contractExpiry} onChange={v => updateField('contractExpiry', v)} inputType="date" />}
             {show('marketValue')       && <EditableField label="Market Value"    editMode={editMode} displayValue={editData.marketValue || null}    editValue={editData.marketValue}    onChange={v => updateField('marketValue', v)} highlight />}
-            {show('fmWages')           && <EditableField label="FM Wages"        editMode={editMode} displayValue={editData.fmWages || null}        editValue={editData.fmWages}        onChange={v => updateField('fmWages', v)} />}
+            {show('fmWages')           && <EditableField label="FM Wages"        editMode={editMode} displayValue={editData.fmWages || null}        editValue={editData.fmWages}        onChange={v => updateField('fmWages', v)} inputType="number" />}
             {show('transferFeeExpect') && <EditableField label="Fee Expectation"   editMode={editMode} displayValue={editData.transferFeeExpect || null} editValue={editData.transferFeeExpect} onChange={v => updateField('transferFeeExpect', v)} />}
             {show('transferFeeReal')   && <EditableField label="Fee (Real)"         editMode={editMode} displayValue={editData.transferFeeReal || null}   editValue={editData.transferFeeReal}   onChange={v => updateField('transferFeeReal', v)} />}
             {show('salaryExpect')      && <EditableField label="Salary Expectation" editMode={editMode} displayValue={editData.salaryExpect || null}      editValue={editData.salaryExpect}      onChange={v => updateField('salaryExpect', v)} />}
@@ -971,7 +971,7 @@ function CardField({ label, value, highlight = false, inline = false }: {
 }
 
 
-function EditableField({ label, editMode, displayValue, editValue, onChange, highlight, isLink }: {
+function EditableField({ label, editMode, displayValue, editValue, onChange, highlight, isLink, inputType, placeholder }: {
   label: string
   editMode: boolean
   displayValue: string | null | undefined
@@ -979,6 +979,8 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
   onChange: (v: string) => void
   highlight?: boolean
   isLink?: boolean
+  inputType?: string
+  placeholder?: string
 }) {
   const [localActive, setLocalActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -992,12 +994,11 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
   if (!showInput) {
     if (isLink && displayValue && displayValue.startsWith('http')) {
       return (
-        <div className="flex items-center justify-between gap-2 group">
-          <span
-            className="text-[11px] flex-shrink-0 cursor-text"
-            style={{ color: 'var(--text-muted)' }}
-            onClick={e => { e.stopPropagation(); setLocalActive(true) }}
-          >{label}</span>
+        <div
+          className="flex items-center justify-between gap-2 group cursor-text"
+          onClick={e => { e.stopPropagation(); setLocalActive(true) }}
+        >
+          <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
           <a
             href={displayValue} target="_blank" rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
@@ -1033,18 +1034,20 @@ function EditableField({ label, editMode, displayValue, editValue, onChange, hig
       <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(0,200,150,0.8)' }}>{label}</span>
       <input
         ref={inputRef}
-        type="text"
+        type={inputType ?? 'text'}
         value={editValue}
+        placeholder={placeholder ?? (isLink ? 'https://…' : undefined)}
         onChange={e => onChange(e.target.value)}
         onClick={e => e.stopPropagation()}
         onBlur={() => setLocalActive(false)}
         className="text-[11px] font-medium text-right focus:outline-none rounded px-1.5 py-0.5"
         style={{
-          flex: 1, maxWidth: 130,
+          flex: 1, maxWidth: inputType === 'date' ? 150 : 130,
           background: 'rgba(0,200,150,0.07)',
           border: '1px solid rgba(0,200,150,0.3)',
           color: 'var(--text-primary)',
           caretColor: '#00c896',
+          colorScheme: 'dark',
         }}
         onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'; e.currentTarget.style.background = 'rgba(0,200,150,0.12)' }}
       />
