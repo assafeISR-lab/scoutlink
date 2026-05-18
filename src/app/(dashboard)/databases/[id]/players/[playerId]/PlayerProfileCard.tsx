@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import NotesSection from './NotesSection'
 import FMRadarChart from '@/components/FMRadarChart'
+import LinkChips from '@/components/LinkChips'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import { loadActive } from '@/app/(dashboard)/search/SearchParamsPanel'
@@ -240,7 +241,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     }}>
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-4 p-5" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="flex items-start gap-4" style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)' }}>
         <div
           className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center text-lg font-bold text-black flex-shrink-0"
           style={photoEnabled && cf('photo') ? { border: '1px solid var(--border)' } : { background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 0 16px rgba(0,200,150,0.3)' }}
@@ -252,25 +253,15 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         </div>
 
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold leading-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>{fullName}</h1>
-          <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="leading-tight mb-1.5" style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>{fullName}</h1>
+          <div className="flex items-center flex-wrap" style={{ gap: '4px 6px' }}>
             {(form.position || player.position) && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{displayPosition(form.position || player.position)}</span>}
-            {(form.clubName || player.clubName) && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{form.clubName || player.clubName}</span>}
-            {(form.nationality || player.nationality) && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{form.nationality || player.nationality}</span>}
-            {age                && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{age} yrs</span>}
+            {(form.clubName || player.clubName) && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.clubName || player.clubName}</span></>}
+            {(form.league || cf('league')) && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: '#00c896' }}>{form.league || cf('league')}</span></>}
+            {(form.nationality || player.nationality) && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.nationality || player.nationality}</span></>}
+            {age && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{age} yrs</span></>}
           </div>
         </div>
-
-        {sourceChips.length > 0 && (
-          <div className="flex flex-col gap-1 flex-shrink-0">
-            {sourceChips.map(s => (
-              <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer"
-                className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded-md transition-colors hover:opacity-80"
-                style={{ background: 'rgba(0,200,150,0.08)', color: '#00c896bb', border: '1px solid rgba(0,200,150,0.2)' }}
-              >{s.name} ↗</a>
-            ))}
-          </div>
-        )}
 
         <div className="flex items-center gap-2 flex-shrink-0">
           {noteAdding && (
@@ -303,8 +294,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Physical */}
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Physical</p>
-          <div className="space-y-2.5">
+          <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Physical</p>
+          <div>
             <Row label="Position"      display={displayPosition(form.position || player.position || '')}  manual={isManual('position')}    isEditing={false} inputValue={form.position}    onChange={v => setField('position', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Height"        display={form.heightCm ? `${form.heightCm} cm` : player.heightCm ? `${player.heightCm} cm` : null}   manual={isManual('heightCm')}    isEditing={false} inputValue={form.heightCm}    onChange={v => setField('heightCm', v)}  inputType="number" onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Age"           display={age ? `${age} yrs` : null} isEditing={false} inputValue={form.dateOfBirth} onChange={v => setField('dateOfBirth', v)} inputType="date" onQuickSave={canWrite ? handleSave : undefined} />
@@ -318,8 +309,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Contract & Value */}
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Contract & Value</p>
-          <div className="space-y-2.5">
+          <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Contract & Value</p>
+          <div>
             <Row label="Club"            display={form.clubName || player.clubName || null}         manual={isManual('clubName')}    isEditing={false} inputValue={form.clubName}       onChange={v => setField('clubName', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="League"          display={form.league || null}    manual={cfGreen('league')}       isEditing={false} inputValue={form.league}         onChange={v => setField('league', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Joining Date"    display={fmtDate(form.joiningDate)} manual={cfGreen('joiningDate')} isEditing={false} inputValue={form.joiningDate}  onChange={v => setField('joiningDate', v)} inputType="date" onQuickSave={canWrite ? handleSave : undefined} />
@@ -335,8 +326,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Scout Info */}
         <div className="p-4">
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Scout Info</p>
-          <div className="space-y-2.5">
+          <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
+          <div>
             <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Available'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
@@ -345,50 +336,50 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <Row label="Agent Phone"     display={form.agentPhone || null}       manual={cfGreen('agentPhone')}   isEditing={false} inputValue={form.agentPhone}  onChange={v => setField('agentPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Plays National"  display={(form.playsNational as boolean) ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={false} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
             <Row label="Recent Form"     display={form.recentForm || null}       manual={cfGreen('recentForm')}   isEditing={false} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <LinkRow label="Transfermarkt" display={form.transfermarktUrl || tmUrl || null} isEditing={false} inputValue={form.transfermarktUrl} onChange={v => setField('transfermarktUrl', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <LinkRow label="Sofascore"     display={form.sofascoreUrl || scUrl || null}     isEditing={false} inputValue={form.sofascoreUrl}     onChange={v => setField('sofascoreUrl', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <LinkRow label="FMInside"      display={form.fmInsideUrl || fmUrl || null}      isEditing={false} inputValue={form.fmInsideUrl}      onChange={v => setField('fmInsideUrl', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <LinkRow label="Instagram"     display={form.instagram || cf('instagram') || null} isEditing={false} inputValue={form.instagram}        onChange={v => setField('instagram', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <LinkRow label="Twitter / X"   display={form.twitter || cf('twitter') || null}     isEditing={false} inputValue={form.twitter}          onChange={v => setField('twitter', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <LinkRow label="TikTok"        display={form.tiktok || cf('tiktok') || null}       isEditing={false} inputValue={form.tiktok}           onChange={v => setField('tiktok', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <LinkRow label="Highlights"    display={form.highlights || cf('highlights') || null} isEditing={false} inputValue={form.highlights}      onChange={v => setField('highlights', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <LinkChips canEdit={canWrite} links={[
+              { label: 'Transfermarkt', value: form.transfermarktUrl || tmUrl,           onChange: v => setField('transfermarktUrl', v), onBlur: canWrite ? handleSave : undefined },
+              { label: 'Sofascore',     value: form.sofascoreUrl     || scUrl,           onChange: v => setField('sofascoreUrl', v),     onBlur: canWrite ? handleSave : undefined },
+              { label: 'FMInside',      value: form.fmInsideUrl      || fmUrl,           onChange: v => setField('fmInsideUrl', v),      onBlur: canWrite ? handleSave : undefined },
+              { label: 'Instagram',     value: form.instagram        || cf('instagram'), onChange: v => setField('instagram', v),        onBlur: canWrite ? handleSave : undefined },
+              { label: 'Twitter / X',   value: form.twitter          || cf('twitter'),   onChange: v => setField('twitter', v),          onBlur: canWrite ? handleSave : undefined },
+              { label: 'TikTok',        value: form.tiktok           || cf('tiktok'),    onChange: v => setField('tiktok', v),           onBlur: canWrite ? handleSave : undefined },
+              { label: 'Highlights',    value: form.highlights       || cf('highlights'),onChange: v => setField('highlights', v),       onBlur: canWrite ? handleSave : undefined },
+            ]} />
             <DescRow label="Description"   display={form.description || null} manual={cfGreen('description')} isEditing={false} inputValue={form.description} onChange={v => setField('description', v)} onQuickSave={canWrite ? handleSave : undefined} />
           </div>
         </div>
       </div>
 
       {/* ── Bottom section — 3 columns matching search result card ── */}
-      <div className="border-t border-white/5 grid grid-cols-3 divide-x divide-white/5" style={{ background: 'var(--subtle-bg)' }}>
+      <div className="grid grid-cols-3" style={{ background: 'var(--subtle-bg)', borderTop: '1px solid var(--border)' }}>
 
         {/* Col 1: Heat Map */}
-        <div className="p-4 flex flex-col gap-2">
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Heat Map</p>
-          <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
+        <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
+          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
+          <div className="flex flex-col items-center justify-center gap-2 flex-1 rounded-lg" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+            <span style={{ fontSize: 28, opacity: 0.25 }}>🗺️</span>
+            <span className="text-[10px] text-center" style={{ color: 'var(--text-faint)' }}>Position heat map coming soon</span>
+            <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.2)' }}>Coming Soon</span>
           </div>
         </div>
 
         {/* Col 2: Season Stats */}
-        <div className="p-4 flex flex-col gap-2">
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
+        <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
+          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Season Stats</p>
           {canWrite ? (
             <SeasonStatsEditor
               json={form.seasonStats || '{"seasons":[]}'}
               onChange={v => setField('seasonStats', v)}
               onCellBlur={handleSave}
             />
-          ) : form.seasonStats ? (
-            <SeasonStatsGrid json={form.seasonStats} />
           ) : (
-            <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>no data</span>
-            </div>
+            <SeasonStatsGrid json={form.seasonStats || '{"seasons":[]}'} />
           )}
         </div>
 
         {/* Col 3: FM Attributes */}
         <div className="p-4 flex flex-col gap-2">
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)' }}>FM Attributes</p>
+          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)' }}>FM Attributes</p>
           {localActiveFm ? (
             <FMAttributesEditor
               value={form.fmAttributes ?? ''}
@@ -396,24 +387,17 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
               onBlur={() => { setLocalActiveFm(false); if (canWrite) handleSave() }}
               autoFocus
             />
-          ) : form.fmAttributes ? (
-            <div className="group relative cursor-text" onClick={() => { if (canWrite) setLocalActiveFm(true) }}>
-              <FMRadarChart fmAttributes={form.fmAttributes} />
-              {canWrite && (
+          ) : (
+            <div
+              className={`group relative${canWrite ? ' cursor-text' : ''}`}
+              onClick={() => { if (canWrite) setLocalActiveFm(true) }}
+            >
+              <FMRadarChart fmAttributes={form.fmAttributes || ''} />
+              {canWrite && form.fmAttributes && (
                 <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#00c896"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                 </div>
               )}
-            </div>
-          ) : (
-            <div
-              className={`flex-1 rounded-lg flex items-center justify-center${canWrite ? ' cursor-text group' : ''}`}
-              style={{ minHeight: 80, border: '1px dashed var(--border)' }}
-              onClick={() => { if (canWrite) setLocalActiveFm(true) }}
-            >
-              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>
-                {canWrite ? 'Click to add FM Attributes' : 'FMInside · no data'}
-              </span>
             </div>
           )}
         </div>
@@ -422,7 +406,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
       {/* ── Scout Notes ── */}
       <div style={{ borderTop: '1px solid var(--border)' }}>
         <div className="px-4 py-2" style={{ background: 'var(--subtle-bg)', borderBottom: '1px solid var(--border)' }}>
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Scout Notes</p>
+          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Notes</p>
         </div>
         <div className="p-5">
           <NotesSection
@@ -497,7 +481,7 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
 
   if (isBool) {
     return (
-      <div className="flex items-center justify-between gap-2 py-0.5">
+      <div className="field-row flex items-center justify-between gap-2" style={{ borderBottom: '1px solid var(--border)', padding: '4px 0' }}>
         <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
         <button
           type="button"
@@ -520,9 +504,9 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
   const canInline = !!onQuickSave && !isBool
   return (
     <div
-      className={`flex items-center justify-between gap-2 py-0.5${canInline ? ' group' : ''}`}
+      className={`field-row flex items-center justify-between gap-2${canInline ? ' group' : ''}`}
       onClick={canInline ? () => setLocalActive(true) : undefined}
-      style={{ cursor: canInline ? 'text' : 'default' }}
+      style={{ borderBottom: '1px solid var(--border)', padding: '4px 0', cursor: canInline ? 'text' : 'default' }}
     >
       <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
       <div className="flex items-center gap-1">
@@ -576,8 +560,9 @@ function LinkRow({ label, display, isEditing, inputValue, onChange, onQuickSave 
 
   return (
     <div
-      className={`flex items-center justify-between gap-2 py-0.5 group${onQuickSave ? ' cursor-text' : ''}`}
+      className={`field-row flex items-center justify-between gap-2 group${onQuickSave ? ' cursor-text' : ''}`}
       onClick={() => { if (onQuickSave) setLocalActive(true) }}
+      style={{ borderBottom: '1px solid var(--border)', padding: '4px 0' }}
     >
       <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
       {isValid ? (
@@ -643,22 +628,22 @@ function DescRow({ label, display, manual = false, isEditing, inputValue, onChan
   const canInline = !!onQuickSave
   return (
     <div
-      className={`flex flex-col gap-1 py-0.5${canInline ? ' group cursor-text' : ''}`}
+      className={`${canInline ? 'group cursor-text' : ''}`}
       onClick={canInline ? () => setLocalActive(true) : undefined}
+      style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 mb-1.5">
         {manual && hasValue && <span title="Manually edited" style={{ color: '#00c896', fontSize: 9 }}>✎</span>}
-        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{label}</span>
+        <p className="text-[9px] uppercase font-semibold" style={{ color: 'var(--text-faint)', letterSpacing: '0.7px' }}>{label}</p>
         {canInline && (
           <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-30 transition-opacity" viewBox="0 0 24 24" fill="#00c896">
             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
           </svg>
         )}
       </div>
-      {hasValue
-        ? <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>{display}</p>
-        : <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
-      }
+      <div className="text-[11px] whitespace-pre-wrap" style={{ background: 'var(--subtle-bg)', border: '1px solid var(--border)', borderRadius: 7, padding: '7px 9px', minHeight: 64, lineHeight: 1.55, color: hasValue ? 'var(--text-secondary)' : 'var(--text-faint)', fontStyle: hasValue ? 'normal' : 'italic' }}>
+        {display ?? 'No description yet. Click to add…'}
+      </div>
     </div>
   )
 }

@@ -190,18 +190,6 @@ export function SeasonStatsEditor({ json, onChange, onCellBlur }: {
     )
   }
 
-  if (seasons.length === 0) {
-    return (
-      <div
-        className="flex items-center justify-center rounded-lg cursor-pointer"
-        style={{ minHeight: 60, border: '1px dashed var(--border)' }}
-        onClick={e => { e.stopPropagation(); commit([emptySeasonData()]) }}
-      >
-        <span style={{ color: 'var(--text-faint)', fontSize: 10 }}>+ Add Season</span>
-      </div>
-    )
-  }
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse" style={{ fontSize: 9 }}>
@@ -257,8 +245,32 @@ export function SeasonStatsEditor({ json, onChange, onCellBlur }: {
 
 export default function SeasonStatsGrid({ json }: { json: string }) {
   let data: MultiSeasonStats
-  try { data = JSON.parse(json) as MultiSeasonStats } catch { return null }
-  if (!data.seasons?.length) return null
+  try { data = JSON.parse(json) as MultiSeasonStats } catch { data = { seasons: [] } }
+
+  if (!data.seasons?.length) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse" style={{ fontSize: 9 }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', paddingRight: 6, paddingBottom: 2, minWidth: 64 }} />
+              <th style={{ textAlign: 'right', paddingLeft: 4, paddingBottom: 2, minWidth: 40 }}>
+                <div style={{ color: 'var(--text-faint)', fontWeight: 700 }}>—</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {STAT_ROWS.map(([label]) => (
+              <tr key={label} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={{ paddingTop: 2, paddingBottom: 2, paddingRight: 6, color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{label}</td>
+                <td style={{ paddingTop: 2, paddingBottom: 2, paddingLeft: 4, textAlign: 'right', color: 'var(--text-faint)', fontWeight: 600 }}>—</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
 
   return (
     <div className="overflow-x-auto">

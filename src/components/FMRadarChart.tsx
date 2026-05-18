@@ -10,6 +10,7 @@ export default function FMRadarChart({ fmAttributes }: { fmAttributes: string })
 
   const top = parseSection(parts[0])
   const bot = parseSection(parts[1])
+  const isEmpty = top.length === 0 && bot.length === 0
 
   const AttrRow = ({ name, value, isTop }: { name: string; value: number; isTop: boolean }) => {
     const pct      = Math.min(100, Math.round((value / 100) * 100))
@@ -35,12 +36,18 @@ export default function FMRadarChart({ fmAttributes }: { fmAttributes: string })
       <p className="uppercase font-semibold" style={{ fontSize: 9, letterSpacing: '0.5px', color: 'var(--text-faint)', marginBottom: 5 }}>
         Key Strengths
       </p>
-      {top.map((a, i) => <AttrRow key={i} name={a.name} value={a.value} isTop={true} />)}
+      {isEmpty
+        ? <p style={{ fontSize: 10, color: 'var(--text-faint)', fontStyle: 'italic' }}>—</p>
+        : top.map((a, i) => <AttrRow key={i} name={a.name} value={a.value} isTop={true} />)
+      }
 
       <p className="uppercase font-semibold" style={{ fontSize: 9, letterSpacing: '0.5px', color: 'var(--text-faint)', margin: '10px 0 5px' }}>
         Areas for Improvement
       </p>
-      {bot.map((a, i) => <AttrRow key={i} name={a.name} value={a.value} isTop={false} />)}
+      {isEmpty
+        ? <p style={{ fontSize: 10, color: 'var(--text-faint)', fontStyle: 'italic' }}>—</p>
+        : bot.map((a, i) => <AttrRow key={i} name={a.name} value={a.value} isTop={false} />)
+      }
     </div>
   )
 }
