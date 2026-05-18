@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
+import LinkChips from '@/components/LinkChips'
+import { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 
 interface Form {
   // DB model fields
@@ -42,6 +44,7 @@ interface Form {
   sentBy: string
   description: string
   fmAttributes: string
+  seasonStats: string
 }
 
 const EMPTY: Form = {
@@ -54,6 +57,7 @@ const EMPTY: Form = {
   transfermarktUrl: '', sofascoreUrl: '', fmInsideUrl: '',
   instagram: '', twitter: '', tiktok: '', highlights: '',
   playerPhone: '', agentPhone: '', sentBy: '', description: '', fmAttributes: '',
+  seasonStats: '',
 }
 
 const CUSTOM_FIELD_KEYS: (keyof Form)[] = [
@@ -61,7 +65,7 @@ const CUSTOM_FIELD_KEYS: (keyof Form)[] = [
   'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
   'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
   'instagram', 'twitter', 'tiktok', 'highlights',
-  'playerPhone', 'agentPhone', 'sentBy', 'description', 'fmAttributes',
+  'playerPhone', 'agentPhone', 'sentBy', 'description', 'fmAttributes', 'seasonStats',
 ]
 
 export default function AddPlayerButton({ databaseId }: { databaseId: string }) {
@@ -132,27 +136,27 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={handleClose}>
           <div
-            className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-2xl border border-white/10"
-            style={{ background: 'var(--card-bg)' }}
+            className="w-full max-w-7xl max-h-[95vh] overflow-y-auto rounded-2xl"
+            style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', boxShadow: 'var(--card-shadow)' }}
             onClick={e => e.stopPropagation()}
           >
 
             {/* ── Modal header ── */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 z-10" style={{ background: 'var(--card-bg)' }}>
+            <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
               <div>
-                <h2 className="text-base font-semibold text-white">Add Player</h2>
-                <p className="text-xs text-white/30 mt-0.5">Fill in the player card below — all fields optional except name</p>
+                <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Add Player</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>Fill in the player card below — all fields optional except name</p>
               </div>
-              <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-white/30 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
+              <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
               </button>
             </div>
 
             {/* ── Player Card ── */}
-            <div className="m-5 rounded-2xl overflow-hidden border border-white/5" style={{ background: 'var(--subtle-bg)' }}>
+            <div className="m-5 rounded-2xl overflow-hidden" style={{ background: 'var(--subtle-bg)', border: '1px solid var(--border)' }}>
 
               {/* Card Header */}
-              <div className="flex items-center gap-4 p-5 border-b border-white/5">
+              <div className="flex items-start gap-4" style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)' }}>
                 <div className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold text-black flex-shrink-0"
                   style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', boxShadow: '0 0 16px rgba(0,200,150,0.3)' }}>
                   {initials}
@@ -160,22 +164,23 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                     <input autoFocus value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="First name *"
-                      className="text-lg font-bold bg-transparent focus:outline-none text-white placeholder-white/20 border-b border-transparent focus:border-[#00c896] transition-colors"
-                      style={{ caretColor: '#00c896', width: 140 }} />
+                      className="bg-transparent focus:outline-none border-b border-transparent focus:border-[#00c896] transition-colors"
+                      style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px', color: 'var(--text-primary)', caretColor: '#00c896', width: 140 }} />
                     <input value={form.middleName} onChange={e => set('middleName', e.target.value)} placeholder="Middle"
-                      className="text-lg font-bold bg-transparent focus:outline-none text-white placeholder-white/20 border-b border-transparent focus:border-[#00c896] transition-colors"
-                      style={{ caretColor: '#00c896', width: 90 }} />
+                      className="bg-transparent focus:outline-none border-b border-transparent focus:border-[#00c896] transition-colors"
+                      style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px', color: 'var(--text-primary)', caretColor: '#00c896', width: 90 }} />
                     <input value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="Last name *"
-                      className="text-lg font-bold bg-transparent focus:outline-none text-white placeholder-white/20 border-b border-transparent focus:border-[#00c896] transition-colors"
-                      style={{ caretColor: '#00c896', width: 140 }} />
+                      className="bg-transparent focus:outline-none border-b border-transparent focus:border-[#00c896] transition-colors"
+                      style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px', color: 'var(--text-primary)', caretColor: '#00c896', width: 140 }} />
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center flex-wrap" style={{ gap: '4px 6px' }}>
                     <input value={form.position} onChange={e => set('position', e.target.value)} placeholder="Position"
-                      className="text-xs px-2 py-0.5 rounded-full font-medium focus:outline-none placeholder-[#00c89660] transition-colors"
+                      className="text-xs px-2 py-0.5 rounded-full font-medium focus:outline-none transition-colors"
                       style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630', caretColor: '#00c896', width: form.position ? `${Math.max(70, form.position.length * 8)}px` : '80px' }} />
-                    {form.clubName    && <span className="text-xs text-white/50">{form.clubName}</span>}
-                    {form.nationality && <span className="text-xs text-white/30">{form.nationality}</span>}
-                    {age !== null     && <span className="text-xs text-white/30">{age} yrs</span>}
+                    {form.clubName    && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.clubName}</span></>}
+                    {form.league      && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: '#00c896' }}>{form.league}</span></>}
+                    {form.nationality && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.nationality}</span></>}
+                    {age !== null     && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{age} yrs</span></>}
                   </div>
                 </div>
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896' }}>New Player</span>
@@ -185,9 +190,9 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
               <div className="grid grid-cols-3">
 
                 {/* Physical */}
-                <div className="p-4 border-r border-white/5">
-                  <p className="text-[10px] uppercase tracking-widest mb-3 font-medium text-white/25">Physical</p>
-                  <div className="space-y-2.5">
+                <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
+                  <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Physical</p>
+                  <div>
                     <CardRow label="Nationality">
                       <CardInput value={form.nationality} onChange={v => set('nationality', v)} placeholder="e.g. Spanish" />
                     </CardRow>
@@ -195,7 +200,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                       <DateInput value={form.dateOfBirth} onChange={v => set('dateOfBirth', v)} />
                     </CardRow>
                     <CardRow label="Age">
-                      <span className="text-[11px] font-medium text-white/40">{age !== null ? `${age} yrs` : '—'}</span>
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-faint)' }}>{age !== null ? `${age} yrs` : '—'}</span>
                     </CardRow>
                     <CardRow label="Height (cm)">
                       <CardInput value={form.heightCm} onChange={v => set('heightCm', v)} placeholder="e.g. 182" type="number" />
@@ -203,14 +208,14 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="Preferred Foot">
                       <select value={form.foot} onChange={e => set('foot', e.target.value)}
                         className="text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5"
-                        style={{ width: 90, color: form.foot ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.2)', border: '1px solid transparent', colorScheme: 'dark', background: 'transparent' }}
+                        style={{ width: 90, color: form.foot ? 'var(--text-primary)' : 'var(--text-faint)', border: '1px solid transparent' }}
                         onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
                         onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
                       >
-                        <option value="" style={{ color: '#000' }}>—</option>
-                        <option value="Right" style={{ color: '#000' }}>Right</option>
-                        <option value="Left"  style={{ color: '#000' }}>Left</option>
-                        <option value="Both"  style={{ color: '#000' }}>Both</option>
+                        <option value="">—</option>
+                        <option value="Right">Right</option>
+                        <option value="Left">Left</option>
+                        <option value="Both">Both</option>
                       </select>
                     </CardRow>
                     <CardRow label="Passports">
@@ -223,9 +228,9 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                 </div>
 
                 {/* Contract & Value */}
-                <div className="p-4 border-r border-white/5">
-                  <p className="text-[10px] uppercase tracking-widest mb-3 font-medium text-white/25">Contract & Value</p>
-                  <div className="space-y-2.5">
+                <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
+                  <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Contract & Value</p>
+                  <div>
                     <CardRow label="Club">
                       <CardInput value={form.clubName} onChange={v => set('clubName', v)} placeholder="e.g. Arsenal" />
                     </CardRow>
@@ -261,8 +266,8 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
 
                 {/* Scout Info */}
                 <div className="p-4">
-                  <p className="text-[10px] uppercase tracking-widest mb-3 font-medium text-white/25">Scout Info</p>
-                  <div className="space-y-2.5">
+                  <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
+                  <div>
                     <CardRow label="Availability">
                       <button
                         type="button"
@@ -278,7 +283,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                       </button>
                     </CardRow>
                     <CardRow label="Added">
-                      <span className="text-[11px] font-medium text-white/40">{today}</span>
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-faint)' }}>{today}</span>
                     </CardRow>
                     <CardRow label="Agent">
                       <CardInput value={form.agentName} onChange={v => set('agentName', v)} placeholder="Agent name" />
@@ -295,9 +300,9 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                         onClick={() => set('playsNational', !form.playsNational)}
                         className="text-[11px] font-medium px-2 py-0.5 rounded transition-all"
                         style={{
-                          background: form.playsNational ? 'rgba(0,200,150,0.12)' : 'rgba(255,255,255,0.04)',
-                          color: form.playsNational ? '#00c896' : 'rgba(255,255,255,0.3)',
-                          border: `1px solid ${form.playsNational ? 'rgba(0,200,150,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                          background: form.playsNational ? 'rgba(0,200,150,0.12)' : 'var(--hover-bg)',
+                          color: form.playsNational ? '#00c896' : 'var(--text-faint)',
+                          border: `1px solid ${form.playsNational ? 'rgba(0,200,150,0.3)' : 'var(--border)'}`,
                         }}
                       >
                         {form.playsNational ? 'Yes' : 'No'}
@@ -306,38 +311,26 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="Recent Form">
                       <CardInput value={form.recentForm} onChange={v => set('recentForm', v)} placeholder="e.g. WWDLW" />
                     </CardRow>
-                    <CardRow label="Transfermarkt">
-                      <CardInput value={form.transfermarktUrl} onChange={v => set('transfermarktUrl', v)} placeholder="https://…" />
-                    </CardRow>
-                    <CardRow label="Sofascore">
-                      <CardInput value={form.sofascoreUrl} onChange={v => set('sofascoreUrl', v)} placeholder="https://…" />
-                    </CardRow>
-                    <CardRow label="FMInside">
-                      <CardInput value={form.fmInsideUrl} onChange={v => set('fmInsideUrl', v)} placeholder="https://…" />
-                    </CardRow>
-                    <CardRow label="Instagram">
-                      <CardInput value={form.instagram} onChange={v => set('instagram', v)} placeholder="@username" />
-                    </CardRow>
-                    <CardRow label="Twitter / X">
-                      <CardInput value={form.twitter} onChange={v => set('twitter', v)} placeholder="https://x.com/…" />
-                    </CardRow>
-                    <CardRow label="TikTok">
-                      <CardInput value={form.tiktok} onChange={v => set('tiktok', v)} placeholder="https://tiktok.com/…" />
-                    </CardRow>
-                    <CardRow label="Highlights">
-                      <CardInput value={form.highlights} onChange={v => set('highlights', v)} placeholder="https://…" />
-                    </CardRow>
-                    <div className="pt-1">
-                      <span className="text-[11px] text-white/30 block mb-1">Description</span>
+                    <LinkChips canEdit links={[
+                      { label: 'Transfermarkt', value: form.transfermarktUrl, onChange: v => set('transfermarktUrl', v) },
+                      { label: 'Sofascore',     value: form.sofascoreUrl,     onChange: v => set('sofascoreUrl', v) },
+                      { label: 'FMInside',      value: form.fmInsideUrl,      onChange: v => set('fmInsideUrl', v) },
+                      { label: 'Instagram',     value: form.instagram,        onChange: v => set('instagram', v) },
+                      { label: 'Twitter / X',   value: form.twitter,          onChange: v => set('twitter', v) },
+                      { label: 'TikTok',        value: form.tiktok,           onChange: v => set('tiktok', v) },
+                      { label: 'Highlights',    value: form.highlights,       onChange: v => set('highlights', v) },
+                    ]} />
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                      <p className="text-[9px] uppercase font-semibold mb-1.5" style={{ color: 'var(--text-faint)', letterSpacing: '0.7px' }}>Description</p>
                       <textarea
                         value={form.description}
                         onChange={e => set('description', e.target.value)}
                         placeholder="Notes on this player…"
-                        rows={2}
-                        className="w-full text-[11px] rounded-lg px-2 py-1.5 focus:outline-none resize-none placeholder-white/15"
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--text-primary)', caretColor: '#00c896' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.05)' }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                        rows={3}
+                        className="w-full text-[11px] focus:outline-none resize-none transition-all"
+                        style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.35)', color: 'var(--text-primary)', caretColor: '#00c896', borderRadius: 7, padding: '7px 9px', minHeight: 64, lineHeight: 1.55 }}
+                        onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'}
                       />
                     </div>
                   </div>
@@ -345,27 +338,30 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
               </div>
 
               {/* ── Bottom section — Heat Map | Season Stats | FM Attributes ── */}
-              <div className="border-t border-white/5 grid grid-cols-3 divide-x divide-white/5" style={{ background: 'rgba(255,255,255,0.01)' }}>
+              <div className="grid grid-cols-3" style={{ background: 'var(--subtle-bg)', borderTop: '1px solid var(--border)' }}>
 
                 {/* Heat Map */}
-                <div className="p-4 flex flex-col gap-2">
-                  <p className="text-[10px] uppercase tracking-widest font-medium text-white/25">Heat Map</p>
-                  <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 60, border: '1px dashed rgba(255,255,255,0.08)' }}>
-                    <span className="text-[10px] text-white/20">Sofascore · coming soon</span>
+                <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
+                  <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
+                  <div className="flex flex-col items-center justify-center gap-2 flex-1 rounded-lg" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+                    <span style={{ fontSize: 28, opacity: 0.25 }}>🗺️</span>
+                    <span className="text-[10px] text-center" style={{ color: 'var(--text-faint)' }}>Position heat map coming soon</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.2)' }}>Coming Soon</span>
                   </div>
                 </div>
 
                 {/* Season Stats */}
-                <div className="p-4 flex flex-col gap-2">
-                  <p className="text-[10px] uppercase tracking-widest font-medium text-white/25">Season Stats</p>
-                  <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 60, border: '1px dashed rgba(255,255,255,0.08)' }}>
-                    <span className="text-[10px] text-white/20">Transfermarkt · coming soon</span>
-                  </div>
+                <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
+                  <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Season Stats</p>
+                  <SeasonStatsEditor
+                    json={form.seasonStats || '{"seasons":[]}'}
+                    onChange={v => set('seasonStats', v)}
+                  />
                 </div>
 
                 {/* FM Attributes */}
                 <div className="p-4 flex flex-col gap-2">
-                  <p className="text-[10px] uppercase tracking-widest font-medium text-white/25">FM Attributes</p>
+                  <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>FM Attributes</p>
                   <FMAttributesEditor
                     value={form.fmAttributes}
                     onChange={v => set('fmAttributes', v)}
@@ -378,7 +374,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
             <div className="px-6 pb-5 flex flex-col gap-3">
               {error && <p className="text-red-400 text-xs">{error}</p>}
               <div className="flex gap-3">
-                <button onClick={handleClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/70 transition-colors" style={{ background: 'var(--hover-bg)' }}>
+                <button onClick={handleClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
                   Cancel
                 </button>
                 <button onClick={handleSubmit} disabled={loading || !form.firstName.trim() || !form.lastName.trim()}
@@ -400,8 +396,8 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
 
 function CardRow({ label, children, highlight = false }: { label: string; children: React.ReactNode; highlight?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className={`text-[11px] flex-shrink-0 ${highlight ? 'text-white/50' : 'text-white/30'}`}>{label}</span>
+    <div className="field-row flex items-center justify-between gap-2" style={{ borderBottom: '1px solid var(--border)', padding: '4px 0' }}>
+      <span className="text-[11px] flex-shrink-0" style={{ color: highlight ? '#00c896' : 'var(--text-muted)' }}>{label}</span>
       <div className="flex items-center justify-end">{children}</div>
     </div>
   )
@@ -413,10 +409,8 @@ function CardInput({ value, onChange, placeholder, type = 'text', highlight = fa
 }) {
   return (
     <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder ?? '—'}
-      className={`text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5 placeholder-white/15 ${
-        highlight ? 'text-[#00c896]' : value ? 'text-white/80' : 'text-white/25'
-      }`}
-      style={{ width: 110, border: '1px solid transparent', caretColor: '#00c896' }}
+      className="text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5"
+      style={{ width: 110, color: highlight ? '#00c896' : value ? 'var(--text-primary)' : 'var(--text-faint)', border: '1px solid transparent', caretColor: '#00c896' }}
       onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
       onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
     />
@@ -426,8 +420,8 @@ function CardInput({ value, onChange, placeholder, type = 'text', highlight = fa
 function DateInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <input type="date" value={value} onChange={e => onChange(e.target.value)}
-      className="text-[11px] font-medium text-right bg-transparent focus:outline-none text-white/70 transition-all rounded px-1.5 py-0.5"
-      style={{ width: 120, border: '1px solid transparent', caretColor: '#00c896', colorScheme: 'dark' }}
+      className="text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5"
+      style={{ width: 120, color: value ? 'var(--text-primary)' : 'var(--text-faint)', border: '1px solid transparent', caretColor: '#00c896', colorScheme: 'dark' }}
       onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
       onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
     />
