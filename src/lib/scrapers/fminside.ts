@@ -7,34 +7,71 @@ export const fmInsideScraper: SiteScraper = {
   domains: ['fminside.net', 'www.fminside.net'],
   name: 'FMInside',
   async search(query: string): Promise<ScrapedPlayer[]> {
-    // Use ScrapingBee JS interaction: load the page, fill the name search input,
-    // trigger the live filter, wait for results to render.
     let html = ''
+
+    // ── Attempt 1: direct server-side POST (no ScrapingBee, fast) ──────────
+    // FMInside's search is a plain AJAX endpoint. Calling it server-to-server
+    // avoids ScrapingBee latency and the 15s route timeout.
+    // Try both the sequential db_id (7 = FM26 counting from FM20) and the
+    // version number (26) so we're covered if the mapping changes.
     try {
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 20000)
-      try {
-        const ajaxBody = `search_phrase=${encodeURIComponent(query)}&database_id=7`
-        const res = await sbInteract(
-          'https://fminside.net/players/26',
-          [
-            { wait_for: "div.players" },
-            { evaluate: `fetch('/resources/inc/ajax/search.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},body:'${ajaxBody}'}).then(r=>r.text()).then(h=>{document.querySelector('div.players').innerHTML=h})` },
-            { wait: 4000 },
-          ],
-          controller.signal,
-        )
-        if (!res.ok) return []
-        html = await res.text()
-      } finally {
-        clearTimeout(timer)
+      const safeQuery = encodeURIComponent(query).replace(/'/g, '%27')
+      const headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Referer': 'https://fminside.net/players/26',
+        'Origin': 'https://fminside.net',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': '*/*',
       }
-    } catch {
-      return []
+      for (const dbId of ['7', '26', '8', '6']) {
+        const res = await fetch('https://fminside.net/resources/inc/ajax/search.php', {
+          method: 'POST',
+          headers,
+          body: `search_phrase=${safeQuery}&database_id=${dbId}`,
+          signal: AbortSignal.timeout(5000),
+        }).catch(() => null)
+        if (res?.ok) {
+          const text = await res.text()
+          if (text.includes('class="player"')) { html = text; break }
+        }
+      }
+    } catch { /* fall through to sbInteract */ }
+
+    // ── Attempt 2: ScrapingBee JS interaction (fallback) ───────────────────
+    if (!html) {
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 18000)
+        try {
+          const safeQuery = encodeURIComponent(query).replace(/'/g, '%27')
+          const res = await sbInteract(
+            'https://fminside.net/players/26',
+            [
+              { wait_for: 'body' },
+              { wait: 1000 },
+              {
+                evaluate: `(function(){
+                  var dbId='7';
+                  try{var el=document.querySelector('[name="database_id"]');if(el&&el.value)dbId=el.value;}catch(e){}
+                  fetch('/resources/inc/ajax/search.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},body:'search_phrase=${safeQuery}&database_id='+dbId}).then(function(r){return r.text()}).then(function(h){var d=document.querySelector('div.players');if(d)d.innerHTML=h;});
+                })()`,
+              },
+              { wait: 3500 },
+            ],
+            controller.signal,
+          )
+          if (!res.ok) return []
+          html = await res.text()
+        } finally {
+          clearTimeout(timer)
+        }
+      } catch {
+        return []
+      }
     }
 
     // Filter: keep only players whose name matches at least 2 query words.
-    // Both sides are accent-stripped so "Hodžić" matches "hodzic".
     const queryWords = stripAccents(query.toLowerCase()).split(/\s+/).filter(w => w.length > 1)
     const nameMatches = (name: string) => {
       const lower = stripAccents(name.toLowerCase())
@@ -96,11 +133,11 @@ export const fmInsideScraper: SiteScraper = {
       if (players.length >= 10) break
     }
 
-    // Fetch profiles for top 3 in parallel to get attributes + wages (6s timeout each)
+    // Fetch profiles for top 3 in parallel to get attributes + wages (4s timeout each)
     await Promise.allSettled(
       players.slice(0, 3).map(async player => {
         const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 6000)
+        const timer = setTimeout(() => controller.abort(), 4000)
         try {
           const res = await sbFetch(player.sourceUrl, false, controller.signal)
           if (!res.ok) return

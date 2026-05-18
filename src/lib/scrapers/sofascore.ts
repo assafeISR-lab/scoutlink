@@ -1,6 +1,28 @@
 import type { SiteScraper, ScrapedPlayer } from './types'
 import { sbFetch } from './scrapingbee'
 
+// Direct fetch for Sofascore JSON API endpoints — much faster than going through
+// ScrapingBee. Falls back to sbFetch only if the direct call is blocked/fails.
+async function apiFetch(url: string, signal?: AbortSignal): Promise<Response> {
+  try {
+    const res = await fetch(url, {
+      signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': 'application/json, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.sofascore.com/',
+        'Origin': 'https://www.sofascore.com',
+      },
+    })
+    if (res.ok) return res
+    throw new Error(`HTTP ${res.status}`)
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') throw err
+    return sbFetch(url, false, signal)
+  }
+}
+
 const POSITION_MAP: Record<string, string> = {
   F: 'Forward', M: 'Midfielder', D: 'Defender', G: 'Goalkeeper',
 }
@@ -47,10 +69,10 @@ export const sofascoreScraper: SiteScraper = {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 12000)
       try {
-        // Fetch profile + seasons list in parallel
+        // Fetch profile + seasons list in parallel (direct API, no ScrapingBee)
         const [profileRes, seasonsRes] = await Promise.all([
-          sbFetch(`https://api.sofascore.com/api/v1/player/${playerId}`, false, controller.signal),
-          sbFetch(`https://api.sofascore.com/api/v1/player/${playerId}/statistics/seasons`, false, controller.signal),
+          apiFetch(`https://api.sofascore.com/api/v1/player/${playerId}`, controller.signal),
+          apiFetch(`https://api.sofascore.com/api/v1/player/${playerId}/statistics/seasons`, controller.signal),
         ])
 
         if (profileRes.ok) {
@@ -126,12 +148,11 @@ export const sofascoreScraper: SiteScraper = {
               }, [])
               .slice(0, 6)
 
-            // Fetch stats for all candidates in parallel
+            // Fetch stats for all candidates in parallel (direct API, no ScrapingBee)
             const statsResponses = await Promise.allSettled(
               candidateYears.map(([, { tId, sId }]) =>
-                sbFetch(
+                apiFetch(
                   `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/statistics/overall`,
-                  false,
                   controller.signal
                 )
               )

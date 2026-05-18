@@ -188,10 +188,12 @@ export default function SearchClient({ databases, userName }: { databases: Datab
         className="sticky top-0 z-20 border-b"
         style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,.07)' }}
       >
-        {/* Search row */}
-        <div className="flex items-center gap-3 px-8 py-3">
-          {/* Title */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+        {/* CSS grid: auto | 1fr | auto — both rows share the same columns so
+            "N results" sits under "Web Scout" and tabs align with the search input */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', columnGap: 12, paddingLeft: 32, paddingRight: 32 }}>
+
+          {/* ── Row 1, Col 1: Title ── */}
+          <div className="flex items-center gap-2 py-3 flex-shrink-0">
             <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,200,150,0.15)', border: '1px solid rgba(0,200,150,0.3)' }}>
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="#00c896">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -200,8 +202,8 @@ export default function SearchClient({ databases, userName }: { databases: Datab
             <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Web Scout</span>
           </div>
 
-          {/* Search form */}
-          <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1">
+          {/* ── Row 1, Col 2: Search form ── */}
+          <form onSubmit={handleSearch} className="flex items-center gap-2 py-3" style={{ maxWidth: 560 }}>
             <div className="flex-1 relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" viewBox="0 0 24 24" fill="rgba(0,200,150,0.5)">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -228,98 +230,102 @@ export default function SearchClient({ databases, userName }: { databases: Datab
             </button>
           </form>
 
-          <div className="flex-1" />
-
-          {/* Coverage dropdown */}
-          {searched && (
-            <div className="relative flex-shrink-0" ref={coverageRef}>
-              <button
-                onClick={() => setCoverageOpen(o => !o)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all"
-                style={{
-                  background: coverageOpen ? 'rgba(0,200,150,0.1)' : 'var(--subtle-bg)',
-                  border: `1.5px solid ${coverageOpen ? 'rgba(0,200,150,0.3)' : 'var(--border)'}`,
-                  color: coverageOpen ? '#00c896' : 'var(--text-muted)',
-                }}
-              >
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                </svg>
-                Coverage
-                <svg
-                  className="w-3 h-3 transition-transform duration-150"
-                  style={{ transform: coverageOpen ? 'rotate(180deg)' : 'none' }}
-                  viewBox="0 0 24 24" fill="currentColor"
-                >
-                  <path d="M7 10l5 5 5-5z"/>
-                </svg>
-              </button>
-
-              {coverageOpen && (
-                <div className="absolute right-0 top-full mt-2 z-50" style={{ width: 290 }}>
-                  <CoveragePanel
-                    siteStats={siteStats}
-                    results={results}
-                    loading={loading}
-                    noSitesSelected={noSitesSelected}
-                    paramsBySource={paramsBySource}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ── Player tabs row ── */}
-        {searched && !loading && results.length > 0 && (
-          <div
-            className="flex items-center gap-1 px-8 overflow-x-auto border-t"
-            style={{ borderColor: 'var(--border)', height: 46 }}
-          >
-            {/* Results count — same style as "Web Scout" title */}
-            <span className="text-sm font-bold flex-shrink-0 mr-2" style={{ color: 'var(--text-primary)' }}>
-              {results.length} result{results.length !== 1 ? 's' : ''}
-            </span>
-            <div className="w-px h-4 flex-shrink-0 mr-1" style={{ background: 'var(--border)' }} />
-
-            {results.map((player, i) => {
-              const initials = player.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-              const isActive = i === activeTabIdx
-              return (
+          {/* ── Row 1, Col 3: Coverage dropdown ── */}
+          <div className="flex items-center py-3" ref={coverageRef}>
+            {searched && (
+              <div className="relative flex-shrink-0">
                 <button
-                  key={player.id}
-                  onClick={() => setActiveTabIdx(i)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-shrink-0 transition-all text-xs font-medium"
+                  onClick={() => setCoverageOpen(o => !o)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all"
                   style={{
-                    background: isActive ? 'rgba(0,200,150,0.1)' : 'transparent',
-                    border: `1.5px solid ${isActive ? 'rgba(0,200,150,0.3)' : 'transparent'}`,
-                    color: isActive ? '#00c896' : 'var(--text-muted)',
+                    background: coverageOpen ? 'rgba(0,200,150,0.1)' : 'var(--subtle-bg)',
+                    border: `1.5px solid ${coverageOpen ? 'rgba(0,200,150,0.3)' : 'var(--border)'}`,
+                    color: coverageOpen ? '#00c896' : 'var(--text-muted)',
                   }}
                 >
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                  </svg>
+                  Coverage
+                  <svg
+                    className="w-3 h-3 transition-transform duration-150"
+                    style={{ transform: coverageOpen ? 'rotate(180deg)' : 'none' }}
+                    viewBox="0 0 24 24" fill="currentColor"
+                  >
+                    <path d="M7 10l5 5 5-5z"/>
+                  </svg>
+                </button>
+
+                {coverageOpen && (
+                  <div className="absolute right-0 top-full mt-2 z-50" style={{ width: 290 }}>
+                    <CoveragePanel
+                      siteStats={siteStats}
+                      results={results}
+                      loading={loading}
+                      noSitesSelected={noSitesSelected}
+                      paramsBySource={paramsBySource}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Row 2 (tabs) — only when results exist ── */}
+          {searched && !loading && results.length > 0 && <>
+            {/* Col 1: results count */}
+            <div className="flex items-center gap-2 flex-shrink-0" style={{ height: 46, borderTop: '1px solid var(--border)' }}>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                {results.length} result{results.length !== 1 ? 's' : ''}
+              </span>
+              <div className="w-px h-4 flex-shrink-0" style={{ background: 'var(--border)' }} />
+            </div>
+
+            {/* Col 2: tab buttons */}
+            <div className="flex items-center gap-1 overflow-x-auto" style={{ height: 46, borderTop: '1px solid var(--border)' }}>
+              {results.map((player, i) => {
+                const initials = player.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+                const isActive = i === activeTabIdx
+                return (
+                  <button
+                    key={player.id}
+                    onClick={() => setActiveTabIdx(i)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-shrink-0 transition-all text-xs font-medium"
                     style={{
-                      background: isActive ? 'rgba(0,200,150,0.2)' : 'var(--hover-bg)',
-                      color: isActive ? '#00c896' : 'var(--text-faint)',
+                      background: isActive ? 'rgba(0,200,150,0.1)' : 'transparent',
+                      border: `1.5px solid ${isActive ? 'rgba(0,200,150,0.3)' : 'transparent'}`,
+                      color: isActive ? '#00c896' : 'var(--text-muted)',
                     }}
                   >
-                    {initials}
-                  </div>
-                  <span>{player.name}</span>
-                  {player.team && (
-                    <span className="text-[10px]" style={{ color: isActive ? 'rgba(0,200,150,0.5)' : 'var(--text-faint)' }}>
-                      · {player.team}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        )}
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
+                      style={{
+                        background: isActive ? 'rgba(0,200,150,0.2)' : 'var(--hover-bg)',
+                        color: isActive ? '#00c896' : 'var(--text-faint)',
+                      }}
+                    >
+                      {initials}
+                    </div>
+                    <span>{player.name}</span>
+                    {player.team && (
+                      <span className="text-[10px]" style={{ color: isActive ? 'rgba(0,200,150,0.5)' : 'var(--text-faint)' }}>
+                        · {player.team}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Col 3: empty — keeps grid structure */}
+            <div style={{ height: 46, borderTop: '1px solid var(--border)' }} />
+          </>}
+
+        </div>
       </div>
 
       {/* ── Main content ───────────────────────────────────────── */}
-      <div className="py-6">
+      <div className="pt-[54px] pb-[18px]">
 
         {/* Loading */}
         {loading && (
@@ -446,7 +452,7 @@ function CoveragePanel({ siteStats, results, loading, noSitesSelected, paramsByS
       ) : orderedSites.length === 0 ? (
         <div className="px-4 py-5"><p className="text-xs text-center" style={{ color: 'var(--text-faint)' }}>No sites with scrapers were searched</p></div>
       ) : (
-        <div className="divide-y" style={{ borderColor: 'var(--border-light)' }}>
+        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
           {orderedSites.map(site => {
             const siteParams = paramsBySource[site.name] ?? []
             const hasParams  = siteParams.length > 0 && !site.noScraper
@@ -660,11 +666,12 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
     ? Math.floor((Date.now() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
 
+
   return (
     <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-4 p-5 border-b" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex items-start gap-4 border-b" style={{ borderColor: 'var(--border)', padding: '18px 22px' }}>
         {/* Photo */}
         {show('Photo') && (
           <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ background: 'var(--hover-bg)', border: '1px solid var(--border)' }}>
@@ -675,61 +682,66 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
           </div>
         )}
 
-        {/* Name + tags */}
+        {/* Name + meta line + source chips */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-bold leading-tight mb-1.5" style={{ color: 'var(--text-primary)' }}>{player.name}</h3>
-          <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="leading-tight mb-1.5" style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>{player.name}</h3>
+
+          {/* Meta line — position badge · club · league (green) · nationality · age */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-2">
             {(editData.position || player.position) && (
               <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>
                 {normalizePos(editData.position || player.position || '')}
               </span>
             )}
-            {(editData.clubName || player.team) && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{editData.clubName || player.team}</span>}
-            {(editData.nationality || player.nationality) && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{editData.nationality || player.nationality}</span>}
-            {age && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{age} yrs</span>}
+            {(editData.clubName || player.team) && (
+              <>
+                {(editData.position || player.position) && <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>·</span>}
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{editData.clubName || player.team}</span>
+              </>
+            )}
+            {(editData.league || player.league) && (
+              <>
+                <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>·</span>
+                <span className="text-xs font-medium" style={{ color: '#00c896' }}>{editData.league || player.league}</span>
+              </>
+            )}
+            {(editData.nationality || player.nationality) && (
+              <>
+                <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>·</span>
+                <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{editData.nationality || player.nationality}</span>
+              </>
+            )}
+            {age != null && (
+              <>
+                <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>·</span>
+                <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{age} yrs</span>
+              </>
+            )}
           </div>
+
         </div>
 
-        {/* Source chips */}
-        <div className="flex flex-col gap-1 flex-shrink-0">
-          {player.sources.map(src => {
-            const url = src === 'Transfermarkt' ? player.transfermarktUrl
-                      : src === 'Sofascore'     ? player.sofascoreUrl
-                      : src === 'FMInside'      ? player.fmInsideUrl
-                      : null
-            return url ? (
-              <a key={src} href={url} target="_blank" rel="noopener noreferrer"
-                className="text-[10px] flex items-center gap-1 px-2 py-0.5 rounded-md transition-colors hover:opacity-80"
-                style={{ background: 'rgba(0,200,150,0.08)', color: '#00c896bb', border: '1px solid rgba(0,200,150,0.2)' }}
-              >
-                {src} ↗
-              </a>
-            ) : (
-              <span key={src} className="text-[10px] px-2 py-0.5 rounded-md" style={{ background: 'var(--hover-bg)', color: 'var(--text-faint)', border: '1px solid var(--border)' }}>
-                {src}
-              </span>
-            )
-          })}
+        {/* Right column: key stats pills + Import button */}
+        <div className="flex flex-col items-end gap-3 flex-shrink-0">
+          {/* Import button */}
+          <button
+            onClick={() => setMerging(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-black transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+            Import to List
+          </button>
         </div>
-
-        {/* Import button */}
-        <button
-          onClick={() => setMerging(true)}
-          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-black transition-all hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
-          Import to List
-        </button>
       </div>
 
       {/* ── Body — 3 columns ── */}
-      <div className="grid grid-cols-3 divide-x" style={{ borderColor: 'var(--border)' }}>
+      <div className="grid grid-cols-3">
 
         {/* Physical */}
-        <div className="p-4">
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Physical</p>
-          <div className="space-y-2.5">
+        <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
+          <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Physical</p>
+          <div>
             {show('Position')      && <EditableField label="Position"     displayValue={normalizePos(editData.position) || null} editValue={editData.position}     onChange={v => updateField('position', v)} />}
             {show('Height')        && <EditableField label="Height"       displayValue={editData.heightCm ? `${editData.heightCm} cm` : null} editValue={editData.heightCm} onChange={v => updateField('heightCm', v)} inputType="number" />}
             {show('Age')           && <EditableField label="Age"          displayValue={age ? `${age} yrs` : null} editValue={editData.dateOfBirth} onChange={v => updateField('dateOfBirth', v)} inputType="date" />}
@@ -742,9 +754,9 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
         </div>
 
         {/* Contract & Value */}
-        <div className="p-4">
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Contract & Value</p>
-          <div className="space-y-2.5">
+        <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
+          <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Contract & Value</p>
+          <div>
             {show('Club')               && <EditableField label="Club"               displayValue={editData.clubName || null}         editValue={editData.clubName}          onChange={v => updateField('clubName', v)} />}
             {show('League')             && <EditableField label="League"             displayValue={editData.league || null}           editValue={editData.league}            onChange={v => updateField('league', v)} />}
             {show('Joining Date')       && <EditableField label="Joining Date"       displayValue={formatDateStr(editData.joiningDate)}   editValue={editData.joiningDate}   onChange={v => updateField('joiningDate', v)} inputType="date" />}
@@ -760,10 +772,10 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
 
         {/* Scout Info */}
         <div className="p-4">
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Scout Info</p>
-          <div className="space-y-2.5">
+          <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Scout Info</p>
+          <div>
             {show('Availability') && (
-              <div className="flex items-center justify-between gap-2">
+              <div className="field-row flex items-center justify-between gap-2 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
                 <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Availability</span>
                 <button
                   type="button"
@@ -797,56 +809,32 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
             {show('Description')  && <EditableField label="Description"  displayValue={editData.description || null} editValue={editData.description} onChange={v => updateField('description', v)} multiline />}
           </div>
 
-          {/* Custom extras */}
-          <div className="mt-3 pt-2.5 border-t" style={{ borderColor: 'rgba(0,200,150,0.15)' }}>
-            {editData.customExtras.map((extra, i) => (
-              <div key={i} className="flex items-center gap-1 mb-1.5">
-                <input type="text" value={extra.key} onChange={e => updateExtra(i, 'key', e.target.value)} placeholder="Field"
-                  className="flex-1 min-w-0 text-[11px] rounded px-1.5 py-0.5 focus:outline-none"
-                  style={{ background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--text-primary)' }}
-                />
-                <input type="text" value={extra.value} onChange={e => updateExtra(i, 'value', e.target.value)} placeholder="Value"
-                  className="flex-1 min-w-0 text-[11px] rounded px-1.5 py-0.5 focus:outline-none"
-                  style={{ background: 'rgba(0,200,150,0.07)', border: '1px solid rgba(0,200,150,0.3)', color: 'var(--text-primary)' }}
-                />
-                <button onClick={() => removeExtra(i)} style={{ color: 'var(--text-faint)' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#f87171' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)' }}>
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-              </div>
-            ))}
-            <button onClick={addExtra} className="flex items-center gap-1 text-[10px] mt-0.5 transition-colors" style={{ color: 'var(--text-faint)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#00c896' }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)' }}>
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-              Add field
-            </button>
-          </div>
         </div>
       </div>
 
       {/* ── Bottom — 3 columns ── */}
       {(show('Heat Map') || show('Season Stats') || show('FM Attributes')) && (
-        <div className="border-t grid grid-cols-3 divide-x" style={{ background: 'var(--subtle-bg)', borderColor: 'var(--border)' }}>
+        <div className="grid grid-cols-3" style={{ background: 'var(--subtle-bg)', borderTop: '1px solid var(--border)' }}>
 
           {/* Heat Map */}
-          <div className="p-4 flex flex-col gap-2">
+          <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
             {show('Heat Map') && (
               <>
-                <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Heat Map</p>
-                <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-                  <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
+                <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Heat Map</p>
+                <div className="flex flex-col items-center justify-center gap-2 rounded-xl text-center" style={{ minHeight: 120, border: '1.5px dashed var(--border)', padding: 16 }}>
+                  <span style={{ fontSize: 28, opacity: 0.25 }}>🗺️</span>
+                  <span className="text-[11px] leading-snug" style={{ color: 'var(--text-faint)' }}>Heat map shows player<br/>positioning on the pitch</span>
+                  <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.2)' }}>Coming Soon</span>
                 </div>
               </>
             )}
           </div>
 
           {/* Season Stats */}
-          <div className="p-4 flex flex-col gap-2">
+          <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
             {show('Season Stats') && (
               <>
-                <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
+                <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Season Stats</p>
                 <SeasonStatsEditor
                   json={editData.seasonStats || '{"seasons":[]}'}
                   onChange={v => updateField('seasonStats', v)}
@@ -858,7 +846,7 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
           {/* FM Attributes */}
           {show('FM Attributes') && (
             <div className="p-4 flex flex-col gap-2">
-              <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)' }}>FM Attributes</p>
+              <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)', letterSpacing: '0.9px' }}>FM Attributes</p>
               {localActiveFm ? (
                 <FMAttributesEditor
                   value={editData.fmAttributes}
@@ -901,9 +889,9 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
 function CardField({ label, value, highlight = false }: { label: string; value: string | null | undefined; highlight?: boolean }) {
   const hasValue = value != null && value !== ''
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="field-row flex items-center justify-between gap-2" style={{ borderBottom: '1px solid var(--border)', padding: '4px 0' }}>
       <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
-      <span className="text-[11px] font-medium text-right" style={{ color: hasValue ? (highlight ? '#00c896' : 'var(--text-primary)') : 'var(--text-faint)' }}>
+      <span className="text-[11px] font-semibold text-right" style={{ color: hasValue ? (highlight ? '#00c896' : 'var(--text-primary)') : 'var(--text-faint)' }}>
         {value ?? '—'}
       </span>
     </div>
@@ -932,13 +920,15 @@ function EditableField({ label, displayValue, editValue, onChange, highlight, is
     }
   }, [localActive])
 
+  const rowStyle: React.CSSProperties = { borderBottom: '1px solid var(--border)', padding: '4px 0' }
+
   if (!localActive) {
     if (isLink && displayValue?.startsWith('http')) {
       return (
-        <div className="flex items-center justify-between gap-2 group cursor-text" onClick={() => setLocalActive(true)}>
+        <div className="field-row flex items-center justify-between gap-2 group cursor-text" style={rowStyle} onClick={() => setLocalActive(true)}>
           <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
           <a href={displayValue} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-            className="text-[11px] font-medium text-right hover:underline" style={{ color: '#00c896' }}>
+            className="text-[11px] font-semibold text-right hover:underline" style={{ color: '#00c896' }}>
             View ↗
           </a>
         </div>
@@ -947,20 +937,35 @@ function EditableField({ label, displayValue, editValue, onChange, highlight, is
     const hasValue = displayValue != null && displayValue !== ''
     if (multiline) {
       return (
-        <div className="flex flex-col gap-1 group cursor-text" onClick={() => setLocalActive(true)}>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
-            <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-40 transition-opacity" viewBox="0 0 24 24" fill="#00c896"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        <div
+          className="cursor-text group"
+          style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}
+          onClick={() => setLocalActive(true)}
+        >
+          <p className="text-[9px] uppercase font-semibold mb-1.5" style={{ color: 'var(--text-faint)', letterSpacing: '0.7px' }}>{label}</p>
+          <div
+            className="text-[11px] whitespace-pre-wrap group-hover:border-[rgba(0,200,150,0.35)] transition-colors"
+            style={{
+              background: 'var(--subtle-bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 7,
+              padding: '7px 9px',
+              minHeight: 64,
+              lineHeight: 1.55,
+              color: hasValue ? 'var(--text-secondary)' : 'var(--text-faint)',
+              fontStyle: hasValue ? 'normal' : 'italic',
+            }}
+          >
+            {displayValue ?? 'No description yet. Click to add…'}
           </div>
-          <p className="text-[11px] whitespace-pre-wrap" style={{ color: hasValue ? 'var(--text-primary)' : 'var(--text-faint)' }}>{displayValue ?? '—'}</p>
         </div>
       )
     }
     return (
-      <div className="flex items-center justify-between gap-2 group cursor-text" onClick={() => setLocalActive(true)}>
+      <div className="field-row flex items-center justify-between gap-2 group cursor-text" style={rowStyle} onClick={() => setLocalActive(true)}>
         <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
         <div className="flex items-center gap-1">
-          <span className="text-[11px] font-medium text-right" style={{ color: hasValue ? (highlight ? '#00c896' : 'var(--text-primary)') : 'var(--text-faint)' }}>{displayValue ?? '—'}</span>
+          <span className="text-[11px] font-semibold text-right" style={{ color: hasValue ? (highlight ? '#00c896' : 'var(--text-primary)') : 'var(--text-faint)' }}>{displayValue ?? '—'}</span>
           <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0" viewBox="0 0 24 24" fill="#00c896"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
         </div>
       </div>
@@ -1018,7 +1023,7 @@ function LinkChips({ links }: { links: { label: string; value: string; onChange:
 
   return (
     <div>
-      <p className="text-[9px] uppercase tracking-[.7px] font-semibold mt-2.5 mb-1.5 pt-2.5 border-t" style={{ color: 'var(--text-faint)', borderColor: 'var(--border-light)' }}>Links</p>
+      <p className="text-[9px] uppercase tracking-[.7px] font-semibold mt-2.5 mb-1.5 pt-2.5 border-t" style={{ color: 'var(--text-faint)', borderColor: 'var(--border)' }}>Links</p>
       <div className="flex flex-wrap gap-1.5">
         {links.map(({ label, value, onChange }) => {
           const hasUrl = value.startsWith('http')

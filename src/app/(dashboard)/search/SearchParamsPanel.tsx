@@ -109,7 +109,7 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   position:             'Sofascore',
   joiningDate:          'Transfermarkt',
   contractExpiry:       'Sofascore',
-  seasonStats:          'Transfermarkt',
+  seasonStats:          'Sofascore',
   // Financial
   marketValue:          'Transfermarkt',
   fmWages:              'FMInside',

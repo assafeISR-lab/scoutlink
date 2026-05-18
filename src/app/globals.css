@@ -126,3 +126,16 @@ textarea[readonly],
 select:disabled {
   cursor: not-allowed;
 }
+
+/* ── Player card field rows ───────────────────────────────────── */
+.field-row:last-child {
+  border-bottom: none !important;
+}
+.field-row:hover {
+  background: var(--hover-bg);
+  margin-left: -4px;
+  margin-right: -4px;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+  border-radius: 5px;
+}
