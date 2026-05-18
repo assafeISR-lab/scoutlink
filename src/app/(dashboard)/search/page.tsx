@@ -14,12 +14,6 @@ export default async function SearchPage() {
   })
 
   return (
-    <>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-1">Web Scout a Player</h1>
-        <p style={{ color: 'var(--text-muted)' }} className="text-sm">Search for players and import them into your database</p>
-      </div>
-      <SearchClient databases={databases} userName={user.user_metadata?.full_name || user.email || 'Agent'} />
-    </>
+    <SearchClient databases={databases} userName={user.user_metadata?.full_name || user.email || 'Agent'} />
   )
 }
