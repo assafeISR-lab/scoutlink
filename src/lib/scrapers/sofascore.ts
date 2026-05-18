@@ -90,38 +90,51 @@ export const sofascoreScraper: SiteScraper = {
           const tournamentSeasons = seasonsData.uniqueTournamentSeasons as TournSeason[] | undefined
           const first = tournamentSeasons?.[0]
           if (first?.seasons?.length) {
-            const tId = first.uniqueTournament.id
+            const tId   = first.uniqueTournament.id
             const tName = first.uniqueTournament.name
-            const sId = first.seasons[0].id
-            const sYear = first.seasons[0].year
-            const statsRes = await sbFetch(
-              `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/statistics/overall`,
-              false,
-              controller.signal
+            // Fetch stats for up to last 3 seasons in parallel
+            const seasonSlice = first.seasons.slice(0, 3)
+            const statsResponses = await Promise.allSettled(
+              seasonSlice.map(sv =>
+                sbFetch(
+                  `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sv.id}/statistics/overall`,
+                  false,
+                  controller.signal
+                )
+              )
             )
-            if (statsRes.ok) {
-              const statsData = await statsRes.json() as Record<string, unknown>
-              const s = statsData.statistics as Record<string, number> | undefined
-              if (s) {
-                seasonStats = JSON.stringify({
-                  tournament: `${tName} ${sYear}`,
-                  apps:         s.appearances          ?? 0,
-                  min:          s.minutesPlayed         ?? 0,
-                  goals:        s.goals                 ?? 0,
-                  assists:      s.assists               ?? 0,
-                  rating:       s.rating       != null ? parseFloat(s.rating.toFixed(2))                       : null,
-                  xG:           s.expectedGoals != null ? parseFloat(s.expectedGoals.toFixed(2))               : null,
-                  xA:           s.expectedAssists != null ? parseFloat(s.expectedAssists.toFixed(2))           : null,
-                  shotsOnTarget:s.shotsOnTarget         ?? 0,
-                  keyPasses:    s.keyPasses             ?? 0,
-                  dribbles:     s.successfulDribbles    ?? 0,
-                  passAcc:      s.accuratePassesPercentage != null ? parseFloat(s.accuratePassesPercentage.toFixed(1)) : null,
-                  tackles:      s.tackles               ?? 0,
-                  interceptions:s.interceptions         ?? 0,
-                  yc:           s.yellowCards            ?? 0,
-                  rc:           (s.directRedCards ?? 0) + (s.yellowRedCards ?? 0),
-                })
-              }
+            const parseStat = (n: number | undefined, decimals: number): number | null =>
+              n != null ? parseFloat(n.toFixed(decimals)) : null
+
+            const seasons = (await Promise.all(
+              statsResponses.map(async (r, i) => {
+                if (r.status !== 'fulfilled' || !r.value.ok) return null
+                const d = await r.value.json() as Record<string, unknown>
+                const s = d.statistics as Record<string, number> | undefined
+                if (!s) return null
+                return {
+                  year:          seasonSlice[i].year,
+                  apps:          s.appearances          ?? 0,
+                  min:           s.minutesPlayed         ?? 0,
+                  goals:         s.goals                 ?? 0,
+                  assists:       s.assists               ?? 0,
+                  rating:        parseStat(s.rating,       2),
+                  xG:            parseStat(s.expectedGoals, 2),
+                  xA:            parseStat(s.expectedAssists, 2),
+                  shotsOnTarget: s.shotsOnTarget         ?? 0,
+                  keyPasses:     s.keyPasses             ?? 0,
+                  dribbles:      s.successfulDribbles    ?? 0,
+                  passAcc:       parseStat(s.accuratePassesPercentage, 1),
+                  tackles:       s.tackles               ?? 0,
+                  interceptions: s.interceptions         ?? 0,
+                  yc:            s.yellowCards            ?? 0,
+                  rc:            (s.directRedCards ?? 0) + (s.yellowRedCards ?? 0),
+                }
+              })
+            )).filter(Boolean)
+
+            if (seasons.length > 0) {
+              seasonStats = JSON.stringify({ tournament: tName, seasons })
             }
           }
         }

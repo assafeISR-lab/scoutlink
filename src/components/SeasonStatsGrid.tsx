@@ -1,7 +1,7 @@
 'use client'
 
-interface SeasonStats {
-  tournament: string
+interface SeasonData {
+  year: string
   apps: number
   min: number
   goals: number
@@ -19,6 +19,11 @@ interface SeasonStats {
   rc: number
 }
 
+interface MultiSeasonStats {
+  tournament: string
+  seasons: SeasonData[]
+}
+
 function fmt(v: unknown, decimals = 0): string {
   if (v == null) return '—'
   const n = Number(v)
@@ -26,38 +31,59 @@ function fmt(v: unknown, decimals = 0): string {
   return decimals ? n.toFixed(decimals) : String(Math.round(n))
 }
 
-export default function SeasonStatsGrid({ json }: { json: string }) {
-  let s: SeasonStats
-  try { s = JSON.parse(json) as SeasonStats } catch { return null }
+const STAT_ROWS: [string, (s: SeasonData) => string][] = [
+  ['Apps',       s => fmt(s.apps)],
+  ['Minutes',    s => fmt(s.min)],
+  ['Goals',      s => fmt(s.goals)],
+  ['Assists',    s => fmt(s.assists)],
+  ['Rating',     s => fmt(s.rating, 2)],
+  ['xG',         s => fmt(s.xG, 2)],
+  ['xA',         s => fmt(s.xA, 2)],
+  ['Shots',      s => fmt(s.shotsOnTarget)],
+  ['Key Passes', s => fmt(s.keyPasses)],
+  ['Dribbles',   s => fmt(s.dribbles)],
+  ['Pass %',     s => s.passAcc != null ? `${fmt(s.passAcc, 1)}%` : '—'],
+  ['Tackles',    s => fmt(s.tackles)],
+  ['Intercept',  s => fmt(s.interceptions)],
+  ['Yellow C',   s => fmt(s.yc)],
+  ['Red C',      s => fmt(s.rc)],
+]
 
-  const rows: [string, string, string, string][] = [
-    ['Apps',     fmt(s.apps),              'Min',      fmt(s.min)],
-    ['Goals',    fmt(s.goals),             'Assists',  fmt(s.assists)],
-    ['Rating',   fmt(s.rating, 2),         'xG',       fmt(s.xG, 2)],
-    ['SoT',      fmt(s.shotsOnTarget),     'xA',       fmt(s.xA, 2)],
-    ['KP',       fmt(s.keyPasses),         'Dribbles', fmt(s.dribbles)],
-    ['Pass%',    s.passAcc != null ? `${fmt(s.passAcc, 1)}%` : '—', 'Tackles', fmt(s.tackles)],
-    ['Intercept',fmt(s.interceptions),     'YC / RC',  `${fmt(s.yc)} / ${fmt(s.rc)}`],
-  ]
+export default function SeasonStatsGrid({ json }: { json: string }) {
+  let data: MultiSeasonStats
+  try { data = JSON.parse(json) as MultiSeasonStats } catch { return null }
+  if (!data.seasons?.length) return null
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-[9px] font-semibold truncate" style={{ color: '#00c896' }}>
-        {s.tournament}
-      </p>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-        {rows.map(([k1, v1, k2, v2]) => (
-          <div key={k1} className="contents">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] truncate" style={{ color: 'var(--text-faint)' }}>{k1}</span>
-              <span className="text-[9px] font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>{v1}</span>
-            </div>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] truncate" style={{ color: 'var(--text-faint)' }}>{k2}</span>
-              <span className="text-[9px] font-semibold tabular-nums" style={{ color: 'var(--text-primary)' }}>{v2}</span>
-            </div>
-          </div>
-        ))}
+    <div className="flex flex-col gap-1">
+      <p className="text-[9px] font-semibold" style={{ color: '#00c896' }}>{data.tournament}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse" style={{ fontSize: 9 }}>
+          <thead>
+            <tr>
+              <th style={{ minWidth: 64, textAlign: 'left', paddingRight: 6, paddingBottom: 3, color: 'var(--text-faint)', fontWeight: 500 }} />
+              {data.seasons.map(s => (
+                <th key={s.year} style={{ minWidth: 36, textAlign: 'right', paddingLeft: 4, paddingBottom: 3, color: '#00c896', fontWeight: 700 }}>
+                  {s.year}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {STAT_ROWS.map(([label, getValue]) => (
+              <tr key={label} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={{ paddingTop: 2, paddingBottom: 2, paddingRight: 6, color: 'var(--text-faint)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                  {label}
+                </td>
+                {data.seasons.map(s => (
+                  <td key={s.year} style={{ paddingTop: 2, paddingBottom: 2, paddingLeft: 4, textAlign: 'right', color: 'var(--text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                    {getValue(s)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
