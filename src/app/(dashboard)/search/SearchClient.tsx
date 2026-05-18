@@ -6,7 +6,7 @@ import ScoutLinkBallLoader from '@/components/ScoutLinkBallLoader'
 import { PARAM_KEYS, PARAM_LABELS, PARAM_SOURCES, type ParamKey, loadActive, loadCustomActive, loadParamSources, buildParamsBySource } from './SearchParamsPanel'
 import FMRadarChart from '@/components/FMRadarChart'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
-import SeasonStatsGrid from '@/components/SeasonStatsGrid'
+import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 
 // Params that are planned but not yet scraped — always shown as "coming soon"
 const COMING_SOON = new Set<string>(['heatMap'])
@@ -791,7 +791,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
       <div className="grid grid-cols-3 divide-x divide-white/5">
         {/* Physical */}
         <div className="p-4">
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Physical</p>
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Physical</p>
           <div className="space-y-2.5">
             {show('position')      && <EditableField label="Position"     editMode={editMode} displayValue={normalizePos(editData.position) || null} editValue={editData.position}     onChange={v => updateField('position', v)} />}
             {show('height')        && <EditableField label="Height"       editMode={editMode} displayValue={editData.heightCm ? `${editData.heightCm} cm` : null} editValue={editData.heightCm} onChange={v => updateField('heightCm', v)} inputType="number" />}
@@ -806,7 +806,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
 
         {/* Contract & Value */}
         <div className="p-4">
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Contract & Value</p>
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Contract & Value</p>
           <div className="space-y-2.5">
             {show('team')              && <EditableField label="Club"            editMode={editMode} displayValue={editData.clubName || null}       editValue={editData.clubName}       onChange={v => updateField('clubName', v)} />}
             {show('league')            && <EditableField label="League"          editMode={editMode} displayValue={editData.league || null}         editValue={editData.league}         onChange={v => updateField('league', v)} />}
@@ -823,7 +823,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
 
         {/* Scout Info */}
         <div className="p-4">
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Scout Info</p>
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Scout Info</p>
           <div className="space-y-2.5">
             {/* Availability toggle — always visible */}
             <div className="flex items-center justify-between gap-2">
@@ -917,13 +917,10 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
             {show('seasonStats') && (
               <>
                 <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
-                {editData.seasonStats ? (
-                  <SeasonStatsGrid json={editData.seasonStats} />
-                ) : (
-                  <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-                    <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · no data</span>
-                  </div>
-                )}
+                <SeasonStatsEditor
+                  json={editData.seasonStats || '{"seasons":[]}'}
+                  onChange={v => updateField('seasonStats', v)}
+                />
               </>
             )}
           </div>

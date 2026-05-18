@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import NotesSection from './NotesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
-import SeasonStatsGrid from '@/components/SeasonStatsGrid'
+import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import { loadActive } from '@/app/(dashboard)/search/SearchParamsPanel'
 
 interface FieldSource {
@@ -303,7 +303,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Physical */}
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Physical</p>
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Physical</p>
           <div className="space-y-2.5">
             <Row label="Position"      display={displayPosition(form.position || player.position || '')}  manual={isManual('position')}    isEditing={false} inputValue={form.position}    onChange={v => setField('position', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Height"        display={form.heightCm ? `${form.heightCm} cm` : player.heightCm ? `${player.heightCm} cm` : null}   manual={isManual('heightCm')}    isEditing={false} inputValue={form.heightCm}    onChange={v => setField('heightCm', v)}  inputType="number" onQuickSave={canWrite ? handleSave : undefined} />
@@ -318,7 +318,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Contract & Value */}
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Contract & Value</p>
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Contract & Value</p>
           <div className="space-y-2.5">
             <Row label="Club"            display={form.clubName || player.clubName || null}         manual={isManual('clubName')}    isEditing={false} inputValue={form.clubName}       onChange={v => setField('clubName', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="League"          display={form.league || null}    manual={cfGreen('league')}       isEditing={false} inputValue={form.league}         onChange={v => setField('league', v)} onQuickSave={canWrite ? handleSave : undefined} />
@@ -335,7 +335,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Scout Info */}
         <div className="p-4">
-          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Scout Info</p>
+          <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-muted)' }}>Scout Info</p>
           <div className="space-y-2.5">
             <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Available'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
@@ -371,11 +371,17 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         {/* Col 2: Season Stats */}
         <div className="p-4 flex flex-col gap-2">
           <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
-          {form.seasonStats ? (
+          {canWrite ? (
+            <SeasonStatsEditor
+              json={form.seasonStats || '{"seasons":[]}'}
+              onChange={v => setField('seasonStats', v)}
+              onCellBlur={handleSave}
+            />
+          ) : form.seasonStats ? (
             <SeasonStatsGrid json={form.seasonStats} />
           ) : (
             <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · no data</span>
+              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>no data</span>
             </div>
           )}
         </div>

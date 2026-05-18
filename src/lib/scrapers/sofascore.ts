@@ -109,9 +109,11 @@ export const sofascoreScraper: SiteScraper = {
             }
 
             // Sort newest-first; for equal canonical year prefer "XX/YY" (club season) over "YYYY"
-            // Then deduplicate by canonical year, keeping the highest-priority entry
+            // Then deduplicate by canonical year, keeping the highest-priority entry.
+            // Try up to 6 candidates so that years with no stats for this player are skipped
+            // and we still end up with 3 seasons of real data.
             const seenCanon = new Set<number>()
-            const recentYears = [...yearMap.entries()]
+            const candidateYears = [...yearMap.entries()]
               .sort((a, b) => {
                 const diff = normYearKey(b[0]) - normYearKey(a[0])
                 if (diff !== 0) return diff
@@ -122,11 +124,11 @@ export const sofascoreScraper: SiteScraper = {
                 if (!seenCanon.has(canon)) { seenCanon.add(canon); acc.push(entry) }
                 return acc
               }, [])
-              .slice(0, 3)
+              .slice(0, 6)
 
-            // Fetch stats for each year in parallel
+            // Fetch stats for all candidates in parallel
             const statsResponses = await Promise.allSettled(
-              recentYears.map(([, { tId, sId }]) =>
+              candidateYears.map(([, { tId, sId }]) =>
                 sbFetch(
                   `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/statistics/overall`,
                   false,
@@ -138,13 +140,14 @@ export const sofascoreScraper: SiteScraper = {
             const parseStat = (n: number | undefined, decimals: number): number | null =>
               n != null ? parseFloat(n.toFixed(decimals)) : null
 
+            // Take the 3 most recent years that actually returned stats
             const seasons = (await Promise.all(
               statsResponses.map(async (r, i) => {
                 if (r.status !== 'fulfilled' || !r.value.ok) return null
                 const d = await r.value.json() as Record<string, unknown>
                 const s = d.statistics as Record<string, number> | undefined
                 if (!s) return null
-                const [year, { tName }] = recentYears[i]
+                const [year, { tName }] = candidateYears[i]
                 return {
                   year,
                   tournament:    tName,
@@ -165,7 +168,7 @@ export const sofascoreScraper: SiteScraper = {
                   rc:            (s.directRedCards ?? 0) + (s.yellowRedCards ?? 0),
                 }
               })
-            )).filter(Boolean)
+            )).filter(Boolean).slice(0, 3)
 
             if (seasons.length > 0) {
               seasonStats = JSON.stringify({ seasons })

@@ -1,6 +1,8 @@
 import type { SiteScraper, ScrapedPlayer } from './types'
 import { sbFetch, sbInteract } from './scrapingbee'
 
+const stripAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+
 export const fmInsideScraper: SiteScraper = {
   domains: ['fminside.net', 'www.fminside.net'],
   name: 'FMInside',
@@ -31,10 +33,11 @@ export const fmInsideScraper: SiteScraper = {
       return []
     }
 
-    // Filter: keep only players whose name matches at least 2 query words
-    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 1)
+    // Filter: keep only players whose name matches at least 2 query words.
+    // Both sides are accent-stripped so "Hodžić" matches "hodzic".
+    const queryWords = stripAccents(query.toLowerCase()).split(/\s+/).filter(w => w.length > 1)
     const nameMatches = (name: string) => {
-      const lower = name.toLowerCase()
+      const lower = stripAccents(name.toLowerCase())
       return queryWords.filter(w => lower.includes(w)).length >= Math.min(2, queryWords.length)
     }
 
