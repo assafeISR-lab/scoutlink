@@ -85,6 +85,7 @@ export const fmInsideScraper: SiteScraper = {
         marketValue: null,
         fmWages: null,
         fmAttributes: null,
+        seasonStats: null,
         sourceUrl: `https://fminside.net/players/${dbVer}/${fullSlug}`,
         sourceName: 'FMInside',
       })

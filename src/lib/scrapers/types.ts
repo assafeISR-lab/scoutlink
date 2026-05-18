@@ -16,6 +16,7 @@ export interface ScrapedPlayer {
   marketValue: string | null
   fmWages: string | null
   fmAttributes: string | null
+  seasonStats: string | null
   sourceUrl: string
   sourceName: string
 }
@@ -47,6 +48,7 @@ export interface MergedPlayer {
   marketValue: string | null
   fmWages: string | null
   fmAttributes: string | null
+  seasonStats: string | null
   transfermarktUrl: string | null
   sofascoreUrl: string | null
   fmInsideUrl: string | null

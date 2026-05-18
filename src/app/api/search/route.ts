@@ -45,6 +45,7 @@ function buildMerged(group: ScrapedPlayer[], paramSources: Record<string, string
     marketValue:   pick('marketValue',    'marketValue',   tm, sc),
     fmWages:       pick('fmWages',        'fmWages',       fm),
     fmAttributes:  pick('fmAttributes',   'fmAttributes',  fm),
+    seasonStats:   pick('seasonStats',    'seasonStats',   sc),
     transfermarktUrl: tm?.sourceUrl ?? null,
     sofascoreUrl:     sc?.sourceUrl ?? null,
     fmInsideUrl:      fm?.sourceUrl ?? null,

@@ -77,6 +77,7 @@ export const wikipediaScraper: SiteScraper = {
         marketValue: null,
         fmWages: null,
         fmAttributes: null,
+        seasonStats: null,
         sourceUrl: s.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(s.title)}`,
         sourceName: 'Wikipedia',
       })

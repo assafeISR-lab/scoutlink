@@ -28,7 +28,7 @@ export const sofascoreScraper: SiteScraper = {
       return type === 'player'
     })
 
-    // Enrich top 3 results with player profile (height, DOB, market value, foot, contract, league)
+    // Enrich top 3 results with player profile + season stats (height, DOB, market value, foot, contract, league, stats)
     const top = footballPlayers.slice(0, 3)
     const enriched = await Promise.allSettled(top.map(async (entry) => {
       const p = (entry.entity ?? entry) as Record<string, unknown>
@@ -42,11 +42,17 @@ export const sofascoreScraper: SiteScraper = {
       let contractUntil: string | null = null
       let league: string | null = null
       let position = POSITION_MAP[p.position as string] ?? p.position as string ?? null
+      let seasonStats: string | null = null
 
       const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 6000)
+      const timer = setTimeout(() => controller.abort(), 12000)
       try {
-        const profileRes = await sbFetch(`https://api.sofascore.com/api/v1/player/${playerId}`, false, controller.signal)
+        // Fetch profile + seasons list in parallel
+        const [profileRes, seasonsRes] = await Promise.all([
+          sbFetch(`https://api.sofascore.com/api/v1/player/${playerId}`, false, controller.signal),
+          sbFetch(`https://api.sofascore.com/api/v1/player/${playerId}/statistics/seasons`, false, controller.signal),
+        ])
+
         if (profileRes.ok) {
           const profileData = await profileRes.json() as Record<string, unknown>
           const pl = (profileData.player ?? profileData) as Record<string, unknown>
@@ -77,6 +83,48 @@ export const sofascoreScraper: SiteScraper = {
             position = DETAILED_POSITION_MAP[detailed[0]] ?? detailed[0]
           }
         }
+
+        if (seasonsRes.ok) {
+          type TournSeason = { uniqueTournament: { id: number; name: string }; seasons: { id: number; year: string }[] }
+          const seasonsData = await seasonsRes.json() as Record<string, unknown>
+          const tournamentSeasons = seasonsData.uniqueTournamentSeasons as TournSeason[] | undefined
+          const first = tournamentSeasons?.[0]
+          if (first?.seasons?.length) {
+            const tId = first.uniqueTournament.id
+            const tName = first.uniqueTournament.name
+            const sId = first.seasons[0].id
+            const sYear = first.seasons[0].year
+            const statsRes = await sbFetch(
+              `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/statistics/overall`,
+              false,
+              controller.signal
+            )
+            if (statsRes.ok) {
+              const statsData = await statsRes.json() as Record<string, unknown>
+              const s = statsData.statistics as Record<string, number> | undefined
+              if (s) {
+                seasonStats = JSON.stringify({
+                  tournament: `${tName} ${sYear}`,
+                  apps:         s.appearances          ?? 0,
+                  min:          s.minutesPlayed         ?? 0,
+                  goals:        s.goals                 ?? 0,
+                  assists:      s.assists               ?? 0,
+                  rating:       s.rating       != null ? parseFloat(s.rating.toFixed(2))                       : null,
+                  xG:           s.expectedGoals != null ? parseFloat(s.expectedGoals.toFixed(2))               : null,
+                  xA:           s.expectedAssists != null ? parseFloat(s.expectedAssists.toFixed(2))           : null,
+                  shotsOnTarget:s.shotsOnTarget         ?? 0,
+                  keyPasses:    s.keyPasses             ?? 0,
+                  dribbles:     s.successfulDribbles    ?? 0,
+                  passAcc:      s.accuratePassesPercentage != null ? parseFloat(s.accuratePassesPercentage.toFixed(1)) : null,
+                  tackles:      s.tackles               ?? 0,
+                  interceptions:s.interceptions         ?? 0,
+                  yc:           s.yellowCards            ?? 0,
+                  rc:           (s.directRedCards ?? 0) + (s.yellowRedCards ?? 0),
+                })
+              }
+            }
+          }
+        }
       } catch { /* use basic data only */ } finally {
         clearTimeout(timer)
       }
@@ -99,6 +147,7 @@ export const sofascoreScraper: SiteScraper = {
         marketValue,
         fmWages: null,
         fmAttributes: null,
+        seasonStats,
         sourceUrl: `https://www.sofascore.com/player/${p.slug ?? (p.name as string)?.toLowerCase().replace(/\s+/g, '-')}/${playerId}`,
         sourceName: 'Sofascore',
       } as ScrapedPlayer

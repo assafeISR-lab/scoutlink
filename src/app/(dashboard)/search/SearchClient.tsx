@@ -6,9 +6,10 @@ import ScoutLinkBallLoader from '@/components/ScoutLinkBallLoader'
 import { PARAM_KEYS, PARAM_LABELS, PARAM_SOURCES, type ParamKey, loadActive, loadCustomActive, loadParamSources, buildParamsBySource } from './SearchParamsPanel'
 import FMRadarChart from '@/components/FMRadarChart'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
+import SeasonStatsGrid from '@/components/SeasonStatsGrid'
 
 // Params that are planned but not yet scraped — always shown as "coming soon"
-const COMING_SOON = new Set<string>(['heatMap', 'seasonStats'])
+const COMING_SOON = new Set<string>(['heatMap'])
 
 const POS_ALIASES: Record<string, string> = {
   DC: 'Centre-Back', CB: 'Centre-Back',
@@ -35,6 +36,7 @@ interface PlayerResult {
   marketValue: string | null
   fmWages: string | null
   fmAttributes: string | null
+  seasonStats: string | null
   transfermarktUrl: string | null
   sofascoreUrl: string | null
   fmInsideUrl: string | null
@@ -70,6 +72,7 @@ interface PlayerEditData {
   joiningDate: string
   contractExpiry: string
   fmAttributes: string
+  seasonStats: string
   description: string
   // Scout-added fields
   available: boolean
@@ -158,7 +161,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
           dateOfBirth: null, heightCm: null, preferredFoot: null,
           contractUntil: null, passports: null, joiningDate: null,
           photo: null, description: null, marketValue: null, fmWages: null,
-          fmAttributes: null, transfermarktUrl: null, sofascoreUrl: null,
+          fmAttributes: null, seasonStats: null, transfermarktUrl: null, sofascoreUrl: null,
           fmInsideUrl: null, sources: [],
         })
       }
@@ -173,7 +176,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
         dateOfBirth: null, heightCm: null, preferredFoot: null,
         contractUntil: null, passports: null, joiningDate: null,
         photo: null, description: null, marketValue: null, fmWages: null,
-        fmAttributes: null, transfermarktUrl: null, sofascoreUrl: null,
+        fmAttributes: null, seasonStats: null, transfermarktUrl: null, sofascoreUrl: null,
         fmInsideUrl: null, sources: [],
       }
       setResults([stub])
@@ -362,6 +365,8 @@ function isFound(results: PlayerResult[], key: string): boolean {
     case 'fmWages':           return results.some(p => !!p.fmWages)
     case 'fmAttributes':
       return results.some(p => !!p.fmAttributes)
+    case 'seasonStats':
+      return results.some(p => !!p.seasonStats)
     default:
       return false
   }
@@ -580,6 +585,7 @@ const FIELD_PARAM_KEY: Record<string, string> = {
   'Market Value':           'marketValue',
   'FM Wages':               'fmWages',
   'FM Attributes':          'fmAttributes',
+  'Season Stats':           'seasonStats',
   'Fee Expectation':        'transferFeeExpect',
   'Fee (Real)':             'transferFeeReal',
   'Salary Expectation':     'salaryExpect',
@@ -641,6 +647,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
     joiningDate: player.joiningDate ?? '',
     contractExpiry: player.contractUntil ?? '',
     fmAttributes: player.fmAttributes ?? '',
+    seasonStats: player.seasonStats ?? '',
     description: player.description ?? '',
     available: true,
     transferFeeExpect: '',
@@ -910,9 +917,13 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
             {show('seasonStats') && (
               <>
                 <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Season Stats</p>
-                <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-                  <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Transfermarkt · coming soon</span>
-                </div>
+                {editData.seasonStats ? (
+                  <SeasonStatsGrid json={editData.seasonStats} />
+                ) : (
+                  <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+                    <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · no data</span>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1217,6 +1228,7 @@ function ImportModal({ players, databases, editedData, onClose }: {
       ...addCf('contractExpiry',p => p.contractUntil,   firstEd?.contractExpiry),
       ...addCf('fmWages',       p => p.fmWages,         firstEd?.fmWages),
       ...addCf('fmAttributes',  p => p.fmAttributes,    firstEd?.fmAttributes),
+      ...addCf('seasonStats',   p => p.seasonStats,     firstEd?.seasonStats),
       ...addCf('description',   p => p.description,    firstEd?.description),
       ...(tmUrl ? { transfermarktUrl: tmUrl } : {}),
       ...(scUrl ? { sofascoreUrl: scUrl } : {}),

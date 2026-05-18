@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import NotesSection from './NotesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
+import SeasonStatsGrid from '@/components/SeasonStatsGrid'
 import { loadActive } from '@/app/(dashboard)/search/SearchParamsPanel'
 
 interface FieldSource {
@@ -107,6 +108,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     tiktok:            cf('tiktok'),
     highlights:        cf('highlights'),
     fmAttributes:      cf('fmAttributes'),
+    seasonStats:       cf('seasonStats'),
     description:       cf('description'),
     sentBy:            cf('sentBy'),
     playerPhone:       cf('playerPhone'),
@@ -139,7 +141,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
     // Split changed fields into DB fields and custom fields
     const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','available'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','description','sentBy','playerPhone','agentPhone']
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','description','sentBy','playerPhone','agentPhone']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -369,9 +371,13 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         {/* Col 2: Season Stats */}
         <div className="p-4 flex flex-col gap-2">
           <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Season Stats</p>
-          <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Transfermarkt · coming soon</span>
-          </div>
+          {form.seasonStats ? (
+            <SeasonStatsGrid json={form.seasonStats} />
+          ) : (
+            <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
+              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · no data</span>
+            </div>
+          )}
         </div>
 
         {/* Col 3: FM Attributes */}
