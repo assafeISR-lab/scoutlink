@@ -50,13 +50,14 @@ function PlayerAvatar({ player, photoEnabled }: { player: Player; photoEnabled: 
         src={photo}
         alt=""
         referrerPolicy="no-referrer"
-        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
         onError={() => setFailed(true)}
       />
     )
   }
   return (
-    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-black flex-shrink-0" style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
+    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+      style={{ background: '#1a1d27', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.1)' }}>
       {player.firstName[0]}{player.lastName[0]}
     </div>
   )
@@ -233,7 +234,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
   const activeChips = getActiveChips(filters)
 
   const visibleColCount = 2 +
-    (show('position') ? 1 : 0) + (show('team') ? 1 : 0) + (show('league') ? 1 : 0) +
+    ((show('team') || show('league')) ? 1 : 0) +
     (show('nationality') ? 1 : 0) + (showDob ? 1 : 0) + (show('height') ? 1 : 0) +
     (show('marketValue') ? 1 : 0) + (show('contractExpiry') ? 1 : 0) +
     (show('preferredFoot') ? 1 : 0) + (show('fmWages') ? 1 : 0) + (canEdit ? 1 : 0)
@@ -260,7 +261,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
         onClosePending={() => setPendingFilter(null)}
       />
 
-      <div className="rounded-2xl border border-white/5" style={{ background: 'var(--card-bg)', borderRadius: '16px', overflow: 'hidden' }}>
+      <div className="mt-4 rounded-2xl border border-white/5" style={{ background: 'var(--card-bg)', borderRadius: '16px', overflow: 'hidden' }}>
         <div style={{ borderRadius: '16px', overflow: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
           <table style={{ minWidth: '600px', width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -268,17 +269,15 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                 <th className="px-3 py-3 text-left" style={{ minWidth: 100, position: 'sticky', left: 0, top: 0, background: 'var(--card-solid)', zIndex: 4 }}>
                   <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>Status</span>
                 </th>
-                <ColHeader label="Player"       sortKey="name"          currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={200} />
-                {show('position')    && <ColHeader label="Position"     sortKey="position"     currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
-                {show('team')        && <ColHeader label="Club"         sortKey="club"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={150} />}
-                {show('league')      && <ColHeader label="League"       sortKey="league"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={140} />}
-                {show('nationality') && <ColHeader label="Nationality"  sortKey="nationality"  currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={120} />}
-                {showDob             && <ColHeader label="Date of Birth" sortKey="age"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={130} />}
-                {show('height')      && <ColHeader label="Height"       sortKey="height"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={90} />}
-                {show('marketValue') && <ColHeader label="Market Value" sortKey="marketValue"  currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={130} />}
-                {show('contractExpiry') && <ColHeader label="Contract"  sortKey="contractExpiry" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
-                {show('preferredFoot') && <ColHeader label="Foot"       sortKey="name"         currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={80} noSort />}
-                {show('fmWages')     && <ColHeader label="FM Wages"     sortKey="fmWages"      currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
+                <ColHeader label="Player"        sortKey="name"           currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={200} />
+                {(show('team') || show('league')) && <ColHeader label="Club / League" sortKey="club" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={160} />}
+                {show('nationality') && <ColHeader label="Nationality"  sortKey="nationality"    currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={120} />}
+                {showDob             && <ColHeader label="Date of Birth" sortKey="age"           currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={130} />}
+                {show('height')      && <ColHeader label="Height"        sortKey="height"        currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={90} />}
+                {show('marketValue') && <ColHeader label="Market Value"  sortKey="marketValue"   currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={130} />}
+                {show('contractExpiry') && <ColHeader label="Contract"   sortKey="contractExpiry" currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
+                {show('preferredFoot') && <ColHeader label="Foot"        sortKey="name"          currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={80} noSort />}
+                {show('fmWages')     && <ColHeader label="FM Wages"      sortKey="fmWages"       currentSort={sortKey} sortDir={sortDir} onSort={handleSort} minWidth={110} />}
                 {canEdit && <th className="px-4 py-3" style={{ minWidth: 72, position: 'sticky', right: 0, top: 0, background: 'var(--card-solid)', zIndex: 4 }} />}
               </tr>
             </thead>
@@ -290,48 +289,58 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                   </td>
                 </tr>
               ) : sorted.map((player, i) => {
+                const isAvail = availOverride[player.id] ?? player.available
                 const rowBg = i % 2 !== 0 ? 'var(--subtle-bg)' : 'var(--card-solid)'
                 const rowBgSolid = i % 2 !== 0 ? 'var(--row-odd-solid)' : 'var(--card-solid)'
                 return (
-                  <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group" style={{ background: rowBg }}>
+                  <tr key={player.id} className="border-b border-white/5 last:border-0 transition-colors group"
+                    style={{ background: rowBg, borderLeft: `3px solid ${isAvail ? '#10b981' : '#ef4444'}` }}>
                     <td className="px-3 py-3" style={{ position: 'sticky', left: 0, background: rowBgSolid, zIndex: 3 }}>
-                      {(() => {
-                        const isAvail = availOverride[player.id] ?? player.available
-                        return (
-                          <button
-                            onClick={() => toggleAvailable(player)}
-                            title={isAvail ? 'Mark Not Available' : 'Mark Available'}
-                            className="text-[10px] font-semibold px-2 py-1 rounded-full transition-all whitespace-nowrap"
-                            style={{
-                              background: isAvail ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
-                              color: isAvail ? '#00c896' : '#ff6464',
-                              border: `1px solid ${isAvail ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
-                            }}
-                          >
-                            {isAvail ? 'Available' : 'Not Available'}
-                          </button>
-                        )
-                      })()}
+                      <button
+                        onClick={() => toggleAvailable(player)}
+                        title={isAvail ? 'Mark Not Available' : 'Mark Available'}
+                        className="flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-md transition-all whitespace-nowrap"
+                        style={{
+                          background: isAvail ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
+                          color: isAvail ? '#00c896' : '#ff6464',
+                          border: `1px solid ${isAvail ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+                        }}
+                      >
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: isAvail ? '#10b981' : '#ef4444', flexShrink: 0, display: 'inline-block' }} />
+                        {isAvail ? 'Available' : 'Not Available'}
+                      </button>
                     </td>
-                    <td className="px-6 py-3" style={{ maxWidth: 280, boxShadow: '4px 0 8px -2px rgba(0,0,0,0.4)' }}>
+                    <td className="px-6 py-3" style={{ maxWidth: 280, borderRight: '1px solid rgba(255,255,255,0.05)' }}>
                       <Link href={`/databases/${databaseId}/players/${player.id}`} className="flex items-center gap-3 overflow-hidden">
                         <PlayerAvatar player={player} photoEnabled={photoEnabled} />
-                        <p
-                          className="text-sm font-medium text-white group-hover:text-[#00c896] transition-colors truncate"
-                          style={{ maxWidth: '30ch' }}
-                          title={`${player.firstName} ${player.lastName}`}
-                        >{player.firstName} {player.lastName}</p>
+                        <div className="min-w-0">
+                          <p
+                            className="text-sm font-medium text-white/80 group-hover:text-white transition-colors truncate"
+                            style={{ maxWidth: '30ch' }}
+                            title={`${player.firstName} ${player.lastName}`}
+                          >{player.firstName} {player.lastName}</p>
+                          {player.position && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded inline-block mt-0.5 truncate" style={{ maxWidth: '24ch', background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>
+                              {player.position}
+                            </span>
+                          )}
+                        </div>
                       </Link>
                     </td>
-                    {show('position') && (
-                      <td className="px-6 py-3 text-sm">
-                        {player.position
-                          ? <span className="text-xs px-2 py-0.5 rounded-full truncate inline-block" style={{ maxWidth: '30ch', background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }} title={player.position}>{player.position}</span>
-                          : <span className="text-white/25">—</span>}
+                    {(show('team') || show('league')) && (
+                      <td className="px-6 py-3">
+                        {show('team') && (
+                          <div className="text-sm truncate" style={{ maxWidth: '24ch', color: 'rgba(255,255,255,0.75)' }}>
+                            {player.clubName || <span style={{ color: 'rgba(255,255,255,0.25)' }}>—</span>}
+                          </div>
+                        )}
+                        {show('league') && (
+                          <div className="text-xs truncate mt-0.5" style={{ maxWidth: '24ch', color: 'rgba(255,255,255,0.4)' }}>
+                            {getCF(player, 'league') || (!show('team') && <span style={{ color: 'rgba(255,255,255,0.25)' }}>—</span>)}
+                          </div>
+                        )}
                       </td>
                     )}
-                    {show('team')        && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={player.clubName ?? ''} /></td>}
-                    {show('league')      && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={getCF(player, 'league')} /></td>}
                     {show('nationality') && <td className="px-6 py-3 text-sm text-white/75"><Trunc text={player.nationality ?? ''} /></td>}
                     {showDob && (
                       <td className="px-6 py-3 text-sm text-white/75">
@@ -346,7 +355,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                     {show('marketValue') && (() => {
                       const val = player.marketValue ? `€${(player.marketValue / 1_000_000).toFixed(1)}M` : ''
                       return (
-                        <td className="px-6 py-3 text-sm" style={{ color: val ? '#00c896' : 'rgba(255,255,255,0.25)' }}>
+                        <td className="px-6 py-3 text-sm" style={{ color: val ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.25)' }}>
                           <Trunc text={val} />
                         </td>
                       )
@@ -369,7 +378,7 @@ const PlayersTable = forwardRef<PlayersTableHandle, {
                       return <td className="px-6 py-3 text-sm text-white/75"><Trunc text={display} /></td>
                     })()}
                     {canEdit && (
-                      <td className="px-4 py-3" style={{ position: 'sticky', right: 0, background: rowBgSolid, zIndex: 3, boxShadow: '-4px 0 8px -2px rgba(0,0,0,0.4)' }}>
+                      <td className="px-4 py-3" style={{ position: 'sticky', right: 0, background: rowBgSolid, zIndex: 3, borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => setEditingPlayer(player)} title="Edit" className="w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition-colors" style={{ background: 'var(--hover-bg)' }}>
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>

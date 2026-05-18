@@ -48,58 +48,66 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
 
   return (
     <>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-white/30 mb-6">
-        <Link href="/databases" className="hover:text-white/60 transition-colors">Players Watch List</Link>
-        <span>/</span>
-        <span className="text-white/60">{databaseName}</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-1">{databaseName}</h1>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {players.length} player{players.length !== 1 ? 's' : ''} · {isOwner ? 'You own this database' : `Shared by ${ownerName}`}
-          </p>
+      {/* Header — compact single row */}
+      <div className="flex items-center gap-3 mb-4">
+        {/* Left: breadcrumb + name + count */}
+        <div className="flex items-center gap-2 min-w-0 mr-auto">
+          <Link href="/databases" className="text-xs transition-colors flex-shrink-0" style={{ color: 'var(--text-faint)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}>
+            Lists
+          </Link>
+          <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>/</span>
+          <h1 className="text-base font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{databaseName}</h1>
+          <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium" style={{ background: 'var(--subtle-bg)', color: 'var(--text-faint)', border: '1px solid var(--border)' }}>
+            {players.length} {players.length !== 1 ? 'players' : 'player'}
+          </span>
+          <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-faint)' }}>
+            · {isOwner ? 'Owner' : `Shared by ${ownerName}`}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          {players.length > 0 && (
-            <button
-              onClick={() => tableRef.current?.openCreateReport()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: 'rgba(255,159,67,0.12)', color: '#ff9f43', border: '1px solid rgba(255,159,67,0.25)' }}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-              </svg>
-              Create Report
-            </button>
-          )}
-          {canEdit && (
-            <button onClick={() => setShowImport(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.25)' }}>
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-              Import
-            </button>
-          )}
+
+        {/* Right: action buttons */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <ColumnPicker
             databaseId={databaseId}
             columnConfig={colConfig}
             onUpdate={setColConfig}
           />
+          {canEdit && (
+            <button onClick={() => setShowImport(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all"
+              style={{ background: 'var(--subtle-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Import
+            </button>
+          )}
+          {players.length > 0 && (
+            <button
+              onClick={() => tableRef.current?.openCreateReport()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: 'rgba(255,159,67,0.12)', color: '#ff9f43', border: '1px solid rgba(255,159,67,0.25)' }}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+              </svg>
+              Create Report
+            </button>
+          )}
           {canEdit && <AddPlayerButton databaseId={databaseId} />}
           {isOwner && (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-              </svg>
-              Delete List
-            </button>
+            <>
+              <div className="w-px h-5 flex-shrink-0" style={{ background: 'var(--border)' }} />
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all"
+                style={{ background: 'transparent', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+                Delete List
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -129,6 +137,7 @@ export default function DatabasePageClient({ players, databaseId, databaseName, 
                 onClick={async () => {
                   setDeleting(true)
                   await fetch(`/api/databases/${databaseId}`, { method: 'DELETE' })
+                  window.dispatchEvent(new Event('scoutlink:db-deleted'))
                   router.push('/databases')
                 }}
                 disabled={deleting}

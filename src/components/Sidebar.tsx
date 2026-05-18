@@ -45,6 +45,18 @@ export default function Sidebar({ userName, userEmail, userInitial, userId, play
       .catch(() => {})
   }, [expanded])
 
+  // Re-fetch when a list is deleted elsewhere
+  useEffect(() => {
+    function handleDbDeleted() {
+      fetch('/api/databases')
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setDatabases(data) })
+        .catch(() => {})
+    }
+    window.addEventListener('scoutlink:db-deleted', handleDbDeleted)
+    return () => window.removeEventListener('scoutlink:db-deleted', handleDbDeleted)
+  }, [])
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!newName.trim()) return

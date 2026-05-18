@@ -26,7 +26,7 @@ export default function DatabasesClient({
       <ScoutAIBar />
       <SearchAllLists />
 
-      <section className="mb-8">
+      <section className="mb-6">
         <h2 className="text-xs uppercase tracking-widest text-white/30 mb-4">
           My Lists ({ownedDbs.length})
         </h2>
@@ -65,6 +65,7 @@ function DatabaseCard({ id, name, playerCount, sharedWith, permission, ownerName
     e.stopPropagation()
     setDeleting(true)
     await fetch(`/api/databases/${id}`, { method: 'DELETE' })
+    window.dispatchEvent(new Event('scoutlink:db-deleted'))
     router.refresh()
   }
 
@@ -164,7 +165,7 @@ function ScoutAIBar() {
 
   return (
     <div
-      className="relative flex items-center gap-2 rounded-xl px-3 py-2 mb-8"
+      className="relative flex items-center gap-2 rounded-xl px-3 py-2 mb-3"
       style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
     >
       {/* AI icon */}

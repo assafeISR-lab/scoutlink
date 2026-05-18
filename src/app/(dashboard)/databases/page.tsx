@@ -43,10 +43,10 @@ export default async function DatabasesPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-1">My Players Watch List</h1>
-          <p style={{ color: 'var(--text-muted)' }} className="text-sm">Manage your scouting Lists</p>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="mr-auto">
+          <h1 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Players Watch List</h1>
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Manage your scouting lists</p>
         </div>
         <ImportDatabasesButton databases={[
           ...ownedSerialized.map(d => ({ id: d.id, name: d.name })),
