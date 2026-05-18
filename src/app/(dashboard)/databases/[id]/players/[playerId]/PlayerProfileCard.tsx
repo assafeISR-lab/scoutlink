@@ -362,7 +362,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Col 1: Heat Map */}
         <div className="p-4 flex flex-col gap-2">
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Heat Map</p>
+          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Heat Map</p>
           <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
             <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
           </div>
@@ -382,7 +382,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Col 3: FM Attributes */}
         <div className="p-4 flex flex-col gap-2">
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-faint)' }}>FM Attributes</p>
+          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)' }}>FM Attributes</p>
           {localActiveFm ? (
             <FMAttributesEditor
               value={form.fmAttributes ?? ''}

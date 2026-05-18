@@ -904,7 +904,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           <div className="p-4 flex flex-col gap-2">
             {show('heatMap') && (
               <>
-                <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Heat Map</p>
+                <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Heat Map</p>
                 <div className="flex-1 rounded-lg flex items-center justify-center" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
                   <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Sofascore · coming soon</span>
                 </div>
@@ -931,7 +931,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           {/* Col 3: FM Attributes radar (aligns with Physical column) */}
           {show('fmAttributes') && (
             <div className="p-4 flex flex-col gap-2">
-              <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: (editMode || localActiveFm) ? 'rgba(0,200,150,0.8)' : 'var(--text-faint)' }}>FM Attributes</p>
+              <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: (editMode || localActiveFm) ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)' }}>FM Attributes</p>
               {(editMode || localActiveFm) ? (
                 <FMAttributesEditor
                   value={editData.fmAttributes}
