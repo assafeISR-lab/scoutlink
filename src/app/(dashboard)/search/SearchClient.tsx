@@ -916,7 +916,7 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           <div className="p-4 flex flex-col gap-2">
             {show('seasonStats') && (
               <>
-                <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Season Stats</p>
+                <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
                 {editData.seasonStats ? (
                   <SeasonStatsGrid json={editData.seasonStats} />
                 ) : (

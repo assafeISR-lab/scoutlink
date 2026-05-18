@@ -59,11 +59,11 @@ export default function SeasonStatsGrid({ json }: { json: string }) {
       <table className="w-full border-collapse" style={{ fontSize: 9 }}>
         <thead>
           <tr>
-            <th style={{ textAlign: 'left', paddingRight: 6, paddingBottom: 2, color: 'var(--text-faint)', fontWeight: 500, minWidth: 64 }} />
+            <th style={{ textAlign: 'left', paddingRight: 6, paddingBottom: 2, color: 'var(--text-muted)', fontWeight: 500, minWidth: 64 }} />
             {data.seasons.map(s => (
               <th key={s.year} style={{ textAlign: 'right', paddingLeft: 4, paddingBottom: 2, minWidth: 40, verticalAlign: 'bottom' }}>
                 <div style={{ color: '#00c896', fontWeight: 700 }}>{s.year}</div>
-                <div style={{ color: 'var(--text-faint)', fontWeight: 400, fontSize: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>
+                <div style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>
                   {s.tournament}
                 </div>
               </th>
@@ -73,7 +73,7 @@ export default function SeasonStatsGrid({ json }: { json: string }) {
         <tbody>
           {STAT_ROWS.map(([label, getValue]) => (
             <tr key={label} style={{ borderTop: '1px solid var(--border)' }}>
-              <td style={{ paddingTop: 2, paddingBottom: 2, paddingRight: 6, color: 'var(--text-faint)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+              <td style={{ paddingTop: 2, paddingBottom: 2, paddingRight: 6, color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>
                 {label}
               </td>
               {data.seasons.map(s => (

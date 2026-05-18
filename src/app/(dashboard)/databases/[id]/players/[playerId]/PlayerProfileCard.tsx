@@ -370,7 +370,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Col 2: Season Stats */}
         <div className="p-4 flex flex-col gap-2">
-          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-faint)' }}>Season Stats</p>
+          <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>Season Stats</p>
           {form.seasonStats ? (
             <SeasonStatsGrid json={form.seasonStats} />
           ) : (
