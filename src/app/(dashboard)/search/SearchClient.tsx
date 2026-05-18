@@ -181,7 +181,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
   const activePlayer = results[activeTabIdx] ?? null
 
   return (
-    <div className="-mx-8 -mt-8">
+    <div className="-mt-8">
 
       {/* ── Sticky top bar ─────────────────────────────────────── */}
       <div
@@ -201,7 +201,7 @@ export default function SearchClient({ databases, userName }: { databases: Datab
           </div>
 
           {/* Search form */}
-          <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1" style={{ maxWidth: 560 }}>
+          <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1">
             <div className="flex-1 relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" viewBox="0 0 24 24" fill="rgba(0,200,150,0.5)">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -276,6 +276,12 @@ export default function SearchClient({ databases, userName }: { databases: Datab
             className="flex items-center gap-1 px-8 overflow-x-auto border-t"
             style={{ borderColor: 'var(--border)', height: 46 }}
           >
+            {/* Results count — same style as "Web Scout" title */}
+            <span className="text-sm font-bold flex-shrink-0 mr-2" style={{ color: 'var(--text-primary)' }}>
+              {results.length} result{results.length !== 1 ? 's' : ''}
+            </span>
+            <div className="w-px h-4 flex-shrink-0 mr-1" style={{ background: 'var(--border)' }} />
+
             {results.map((player, i) => {
               const initials = player.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
               const isActive = i === activeTabIdx
@@ -308,15 +314,12 @@ export default function SearchClient({ databases, userName }: { databases: Datab
                 </button>
               )
             })}
-            <span className="ml-auto pl-4 text-[10px] flex-shrink-0" style={{ color: 'var(--text-faint)' }}>
-              {results.length} result{results.length !== 1 ? 's' : ''}
-            </span>
           </div>
         )}
       </div>
 
       {/* ── Main content ───────────────────────────────────────── */}
-      <div className="px-8 py-6">
+      <div className="py-6">
 
         {/* Loading */}
         {loading && (
@@ -465,6 +468,11 @@ function CoveragePanel({ siteStats, results, loading, noSitesSelected, paramsByS
                     <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--hover-bg)' }}>
                       <svg className="w-3 h-3 opacity-20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     </div>
+                  ) : site.count > 0 && hasParams && foundCount === 0 ? (
+                    // Site found players but no parameter data was actually extracted
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.15)' }}>
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
                   ) : site.count > 0 ? (
                     <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.15)' }}>
                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
@@ -476,8 +484,8 @@ function CoveragePanel({ siteStats, results, loading, noSitesSelected, paramsByS
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate" style={{ color: site.count > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>{site.name}</p>
-                    <p className="text-[10px]" style={{ color: site.error ? '#ff6464aa' : site.noScraper ? 'var(--text-faint)' : site.count > 0 ? '#00c896aa' : 'var(--text-faint)' }}>
-                      {site.error ? 'Scrape failed' : site.noScraper ? 'No scraper' : site.count > 0 ? `${site.count} result${site.count !== 1 ? 's' : ''}` : 'No results'}
+                    <p className="text-[10px]" style={{ color: site.error ? '#ff6464aa' : site.noScraper ? 'var(--text-faint)' : site.count > 0 && hasParams && foundCount === 0 ? '#f59e0baa' : site.count > 0 ? '#00c896aa' : 'var(--text-faint)' }}>
+                      {site.error ? 'Scrape failed' : site.noScraper ? 'No scraper' : site.count > 0 && hasParams && foundCount === 0 ? `${site.count} found · no data` : site.count > 0 ? `${site.count} result${site.count !== 1 ? 's' : ''}` : 'No results'}
                     </p>
                   </div>
                   {hasParams && realParams.length > 0 && (
@@ -777,13 +785,15 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
             {show('Agent')        && <EditableField label="Agent"        displayValue={editData.agentName || null}  editValue={editData.agentName}  onChange={v => updateField('agentName', v)} />}
             {show('Agent Phone')  && <EditableField label="Agent Phone"  displayValue={editData.agentPhone || null} editValue={editData.agentPhone} onChange={v => updateField('agentPhone', v)} />}
             {show('Recent Form')  && <EditableField label="Recent Form"  displayValue={editData.recentForm || null} editValue={editData.recentForm} onChange={v => updateField('recentForm', v)} />}
-            {show('Transfermarkt') && <EditableField label="Transfermarkt" displayValue={editData.tmUrl || null}     editValue={editData.tmUrl}      onChange={v => updateField('tmUrl', v)} isLink />}
-            {show('Sofascore')    && <EditableField label="Sofascore"    displayValue={editData.scUrl || null}      editValue={editData.scUrl}      onChange={v => updateField('scUrl', v)} isLink />}
-            {show('FMInside')     && <EditableField label="FMInside"     displayValue={editData.fmUrl || null}      editValue={editData.fmUrl}      onChange={v => updateField('fmUrl', v)} isLink />}
-            {show('Instagram')    && <EditableField label="Instagram"    displayValue={editData.igUrl || null}      editValue={editData.igUrl}      onChange={v => updateField('igUrl', v)} isLink />}
-            {show('Twitter / X')  && <EditableField label="Twitter / X"  displayValue={editData.twitterUrl || null} editValue={editData.twitterUrl} onChange={v => updateField('twitterUrl', v)} isLink />}
-            {show('TikTok')       && <EditableField label="TikTok"       displayValue={editData.tiktokUrl || null}  editValue={editData.tiktokUrl}  onChange={v => updateField('tiktokUrl', v)} isLink />}
-            {show('Highlights')   && <EditableField label="Highlights"   displayValue={editData.highlights || null} editValue={editData.highlights} onChange={v => updateField('highlights', v)} isLink />}
+            <LinkChips links={[
+              show('Transfermarkt') && { label: 'TM',          value: editData.tmUrl,      onChange: (v: string) => updateField('tmUrl', v) },
+              show('Sofascore')     && { label: 'Sofascore',   value: editData.scUrl,      onChange: (v: string) => updateField('scUrl', v) },
+              show('FMInside')      && { label: 'FMInside',    value: editData.fmUrl,      onChange: (v: string) => updateField('fmUrl', v) },
+              show('Instagram')     && { label: 'Instagram',   value: editData.igUrl,      onChange: (v: string) => updateField('igUrl', v) },
+              show('Twitter / X')   && { label: 'Twitter / X', value: editData.twitterUrl, onChange: (v: string) => updateField('twitterUrl', v) },
+              show('TikTok')        && { label: 'TikTok',      value: editData.tiktokUrl,  onChange: (v: string) => updateField('tiktokUrl', v) },
+              show('Highlights')    && { label: 'Highlights',  value: editData.highlights, onChange: (v: string) => updateField('highlights', v) },
+            ].filter(Boolean) as { label: string; value: string; onChange: (v: string) => void }[]} />
             {show('Description')  && <EditableField label="Description"  displayValue={editData.description || null} editValue={editData.description} onChange={v => updateField('description', v)} multiline />}
           </div>
 
@@ -990,6 +1000,82 @@ function EditableField({ label, displayValue, editValue, onChange, highlight, is
         className="text-[11px] font-medium text-right focus:outline-none rounded px-1.5 py-0.5"
         style={{ ...inputStyle, flex: 1, maxWidth: inputType === 'date' ? 150 : 130 }} onFocus={onFocusStyle}
       />
+    </div>
+  )
+}
+
+// ─── Link Chips ───────────────────────────────────────────────────────────────
+
+function LinkChips({ links }: { links: { label: string; value: string; onChange: (v: string) => void }[] }) {
+  const [editing, setEditing] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus()
+  }, [editing])
+
+  if (links.length === 0) return null
+
+  return (
+    <div>
+      <p className="text-[9px] uppercase tracking-[.7px] font-semibold mt-2.5 mb-1.5 pt-2.5 border-t" style={{ color: 'var(--text-faint)', borderColor: 'var(--border-light)' }}>Links</p>
+      <div className="flex flex-wrap gap-1.5">
+        {links.map(({ label, value, onChange }) => {
+          const hasUrl = value.startsWith('http')
+          if (editing === label) {
+            return (
+              <input
+                key={label}
+                ref={inputRef}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                onBlur={() => setEditing(null)}
+                placeholder="https://…"
+                className="text-[10px] rounded-md px-2 py-0.5 focus:outline-none"
+                style={{
+                  background: 'rgba(0,200,150,0.07)',
+                  border: '1px solid rgba(0,200,150,0.4)',
+                  color: 'var(--text-primary)',
+                  width: 150,
+                  caretColor: '#00c896',
+                }}
+              />
+            )
+          }
+          return (
+            <div key={label} className="flex items-center">
+              <button
+                onClick={() => setEditing(label)}
+                className="text-[10px] font-medium px-2 py-0.5 transition-all"
+                style={hasUrl ? {
+                  color: '#00c896',
+                  background: 'rgba(0,200,150,0.08)',
+                  border: '1px solid rgba(0,200,150,0.25)',
+                  borderRadius: hasUrl ? '6px 0 0 6px' : '6px',
+                } : {
+                  color: 'var(--text-faint)',
+                  background: 'transparent',
+                  border: '1px dashed var(--border)',
+                  borderRadius: '6px',
+                }}
+              >
+                {label}
+              </button>
+              {hasUrl && (
+                <a
+                  href={value}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] px-1.5 py-0.5 transition-all hover:opacity-80"
+                  style={{ color: '#00c896', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderLeft: 'none', borderRadius: '0 6px 6px 0' }}
+                >
+                  ↗
+                </a>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
