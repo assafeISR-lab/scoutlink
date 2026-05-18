@@ -819,23 +819,21 @@ function PlayerCard({ player, selected, onToggleSelect, onDataChange, userName, 
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Scout Info</p>
           <div className="space-y-2.5">
             {/* Availability toggle — always visible */}
-            {show('availability') && (
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Availability</span>
-                <button
-                  type="button"
-                  onClick={e => { e.stopPropagation(); const next = { ...editData, available: !editData.available }; setEditData(next); onDataChange(next) }}
-                  className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
-                  style={{
-                    background: editData.available ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
-                    color: editData.available ? '#00c896' : '#ff6464',
-                    border: `1px solid ${editData.available ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
-                  }}
-                >
-                  {editData.available ? 'Available' : 'Not Available'}
-                </button>
-              </div>
-            )}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Availability</span>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); const next = { ...editData, available: !editData.available }; setEditData(next); onDataChange(next) }}
+                className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
+                style={{
+                  background: editData.available ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
+                  color: editData.available ? '#00c896' : '#ff6464',
+                  border: `1px solid ${editData.available ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+                }}
+              >
+                {editData.available ? 'Available' : 'Not Available'}
+              </button>
+            </div>
             {/* Added — always visible */}
             <CardField label="Added" value={dateAdded} />
             {show('sentBy')            && <CardField label="Sent by / Scout Name" value={userName} />}

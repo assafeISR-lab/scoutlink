@@ -66,8 +66,6 @@ export const fmInsideScraper: SiteScraper = {
       const photo      = `https://img.fminside.net/${fmFolder}/${playerId}.png`
       const posMatch   = block.match(/<span[^>]*position="([^"]+)"/)
       const clubMatch  = block.match(/href="\/clubs\/[^"]*">(?:<img[^>]*>)?([^<]+)<\/a>/)
-      const wageMatch  = block.match(/<li class="wage">([\s\S]*?)<\/li>/)
-      const fmWages    = wageMatch ? cleanHtml(wageMatch[1]) + ' p/w' : null
 
       players.push({
         id: `fmi-${playerId}`,
@@ -85,7 +83,7 @@ export const fmInsideScraper: SiteScraper = {
         photo,
         description: null,
         marketValue: null,
-        fmWages,
+        fmWages: null,
         fmAttributes: null,
         sourceUrl: `https://fminside.net/players/${dbVer}/${fullSlug}`,
         sourceName: 'FMInside',
@@ -94,7 +92,7 @@ export const fmInsideScraper: SiteScraper = {
       if (players.length >= 10) break
     }
 
-    // Fetch profiles for top 3 in parallel to get attributes (6s timeout each)
+    // Fetch profiles for top 3 in parallel to get attributes + wages (6s timeout each)
     await Promise.allSettled(
       players.slice(0, 3).map(async player => {
         const controller = new AbortController()
@@ -102,9 +100,11 @@ export const fmInsideScraper: SiteScraper = {
         try {
           const res = await sbFetch(player.sourceUrl, false, controller.signal)
           if (!res.ok) return
-          player.fmAttributes = parseAttributes(await res.text())
+          const profileHtml = await res.text()
+          player.fmAttributes = parseAttributes(profileHtml)
+          player.fmWages = parseWages(profileHtml)
         } catch {
-          // ignore — attributes stay null
+          // ignore — attributes/wages stay null
         } finally {
           clearTimeout(timer)
         }
@@ -124,6 +124,12 @@ function cleanHtml(raw: string): string {
     .replace(/&amp;/g, '&')
     .replace(/<[^>]+>/g, '')
     .trim()
+}
+
+function parseWages(profileHtml: string): string | null {
+  const m = profileHtml.match(/class="key">Wages<\/span>\s*<span class="value">([^<]+)<\/span>/)
+  if (!m) return null
+  return cleanHtml(m[1]).trim()
 }
 
 function parseAttributes(profileHtml: string): string | null {

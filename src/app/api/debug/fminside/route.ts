@@ -26,7 +26,6 @@ export async function GET(request: Request) {
     const blocks = [...html.matchAll(/<ul class="player">([\s\S]*?)<\/ul>/g)]
     playerCount = blocks.length
     // Check if blocks are hidden (display:none) — FMInside may hide rather than remove filtered players
-    const visibleBlocks = [...html.matchAll(/<ul class="player"[^>]*>([\s\S]*?)<\/ul>/g)]
     const hiddenCount = [...html.matchAll(/display:\s*none/g)].length
     const nameIdx = html.toLowerCase().indexOf(query.split(' ').pop()!.toLowerCase())
     htmlSnippet = nameIdx >= 0

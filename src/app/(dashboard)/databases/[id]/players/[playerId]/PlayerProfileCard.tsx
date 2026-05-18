@@ -120,6 +120,19 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     setChangedFields(prev => new Set([...prev, name]))
   }
 
+  async function saveAvailability(newVal: boolean) {
+    setField('available', newVal)
+    const res = await fetch(`/api/databases/${databaseId}/players/${player.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ available: newVal, changedFields: ['available'], customFields: {} }),
+    })
+    if (!res.ok) {
+      setField('available', !newVal)
+      setSaveError('Failed to save')
+    }
+  }
+
   async function handleSave() {
     setSaving(true)
     setSaveError('')
@@ -322,7 +335,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="p-4">
           <p className="text-[10px] uppercase tracking-widest mb-3 font-medium" style={{ color: 'var(--text-faint)' }}>Scout Info</p>
           <div className="space-y-2.5">
-            <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Available'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={v => setField('available', v)} onQuickSave={canWrite ? handleSave : undefined} highlight={form.available as boolean} />
+            <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Available'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Referral"        display={form.sentBy || null}           manual={cfGreen('sentBy')}      isEditing={false} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} onQuickSave={canWrite ? handleSave : undefined} />
@@ -466,6 +479,28 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
             if (localActive) { setLocalActive(false); onQuickSave?.() }
           }}
         />
+      </div>
+    )
+  }
+
+  if (isBool) {
+    return (
+      <div className="flex items-center justify-between gap-2 py-0.5">
+        <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+        <button
+          type="button"
+          onClick={onBoolChange ? () => onBoolChange(!boolValue) : undefined}
+          disabled={!onBoolChange}
+          className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
+          style={{
+            background: boolValue ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
+            color: boolValue ? '#00c896' : '#ff6464',
+            border: `1px solid ${boolValue ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+            cursor: onBoolChange ? 'pointer' : 'default',
+          }}
+        >
+          {boolValue ? 'Available' : 'Not Available'}
+        </button>
       </div>
     )
   }
