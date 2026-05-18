@@ -2,6 +2,7 @@
 
 interface SeasonData {
   year: string
+  tournament: string
   apps: number
   min: number
   goals: number
@@ -20,7 +21,6 @@ interface SeasonData {
 }
 
 interface MultiSeasonStats {
-  tournament: string
   seasons: SeasonData[]
 }
 
@@ -55,36 +55,36 @@ export default function SeasonStatsGrid({ json }: { json: string }) {
   if (!data.seasons?.length) return null
 
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-[9px] font-semibold" style={{ color: '#00c896' }}>{data.tournament}</p>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse" style={{ fontSize: 9 }}>
-          <thead>
-            <tr>
-              <th style={{ minWidth: 64, textAlign: 'left', paddingRight: 6, paddingBottom: 3, color: 'var(--text-faint)', fontWeight: 500 }} />
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse" style={{ fontSize: 9 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: 'left', paddingRight: 6, paddingBottom: 2, color: 'var(--text-faint)', fontWeight: 500, minWidth: 64 }} />
+            {data.seasons.map(s => (
+              <th key={s.year} style={{ textAlign: 'right', paddingLeft: 4, paddingBottom: 2, minWidth: 40, verticalAlign: 'bottom' }}>
+                <div style={{ color: '#00c896', fontWeight: 700 }}>{s.year}</div>
+                <div style={{ color: 'var(--text-faint)', fontWeight: 400, fontSize: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>
+                  {s.tournament}
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {STAT_ROWS.map(([label, getValue]) => (
+            <tr key={label} style={{ borderTop: '1px solid var(--border)' }}>
+              <td style={{ paddingTop: 2, paddingBottom: 2, paddingRight: 6, color: 'var(--text-faint)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                {label}
+              </td>
               {data.seasons.map(s => (
-                <th key={s.year} style={{ minWidth: 36, textAlign: 'right', paddingLeft: 4, paddingBottom: 3, color: '#00c896', fontWeight: 700 }}>
-                  {s.year}
-                </th>
+                <td key={s.year} style={{ paddingTop: 2, paddingBottom: 2, paddingLeft: 4, textAlign: 'right', color: 'var(--text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                  {getValue(s)}
+                </td>
               ))}
             </tr>
-          </thead>
-          <tbody>
-            {STAT_ROWS.map(([label, getValue]) => (
-              <tr key={label} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ paddingTop: 2, paddingBottom: 2, paddingRight: 6, color: 'var(--text-faint)', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                  {label}
-                </td>
-                {data.seasons.map(s => (
-                  <td key={s.year} style={{ paddingTop: 2, paddingBottom: 2, paddingLeft: 4, textAlign: 'right', color: 'var(--text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                    {getValue(s)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

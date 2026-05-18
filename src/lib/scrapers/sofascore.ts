@@ -88,21 +88,53 @@ export const sofascoreScraper: SiteScraper = {
           type TournSeason = { uniqueTournament: { id: number; name: string }; seasons: { id: number; year: string }[] }
           const seasonsData = await seasonsRes.json() as Record<string, unknown>
           const tournamentSeasons = seasonsData.uniqueTournamentSeasons as TournSeason[] | undefined
-          const first = tournamentSeasons?.[0]
-          if (first?.seasons?.length) {
-            const tId   = first.uniqueTournament.id
-            const tName = first.uniqueTournament.name
-            // Fetch stats for up to last 3 seasons in parallel
-            const seasonSlice = first.seasons.slice(0, 3)
+
+          if (tournamentSeasons?.length) {
+            // Build year → best (tId, tName, sId) map by scanning ALL tournaments.
+            // Sofascore returns tournaments in popularity order, so the first tournament
+            // that has a given year is the most relevant competition for that season.
+            const yearMap = new Map<string, { tId: number; tName: string; sId: number }>()
+            for (const ts of tournamentSeasons) {
+              for (const sv of ts.seasons) {
+                if (!yearMap.has(sv.year)) {
+                  yearMap.set(sv.year, { tId: ts.uniqueTournament.id, tName: ts.uniqueTournament.name, sId: sv.id })
+                }
+              }
+            }
+
+            // Normalize year key: "25/26" → 2025, "2025" → 2025, "24/25" → 2024
+            const normYearKey = (y: string): number => {
+              const n = parseInt(y.includes('/') ? y.split('/')[0] : y)
+              return n < 100 ? 2000 + n : n
+            }
+
+            // Sort newest-first; for equal canonical year prefer "XX/YY" (club season) over "YYYY"
+            // Then deduplicate by canonical year, keeping the highest-priority entry
+            const seenCanon = new Set<number>()
+            const recentYears = [...yearMap.entries()]
+              .sort((a, b) => {
+                const diff = normYearKey(b[0]) - normYearKey(a[0])
+                if (diff !== 0) return diff
+                return (a[0].includes('/') ? 0 : 1) - (b[0].includes('/') ? 0 : 1)
+              })
+              .reduce<Array<[string, { tId: number; tName: string; sId: number }]>>((acc, entry) => {
+                const canon = normYearKey(entry[0])
+                if (!seenCanon.has(canon)) { seenCanon.add(canon); acc.push(entry) }
+                return acc
+              }, [])
+              .slice(0, 3)
+
+            // Fetch stats for each year in parallel
             const statsResponses = await Promise.allSettled(
-              seasonSlice.map(sv =>
+              recentYears.map(([, { tId, sId }]) =>
                 sbFetch(
-                  `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sv.id}/statistics/overall`,
+                  `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/statistics/overall`,
                   false,
                   controller.signal
                 )
               )
             )
+
             const parseStat = (n: number | undefined, decimals: number): number | null =>
               n != null ? parseFloat(n.toFixed(decimals)) : null
 
@@ -112,8 +144,10 @@ export const sofascoreScraper: SiteScraper = {
                 const d = await r.value.json() as Record<string, unknown>
                 const s = d.statistics as Record<string, number> | undefined
                 if (!s) return null
+                const [year, { tName }] = recentYears[i]
                 return {
-                  year:          seasonSlice[i].year,
+                  year,
+                  tournament:    tName,
                   apps:          s.appearances          ?? 0,
                   min:           s.minutesPlayed         ?? 0,
                   goals:         s.goals                 ?? 0,
@@ -134,7 +168,7 @@ export const sofascoreScraper: SiteScraper = {
             )).filter(Boolean)
 
             if (seasons.length > 0) {
-              seasonStats = JSON.stringify({ tournament: tName, seasons })
+              seasonStats = JSON.stringify({ seasons })
             }
           }
         }
