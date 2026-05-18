@@ -8,7 +8,7 @@ const SCRAPERS = [
     name: 'Transfermarkt',
     url: 'https://www.transfermarkt.com',
     domain: 'transfermarkt.com',
-    comingSoon: ['Season Stats'],
+    comingSoon: [],
     color: '#1a6b3c',
     accent: '#2db570',
   },
