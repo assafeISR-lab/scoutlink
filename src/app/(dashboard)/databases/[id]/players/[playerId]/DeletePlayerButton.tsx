@@ -22,7 +22,7 @@ export default function DeletePlayerButton({ databaseId, playerId, playerName }:
     })
 
     if (res.ok) {
-      router.push(`/databases/${databaseId}`)
+      router.push('/databases')
       router.refresh()
     } else {
       const data = await res.json()

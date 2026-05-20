@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { getUser } from '@/lib/auth'
-import CreateDatabaseButton from './CreateDatabaseButton'
-import ImportDatabasesButton from './ImportDatabasesButton'
 import DatabasesClient from './DatabasesClient'
 
 export default async function DatabasesPage() {
@@ -41,21 +39,16 @@ export default async function DatabasesPage() {
     createdAt: database.createdAt.toISOString(),
   }))
 
-  return (
-    <>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="mr-auto">
-          <h1 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Players Watch List</h1>
-          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Manage your scouting lists</p>
-        </div>
-        <ImportDatabasesButton databases={[
-          ...ownedSerialized.map(d => ({ id: d.id, name: d.name })),
-          ...sharedAccess.filter(a => a.permission === 'contributor').map(a => ({ id: a.database.id, name: a.database.name })),
-        ]} />
-        <CreateDatabaseButton />
-      </div>
+  const importableDatabases = [
+    ...ownedSerialized.map(d => ({ id: d.id, name: d.name })),
+    ...sharedAccess.filter(a => a.permission === 'contributor').map(a => ({ id: a.database.id, name: a.database.name })),
+  ]
 
-      <DatabasesClient ownedDbs={ownedSerialized} sharedDbs={sharedSerialized} />
-    </>
+  return (
+    <DatabasesClient
+      ownedDbs={ownedSerialized}
+      sharedDbs={sharedSerialized}
+      importableDatabases={importableDatabases}
+    />
   )
 }

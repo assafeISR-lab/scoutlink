@@ -2,6 +2,44 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: databaseId } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const db = await prisma.playerDatabase.findUnique({
+    where: { id: databaseId },
+    include: { access: { where: { agentId: user.id } } },
+  })
+  if (!db) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const hasAccess = db.ownerId === user.id || db.access.length > 0
+  if (!hasAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const players = await prisma.player.findMany({
+    where: { databaseId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      position: true,
+      clubName: true,
+      nationality: true,
+      agentName: true,
+      dateOfBirth: true,
+      heightCm: true,
+      marketValue: true,
+      available: true,
+      playsNational: true,
+      customFields: { select: { fieldName: true, value: true } },
+    },
+  })
+
+  return NextResponse.json({ players, columnConfig: db.columnConfig ?? null })
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: databaseId } = await params
   const supabase = await createClient()

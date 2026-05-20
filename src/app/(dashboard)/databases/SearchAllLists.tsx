@@ -8,6 +8,7 @@ import {
   getActiveChips, isFilterActive, clearFilterForKey,
   type Filters, type FilterMode, type FilterKey, type RangeBound,
 } from '@/components/PlayerFilterBar'
+import type { PlayerSnapshot } from './CreateReportModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,7 +95,12 @@ function PlayerAvatar({ player }: { player: Player }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function SearchAllLists() {
+export default function SearchAllLists({ databaseIds, bare, onCreateReport, onActiveChange }: {
+  databaseIds?: string[]
+  bare?: boolean
+  onCreateReport?: (players: PlayerSnapshot[]) => void
+  onActiveChange?: (active: boolean) => void
+}) {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
@@ -103,12 +109,17 @@ export default function SearchAllLists() {
   const [pendingFilter, setPendingFilter] = useState<FilterKey | null>(null)
 
   useEffect(() => {
-    fetch('/api/players')
+    setLoading(true)
+    setPlayers([])
+    const url = databaseIds && databaseIds.length > 0
+      ? `/api/players?databaseIds=${databaseIds.join(',')}`
+      : '/api/players'
+    fetch(url)
       .then(r => r.json())
       .then(d => setPlayers(d.players ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [databaseIds?.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const uniquePositions     = useMemo(() => [...new Set(players.map(p => p.position).filter(Boolean) as string[])].sort(), [players])
   const uniqueNationalities = useMemo(() => [...new Set(players.map(p => p.nationality).filter(Boolean) as string[])].sort(), [players])
@@ -137,14 +148,17 @@ export default function SearchAllLists() {
   const activeChips = getActiveChips(filters)
   const hasFilters  = isFilterActive(filters)
 
+  useEffect(() => { onActiveChange?.(hasFilters) }, [hasFilters]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const filtered = useMemo(
     () => hasFilters ? players.filter(p => matchesFilters(p, filters, filterMode)) : [],
     [players, filters, filterMode, hasFilters]
   )
 
   return (
-    <div className="mb-8">
+    <div className={bare ? '' : 'mb-8'}>
       <PlayerFilterBar
+        bare={bare}
         filters={filters}
         filterMode={filterMode}
         activeChips={activeChips}
@@ -166,14 +180,32 @@ export default function SearchAllLists() {
         onClosePending={() => setPendingFilter(null)}
       />
 
-      {hasFilters && <ResultsTable players={filtered} />}
+      {hasFilters && <ResultsTable players={filtered} onCreateReport={onCreateReport} />}
     </div>
   )
 }
 
 // ─── Results Table ────────────────────────────────────────────────────────────
 
-function ResultsTable({ players }: { players: Player[] }) {
+function toSnapshot(player: Player): PlayerSnapshot {
+  const age = calcAge(player.dateOfBirth)
+  return {
+    id: player.id,
+    name: `${player.firstName} ${player.lastName}`,
+    position: player.position,
+    clubName: player.clubName,
+    nationality: player.nationality,
+    age,
+    heightCm: player.heightCm,
+    marketValue: player.marketValue,
+    agentName: null,
+    fmAttributes: player.customFields.find(f => f.fieldName === 'fmAttributes')?.value ?? null,
+    playsNational: false,
+    notes: [],
+  }
+}
+
+function ResultsTable({ players, onCreateReport }: { players: Player[]; onCreateReport?: (players: PlayerSnapshot[]) => void }) {
   return (
     <div className="rounded-2xl border border-white/5 overflow-hidden mt-3" style={{ background: 'var(--card-bg)' }}>
       {players.length === 0 ? (
@@ -182,10 +214,22 @@ function ResultsTable({ players }: { players: Player[] }) {
         </div>
       ) : (
         <>
-          <div className="px-5 py-3 border-b border-white/5">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
             <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               <strong style={{ color: '#00c896' }}>{players.length}</strong> player{players.length !== 1 ? 's' : ''} found across all lists
             </p>
+            {onCreateReport && (
+              <button
+                onClick={() => onCreateReport(players.map(toSnapshot))}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                style={{ background: 'rgba(255,159,67,0.1)', color: '#ff9f43', border: '1px solid rgba(255,159,67,0.25)' }}
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                Create Report
+              </button>
+            )}
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ minWidth: 700, width: '100%', borderCollapse: 'collapse' }}>
@@ -219,7 +263,7 @@ function ResultsTable({ players }: { players: Player[] }) {
                       <td className="px-5 py-3 text-sm text-white/75 whitespace-nowrap">{player.nationality || <span className="text-white/25">—</span>}</td>
                       <td className="px-5 py-3 text-sm text-white/75 whitespace-nowrap">{age ?? <span className="text-white/25">—</span>}</td>
                       <td className="px-5 py-3">
-                        <Link href={`/databases/${player.databaseId}`}
+                        <Link href="/databases"
                           className="text-xs px-2.5 py-1 rounded-full whitespace-nowrap transition-colors"
                           style={{ background: 'rgba(108,143,255,0.1)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.2)' }}
                           onClick={e => e.stopPropagation()}>

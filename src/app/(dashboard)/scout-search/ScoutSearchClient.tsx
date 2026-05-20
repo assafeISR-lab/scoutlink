@@ -173,7 +173,7 @@ function ResultCard({ result, rank }: { result: SearchResult; rank: number }) {
         {/* List badge */}
         <div className="mt-2.5 flex items-center gap-2">
           <Link
-            href={`/databases/${player.databaseId}`}
+            href="/databases"
             className="text-xs px-2.5 py-1 rounded-full transition-colors"
             style={{ background: 'rgba(108,143,255,0.1)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.2)' }}
           >

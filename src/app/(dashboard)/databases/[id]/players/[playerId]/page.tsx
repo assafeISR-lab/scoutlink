@@ -44,8 +44,6 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
       <div className="flex items-center gap-2 text-sm mb-6" style={{ color: 'var(--text-faint)' }}>
         <Link href="/databases" className="hover:text-[#00c896] transition-colors">Players Watch List</Link>
         <span>/</span>
-        <Link href={`/databases/${databaseId}`} className="hover:text-[#00c896] transition-colors">{db.name}</Link>
-        <span>/</span>
         <span style={{ color: 'var(--text-muted)' }}>{player.firstName} {player.lastName}</span>
       </div>
 

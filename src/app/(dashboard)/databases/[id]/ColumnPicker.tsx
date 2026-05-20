@@ -15,6 +15,7 @@ const TABLE_COLUMNS = new Set([
   'position', 'team', 'league', 'nationality',
   'age', 'dateOfBirth', 'height',
   'marketValue', 'contractExpiry', 'preferredFoot', 'fmWages',
+  'availability',
 ])
 
 // ─── Column groups (mirrors the order in PARAM_KEYS) ─────────────────────────
@@ -34,7 +35,7 @@ const GROUPS: { label: string; keys: string[] }[] = [
   },
   {
     label: 'Scouting',
-    keys: ['heatMap', 'fmAttributes', 'recentForm', 'description'],
+    keys: ['availability', 'heatMap', 'fmAttributes', 'recentForm', 'description'],
   },
   {
     label: 'Links & Meta',

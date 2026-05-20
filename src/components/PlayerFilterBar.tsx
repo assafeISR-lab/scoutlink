@@ -145,10 +145,10 @@ export interface PlayerFilterBarProps {
 
 export function PlayerFilterBar({
   filters, filterMode, activeChips, totalCount, filteredCount, addFilterOpen, pendingFilter,
-  multiOptions, rangeBounds, loading = false, placeholder = 'Search players…',
+  multiOptions, rangeBounds, loading = false, placeholder = 'Search players…', bare = false,
   onSetMode, onRemoveChip, onEditChip, onToggleAddFilter, onSelectParam, onClearAll,
   updateFilter, onClosePending,
-}: PlayerFilterBarProps) {
+}: PlayerFilterBarProps & { bare?: boolean }) {
   const uid    = useId()
   const dropId = `add-filter-dropdown-${uid}`
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -168,8 +168,8 @@ export function PlayerFilterBar({
 
   return (
     <div>
-      <div className="relative flex items-center gap-2 flex-wrap rounded-xl border px-3 py-2"
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
+      <div className={bare ? 'relative flex items-center gap-2 flex-wrap px-0 py-0' : 'relative flex items-center gap-2 flex-wrap rounded-xl border px-3 py-2'}
+        style={bare ? {} : { background: 'var(--card-bg)', borderColor: 'var(--border)' }}>
 
         {/* Name search */}
         <div className="relative flex items-center flex-shrink-0">

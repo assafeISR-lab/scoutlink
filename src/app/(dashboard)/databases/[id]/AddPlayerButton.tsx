@@ -110,7 +110,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
         customFields,
       }),
     })
-    if (res.ok) { handleClose(); router.refresh() }
+    if (res.ok) { handleClose(); router.refresh(); window.dispatchEvent(new Event('scoutlink:player-added')) }
     else { const d = await res.json(); setError(d.error || 'Something went wrong') }
     setLoading(false)
   }

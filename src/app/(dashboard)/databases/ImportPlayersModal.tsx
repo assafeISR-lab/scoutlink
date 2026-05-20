@@ -251,7 +251,7 @@ export default function ImportPlayersModal({
   function handleDone() {
     onClose()
     if (targetDbId) {
-      router.push(`/databases/${targetDbId}`)
+      router.push('/databases')
       router.refresh()
     } else {
       router.refresh()
