@@ -306,11 +306,11 @@ export default function EditPlayerModal({ player, singleId, onClose, onSaved }: 
                 <CardRow label="Referral"><CardInput value={form.sentBy} onChange={v => set('sentBy', v)} placeholder="Who sent this lead" /></CardRow>
                 <CardRow label="Plays National">
                   <button type="button" onClick={() => set('playsNational', !form.playsNational)}
-                    className="text-[11px] font-medium px-2 py-0.5 rounded transition-all"
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-full transition-all"
                     style={{
-                      background: form.playsNational ? 'rgba(0,200,150,0.12)' : 'var(--hover-bg)',
-                      color: form.playsNational ? '#00c896' : 'var(--text-faint)',
-                      border: `1px solid ${form.playsNational ? 'rgba(0,200,150,0.3)' : 'var(--border)'}`,
+                      background: form.playsNational ? '#00c896' : 'var(--hover-bg)',
+                      color: form.playsNational ? '#fff' : 'var(--text-faint)',
+                      border: `1px solid ${form.playsNational ? '#00c896' : 'var(--border)'}`,
                     }}>
                     {form.playsNational ? 'Yes' : 'No'}
                   </button>

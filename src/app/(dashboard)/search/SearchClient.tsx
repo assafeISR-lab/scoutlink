@@ -73,6 +73,7 @@ interface PlayerEditData {
   seasonStats: string
   description: string
   available: boolean
+  playsNational: boolean
   transferFeeExpect: string
   transferFeeReal: string
   salaryExpect: string
@@ -633,6 +634,7 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
     seasonStats: player.seasonStats ?? '',
     description: player.description ?? '',
     available: true,
+    playsNational: false,
     transferFeeExpect: '',
     transferFeeReal: '',
     salaryExpect: '',
@@ -796,6 +798,21 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
                 </button>
               </div>
             )}
+            <div className="field-row flex items-center justify-between gap-2 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+              <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Plays National</span>
+              <button
+                type="button"
+                onClick={() => setEditData(prev => ({ ...prev, playsNational: !prev.playsNational }))}
+                className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
+                style={{
+                  background: editData.playsNational ? '#00c896' : 'var(--hover-bg)',
+                  color: editData.playsNational ? '#fff' : 'var(--text-muted)',
+                  border: `1px solid ${editData.playsNational ? '#00c896' : 'var(--border)'}`,
+                }}
+              >
+                {editData.playsNational ? 'Yes' : 'No'}
+              </button>
+            </div>
             <CardField label="Added" value={dateAdded} />
             {show('Sent by / Scout Name') && <CardField label="Sent by / Scout Name" value={userName} />}
             {show('Referral')     && <EditableField label="Referral"     displayValue={editData.sentBy || null}     editValue={editData.sentBy}     onChange={v => updateField('sentBy', v)} />}
@@ -1107,7 +1124,8 @@ function ImportModal({ player, editData, databases, onClose }: {
       clubName:    editData.clubName?.trim()    || clubName    || null,
       nationality: editData.nationality?.trim() || player.nationality || null,
       agentName:   editData.agentName?.trim()   || null,
-      available:   editData.available ?? true,
+      available:      editData.available ?? true,
+      playsNational:  editData.playsNational ?? false,
       dateOfBirth: editData.dateOfBirth?.trim() || player.dateOfBirth || null,
       heightCm:    heightStr ? parseInt(heightStr) : null,
       marketValue: parseMarketValueToNumber(mktStr || null),

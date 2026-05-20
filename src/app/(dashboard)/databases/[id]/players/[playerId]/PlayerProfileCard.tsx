@@ -336,7 +336,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <Row label="Referral"        display={form.sentBy || null}           manual={cfGreen('sentBy')}      isEditing={false} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Agent"           display={form.agentName || player.agentName || null}   manual={isManual('agentName')}   isEditing={false} inputValue={form.agentName}   onChange={v => setField('agentName', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Agent Phone"     display={form.agentPhone || null}       manual={cfGreen('agentPhone')}   isEditing={false} inputValue={form.agentPhone}  onChange={v => setField('agentPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <Row label="Plays National"  display={(form.playsNational as boolean) ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={false} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
+            <Row label="Plays National"  display={(form.playsNational as boolean) ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={false} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool neutralFalse boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
             <Row label="Recent Form"     display={form.recentForm || null}       manual={cfGreen('recentForm')}   isEditing={false} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <LinkChips canEdit={canWrite} links={[
               { label: 'Transfermarkt', value: form.transfermarktUrl || tmUrl,           onChange: v => setField('transfermarktUrl', v), onBlur: canWrite ? handleSave : undefined },
@@ -431,10 +431,10 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
 // ── Row: static display ↔ inline input ────────────────────────────────────────
 
-function Row({ label, display, manual = false, highlight = false, isEditing, inputValue, onChange, inputType = 'text', isBool = false, boolValue, onBoolChange, onQuickSave }: {
+function Row({ label, display, manual = false, highlight = false, isEditing, inputValue, onChange, inputType = 'text', isBool = false, boolValue, onBoolChange, onQuickSave, neutralFalse = false }: {
   label: string; display: string | null | undefined; manual?: boolean; highlight?: boolean
   isEditing: boolean; inputValue: string; onChange: (v: string) => void; inputType?: string
-  isBool?: boolean; boolValue?: boolean; onBoolChange?: (v: boolean) => void
+  isBool?: boolean; boolValue?: boolean; onBoolChange?: (v: boolean) => void; neutralFalse?: boolean
   onQuickSave?: () => void
 }) {
   const hasValue = display != null && display !== ''
@@ -491,13 +491,13 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
           disabled={!onBoolChange}
           className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
           style={{
-            background: boolValue ? '#00c896' : 'rgba(255,80,80,0.1)',
-            color: boolValue ? '#fff' : '#ff6464',
-            border: `1px solid ${boolValue ? '#00c896' : 'rgba(255,80,80,0.25)'}`,
+            background: boolValue ? '#00c896' : neutralFalse ? 'var(--hover-bg)' : 'rgba(255,80,80,0.1)',
+            color: boolValue ? '#fff' : neutralFalse ? 'var(--text-muted)' : '#ff6464',
+            border: `1px solid ${boolValue ? '#00c896' : neutralFalse ? 'var(--border)' : 'rgba(255,80,80,0.25)'}`,
             cursor: onBoolChange ? 'pointer' : 'default',
           }}
         >
-          {boolValue ? 'Available' : 'Not Available'}
+          {display ?? (boolValue ? 'Available' : 'Not Available')}
         </button>
       </div>
     )
