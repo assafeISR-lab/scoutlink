@@ -9,6 +9,7 @@ import {
   type Filters, type FilterMode, type FilterKey, type RangeBound,
 } from '@/components/PlayerFilterBar'
 import type { PlayerSnapshot } from './CreateReportModal'
+import { positionPillStyle } from '@/lib/positionColor'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,10 @@ function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
   const checks: (() => boolean)[] = []
 
   if (f.name)             checks.push(() => `${player.firstName} ${player.lastName}`.toLowerCase().includes(f.name.toLowerCase()))
-  if (f.positions.length) checks.push(() => f.positions.some(p => (player.position ?? '').toLowerCase() === p.toLowerCase()))
+  if (f.positions.length) checks.push(() => {
+    const playerPos = (player.position ?? '').toLowerCase().split(/[\/,]/).map(s => s.trim())
+    return f.positions.some(p => playerPos.includes(p.toLowerCase()))
+  })
   if (f.club)             checks.push(() => (player.clubName ?? '').toLowerCase().includes(f.club.toLowerCase()))
   if (f.nationalities.length) checks.push(() => f.nationalities.some(n => (player.nationality ?? '').toLowerCase() === n.toLowerCase()))
   if (f.ageMin !== null || f.ageMax !== null) checks.push(() => { const a = age ?? 0; return (f.ageMin === null || a >= f.ageMin) && (f.ageMax === null || a <= f.ageMax) })
@@ -121,7 +125,7 @@ export default function SearchAllLists({ databaseIds, bare, onCreateReport, onAc
       .finally(() => setLoading(false))
   }, [databaseIds?.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const uniquePositions     = useMemo(() => [...new Set(players.map(p => p.position).filter(Boolean) as string[])].sort(), [players])
+  const uniquePositions     = useMemo(() => [...new Set(players.flatMap(p => p.position ? p.position.split(/[\/,]/).map(s => s.trim()).filter(Boolean) : []))].sort(), [players])
   const uniqueNationalities = useMemo(() => [...new Set(players.map(p => p.nationality).filter(Boolean) as string[])].sort(), [players])
   const uniqueFeet          = useMemo(() => [...new Set(players.map(p => getCF(p, 'foot')).filter(Boolean))].sort(), [players])
   const ages                = useMemo(() => players.map(p => calcAge(p.dateOfBirth)).filter(Boolean) as number[], [players])
@@ -236,7 +240,7 @@ function ResultsTable({ players, onCreateReport }: { players: Player[]; onCreate
               <thead>
                 <tr className="border-b border-white/5">
                   {['Player', 'Position', 'Club', 'Nationality', 'Age', 'List'].map(col => (
-                    <th key={col} className="text-left px-5 py-3 text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-secondary)' }}>{col}</th>
+                    <th key={col} className="text-left px-5 py-3 text-xs uppercase tracking-widest font-medium" style={{ color: 'var(--text-muted)' }}>{col}</th>
                   ))}
                 </tr>
               </thead>
@@ -256,7 +260,10 @@ function ResultsTable({ players, onCreateReport }: { players: Player[]; onCreate
                       </td>
                       <td className="px-5 py-3 text-sm whitespace-nowrap">
                         {player.position
-                          ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{player.position}</span>
+                          ? (() => { const s = positionPillStyle(player.position); return s
+                              ? <span className="text-xs px-1.5 py-0.5 rounded" style={s}>{player.position}</span>
+                              : <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{player.position}</span>
+                            })()
                           : <span className="text-white/25">—</span>}
                       </td>
                       <td className="px-5 py-3 text-sm text-white/75 whitespace-nowrap">{player.clubName || <span className="text-white/25">—</span>}</td>

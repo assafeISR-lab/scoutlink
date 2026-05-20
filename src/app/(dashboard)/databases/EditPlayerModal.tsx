@@ -292,13 +292,13 @@ export default function EditPlayerModal({ player, singleId, onClose, onSaved }: 
               <div>
                 <CardRow label="Availability">
                   <button type="button" onClick={() => set('available', !form.available)}
-                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
+                    className="text-[11px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase transition-all"
                     style={{
-                      background: form.available ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
-                      color: form.available ? '#00c896' : '#ff6464',
-                      border: `1px solid ${form.available ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+                      background: form.available ? 'rgba(0,200,150,0.12)' : 'rgba(239,68,68,0.1)',
+                      color: form.available ? '#00c896' : '#ef4444',
+                      border: `1px solid ${form.available ? 'rgba(0,200,150,0.3)' : 'rgba(239,68,68,0.25)'}`,
                     }}>
-                    {form.available ? 'Available' : 'Not Available'}
+                    {form.available ? 'Available' : 'Not Avail.'}
                   </button>
                 </CardRow>
                 <CardRow label="Agent"><CardInput value={form.agentName} onChange={v => set('agentName', v)} placeholder="Agent name" /></CardRow>

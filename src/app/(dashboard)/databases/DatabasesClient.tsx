@@ -10,6 +10,7 @@ import ColumnPicker from './[id]/ColumnPicker'
 import AddPlayerButton from './[id]/AddPlayerButton'
 import CreateReportModal, { type PlayerSnapshot } from './CreateReportModal'
 import { loadActive, loadCustomActive } from '@/app/(dashboard)/search/SearchParamsPanel'
+import { positionPillStyle } from '@/lib/positionColor'
 
 type DbItem = {
   id: string
@@ -138,7 +139,7 @@ function SortTh({ label, sortKey, current, dir, onSort }: {
   return (
     <th
       className="px-4 py-2.5 text-left text-[10px] uppercase tracking-widest font-medium whitespace-nowrap cursor-pointer select-none transition-colors"
-      style={{ color: active ? '#00c896' : 'var(--text-faint)' }}
+      style={{ color: active ? 'var(--text-secondary)' : 'var(--text-muted)' }}
       onClick={() => onSort(sortKey)}
     >
       <span className="inline-flex items-center gap-1">
@@ -235,12 +236,10 @@ function AIResultsPanel({ results, query, onCreateReport, onClose }: {
                     style={{ color: 'var(--text-primary)' }}>
                     {r.player.firstName} {r.player.lastName}
                   </Link>
-                  {r.player.position && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                      style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>
-                      {r.player.position}
-                    </span>
-                  )}
+                  {r.player.position && (() => { const s = positionPillStyle(r.player.position); return s
+                    ? <span className="text-[10px] px-1.5 py-0.5 rounded" style={s}>{r.player.position}</span>
+                    : <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{r.player.position}</span>
+                  })()}
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold ml-auto"
                     style={{ background: `${sc}15`, color: sc, border: `1px solid ${sc}30` }}>
                     {r.score}%
@@ -432,7 +431,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
         <table className="w-full text-sm" style={{ minWidth: 500 }}>
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--border)' }}>
-              {isMulti && <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-widest font-medium whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>List</th>}
+              {isMulti && <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-widest font-medium whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>List</th>}
               <SortTh label="Player"       sortKey="name"          {...thProps} />
               {show('availability') && <SortTh label="Status"      sortKey="availability" {...thProps} />}
               {show('position')    && <SortTh label="Position"     sortKey="position"     {...thProps} />}
@@ -490,7 +489,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
                           )
                         })()}
                         {!(availOverride[p.id] ?? p.available) && !show('availability') && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Unavailable</span>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>Not Avail.</span>
                         )}
                       </div>
                     </Link>
@@ -502,15 +501,15 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
                       <td className="px-4 py-2.5">
                         <button
                           onClick={e => { e.stopPropagation(); toggleAvailable(p) }}
-                          className="text-[11px] px-2 py-0.5 rounded-full font-medium transition-all cursor-pointer"
+                          className="text-[11px] px-1.5 py-0.5 rounded font-medium tracking-wider uppercase transition-all cursor-pointer"
                           style={isAvail
-                            ? { background: '#00c896', color: '#fff', border: '1px solid #00c896' }
+                            ? { background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }
                             : { background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
                           onMouseEnter={e => { e.currentTarget.style.opacity = '0.75' }}
                           onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
                           title="Click to toggle availability"
                         >
-                          {isAvail ? 'Available' : 'Not Available'}
+                          {isAvail ? 'Available' : 'Not Avail.'}
                         </button>
                       </td>
                     )
@@ -519,7 +518,10 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
                   {show('position') && (
                     <td className="px-4 py-2.5">
                       {p.position
-                        ? <span className="text-[11px] px-1.5 py-0.5 rounded-full" title={p.position.length > 30 ? p.position : undefined} style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{trunc(p.position)}</span>
+                        ? (() => { const s = positionPillStyle(p.position); return s
+                            ? <span className="text-[11px] px-1.5 py-0.5 rounded" title={p.position.length > 30 ? p.position : undefined} style={s}>{trunc(p.position)}</span>
+                            : <span className="text-[11px]" title={p.position.length > 30 ? p.position : undefined} style={{ color: 'var(--text-secondary)' }}>{trunc(p.position)}</span>
+                          })()
                         : <span style={{ color: 'var(--text-faint)' }}>—</span>}
                     </td>
                   )}

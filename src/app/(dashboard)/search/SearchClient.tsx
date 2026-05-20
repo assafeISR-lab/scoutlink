@@ -8,6 +8,7 @@ import FMRadarChart from '@/components/FMRadarChart'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import LinkChips from '@/components/LinkChips'
+import { positionPillStyle } from '@/lib/positionColor'
 
 const COMING_SOON = new Set<string>(['heatMap'])
 
@@ -693,11 +694,10 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
 
           {/* Meta line — position badge · club · league (green) · nationality · age */}
           <div className="flex items-center gap-1.5 flex-wrap mb-2">
-            {(editData.position || player.position) && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>
-                {normalizePos(editData.position || player.position || '')}
-              </span>
-            )}
+            {(editData.position || player.position) && (() => { const pos = normalizePos(editData.position || player.position || ''); const s = positionPillStyle(pos); return s
+                ? <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={s}>{pos}</span>
+                : <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{pos}</span>
+              })()}
             {(editData.clubName || player.team) && (
               <>
                 {(editData.position || player.position) && <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>·</span>}
@@ -787,14 +787,14 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
                 <button
                   type="button"
                   onClick={() => setEditData(prev => ({ ...prev, available: !prev.available }))}
-                  className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
+                  className="text-[11px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase transition-all"
                   style={{
-                    background: editData.available ? '#00c896' : 'rgba(255,80,80,0.1)',
-                    color: editData.available ? '#fff' : '#ff6464',
-                    border: `1px solid ${editData.available ? '#00c896' : 'rgba(255,80,80,0.25)'}`,
+                    background: editData.available ? 'rgba(0,200,150,0.12)' : 'rgba(239,68,68,0.1)',
+                    color: editData.available ? '#00c896' : '#ef4444',
+                    border: `1px solid ${editData.available ? 'rgba(0,200,150,0.3)' : 'rgba(239,68,68,0.25)'}`,
                   }}
                 >
-                  {editData.available ? 'Available' : 'Not Available'}
+                  {editData.available ? 'Available' : 'Not Avail.'}
                 </button>
               </div>
             )}

@@ -8,6 +8,7 @@ import LinkChips from '@/components/LinkChips'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import { loadActive } from '@/app/(dashboard)/search/SearchParamsPanel'
+import { positionPillStyle } from '@/lib/positionColor'
 
 interface FieldSource {
   id: string
@@ -255,7 +256,10 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="flex-1 min-w-0">
           <h1 className="leading-tight mb-1.5" style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px', color: 'var(--text-primary)' }}>{fullName}</h1>
           <div className="flex items-center flex-wrap" style={{ gap: '4px 6px' }}>
-            {(form.position || player.position) && <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630' }}>{displayPosition(form.position || player.position)}</span>}
+            {(form.position || player.position) && (() => { const pos = displayPosition(form.position || player.position); const s = positionPillStyle(pos); return s
+                ? <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={s}>{pos}</span>
+                : <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{pos}</span>
+              })()}
             {(form.clubName || player.clubName) && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.clubName || player.clubName}</span></>}
             {(form.league || cf('league')) && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: '#00c896' }}>{form.league || cf('league')}</span></>}
             {(form.nationality || player.nationality) && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.nationality || player.nationality}</span></>}
@@ -330,7 +334,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="p-4">
           <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
           <div>
-            <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Available'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
+            <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Avail.'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Referral"        display={form.sentBy || null}           manual={cfGreen('sentBy')}      isEditing={false} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} onQuickSave={canWrite ? handleSave : undefined} />
@@ -489,15 +493,15 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
           type="button"
           onClick={onBoolChange ? () => onBoolChange(!boolValue) : undefined}
           disabled={!onBoolChange}
-          className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
+          className="text-[11px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase transition-all"
           style={{
-            background: boolValue ? '#00c896' : neutralFalse ? 'var(--hover-bg)' : 'rgba(255,80,80,0.1)',
-            color: boolValue ? '#fff' : neutralFalse ? 'var(--text-muted)' : '#ff6464',
-            border: `1px solid ${boolValue ? '#00c896' : neutralFalse ? 'var(--border)' : 'rgba(255,80,80,0.25)'}`,
+            background: boolValue ? 'rgba(0,200,150,0.12)' : neutralFalse ? 'var(--hover-bg)' : 'rgba(239,68,68,0.1)',
+            color: boolValue ? '#00c896' : neutralFalse ? 'var(--text-muted)' : '#ef4444',
+            border: `1px solid ${boolValue ? 'rgba(0,200,150,0.3)' : neutralFalse ? 'var(--border)' : 'rgba(239,68,68,0.25)'}`,
             cursor: onBoolChange ? 'pointer' : 'default',
           }}
         >
-          {display ?? (boolValue ? 'Available' : 'Not Available')}
+          {display ?? (boolValue ? 'Available' : 'Not Avail.')}
         </button>
       </div>
     )
