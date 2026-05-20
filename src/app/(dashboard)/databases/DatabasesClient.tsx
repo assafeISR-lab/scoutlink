@@ -411,8 +411,8 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
     <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
       {/* Header bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
-        <p className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-          <span style={{ color: '#00c896', fontWeight: 700 }}>{players.length}</span> player{players.length !== 1 ? 's' : ''}
+        <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+          <span style={{ color: '#00c896' }}>{players.length}</span> player{players.length !== 1 ? 's' : ''}
         </p>
         <div className="flex items-center gap-2">
           {onCreateReport && players && players.length > 0 && (
@@ -503,7 +503,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
                         {(() => {
                           const fullName = `${p.firstName} ${p.lastName}`
                           return (
-                            <p className="text-sm font-medium truncate transition-colors group-hover:text-[#00c896]"
+                            <p className="text-sm font-semibold truncate transition-colors group-hover:text-[#00c896]"
                               title={fullName.length > 30 ? fullName : undefined}
                               style={{ color: 'var(--text-primary)' }}>
                               {trunc(fullName)}
@@ -671,11 +671,11 @@ export default function DatabasesClient({
     <>
       {/* Page header */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="mr-auto">
+        <div className="mr-auto pl-3 border-l-2" style={{ borderColor: '#00c896' }}>
           <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Players Watch List</h1>
           {allDbs.length > 0 && (
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>
-              {allDbs.reduce((s, d) => s + d.playerCount, 0)} players · {allDbs.length} list{allDbs.length !== 1 ? 's' : ''}
+              <span style={{ color: '#00c896' }}>{allDbs.reduce((s, d) => s + d.playerCount, 0)}</span> players · {allDbs.length} list{allDbs.length !== 1 ? 's' : ''}
             </p>
           )}
         </div>
@@ -778,7 +778,7 @@ export default function DatabasesClient({
 
         {/* Row 2 — AI search */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: 'var(--border)' }}>
-          <span className="w-7 flex-shrink-0 flex items-center justify-center" style={{ color: 'var(--text-faint)' }}>
+          <span className="w-7 flex-shrink-0 flex items-center justify-center" style={{ color: 'rgba(0,200,150,0.55)' }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/>
             </svg>
