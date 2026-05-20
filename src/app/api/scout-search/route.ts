@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
   const CF_FIELDS = [
     'foot', 'league', 'passports', 'joiningDate', 'contractExpiry',
     'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
-    'recentForm', 'description', 'fmAttributes',
+    'recentForm', 'description', 'fmAttributes', 'seasonStats',
   ]
 
   const playerSummaries = candidates.map(p => {
