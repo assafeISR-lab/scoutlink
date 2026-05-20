@@ -206,8 +206,10 @@ export function PlayerFilterBar({
         {/* Active chips (name chip is already shown in the input) */}
         {activeChips.filter(key => key !== 'name').map(key => (
           <div key={key}
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] cursor-pointer select-none"
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] cursor-pointer select-none transition-all"
             style={{ background: 'rgba(0,200,150,0.12)', border: '1px solid rgba(0,200,150,0.25)' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(0,200,150,0.2)'; el.style.borderColor = 'rgba(0,200,150,0.45)' }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(0,200,150,0.12)'; el.style.borderColor = 'rgba(0,200,150,0.25)' }}
             onClick={() => onEditChip(key)}>
             <span className="font-semibold" style={{ color: '#00c896' }}>{FILTER_PARAMS.find(p => p.key === key)?.label}</span>
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{chipValueSummary(key, filters)}</span>
@@ -223,7 +225,9 @@ export function PlayerFilterBar({
         {/* Add Filter */}
         <button ref={btnRef} onClick={onToggleAddFilter}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12.5px] transition-all"
-          style={{ background: addFilterOpen ? 'rgba(0,200,150,0.08)' : 'transparent', border: `1px dashed ${addFilterOpen ? '#00c896' : 'var(--border-strong)'}`, color: addFilterOpen ? '#00c896' : 'var(--text-muted)' }}>
+          style={{ background: addFilterOpen ? 'rgba(0,200,150,0.08)' : 'transparent', border: `1px dashed ${addFilterOpen ? '#00c896' : 'var(--border-strong)'}`, color: addFilterOpen ? '#00c896' : 'var(--text-muted)' }}
+          onMouseEnter={e => { if (!addFilterOpen) { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--text-faint)' } }}
+          onMouseLeave={e => { if (!addFilterOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-strong)' } }}>
           + Add Filter {addFilterOpen && <span className="text-[10px]">▴</span>}
         </button>
 
