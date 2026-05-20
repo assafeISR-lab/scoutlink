@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SearchAllLists from './SearchAllLists'
+import SearchClient from '@/app/(dashboard)/search/SearchClient'
 import CreateDatabaseButton from './CreateDatabaseButton'
 import ImportDatabasesButton from './ImportDatabasesButton'
 import ColumnPicker from './[id]/ColumnPicker'
@@ -262,7 +263,7 @@ function AIResultsPanel({ results, query, onCreateReport, onClose }: {
 
 // ─── Inline Players Table ─────────────────────────────────────────────────────
 
-function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseIds: string[]; allDbs: DbItem[]; onCreateReport?: (players: PlayerSnapshot[]) => void }) {
+function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }: { databaseIds: string[]; allDbs: DbItem[]; onCreateReport?: (players: PlayerSnapshot[]) => void; fillHeight?: boolean }) {
   const isMulti = databaseIds.length > 1
   const singleId = !isMulti ? databaseIds[0] : undefined
 
@@ -324,7 +325,9 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
     setDeletingId(null)
   }
 
-  const show = (key: string) => columnConfig !== null ? columnConfig.includes(key) : fallbackCols.has(key)
+  const show = (key: string) => {
+    return columnConfig !== null ? columnConfig.includes(key) : fallbackCols.has(key)
+  }
   const showDobCol = show('age') || show('dateOfBirth')
 
   function handleSort(key: SortKey) {
@@ -378,7 +381,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
 
   if (loading) {
     return (
-      <div className="rounded-2xl border flex items-center justify-center py-16" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
+      <div className="rounded-2xl border flex items-center justify-center py-16" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(fillHeight ? { flex: 1, minHeight: 0 } : {}) }}>
         <div className="w-5 h-5 rounded-full border-2 animate-spin" style={{ borderColor: '#00c896', borderTopColor: 'transparent' }} />
       </div>
     )
@@ -386,7 +389,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
 
   if (!players || players.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed p-12 text-center" style={{ borderColor: 'var(--border)' }}>
+      <div className="rounded-2xl border border-dashed p-12 text-center" style={{ borderColor: 'var(--border)', ...(fillHeight ? { flex: 1, minHeight: 0 } : {}) }}>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No players in this list yet.</p>
       </div>
     )
@@ -395,9 +398,9 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
   const thProps = { current: sortKey, dir: sortDir, onSort: handleSort }
 
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
+    <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(fillHeight ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } : {}) }}>
       {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
+      <div className={`flex items-center justify-between px-4 py-3 border-b${fillHeight ? ' flex-shrink-0' : ''}`} style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
         <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
           <span style={{ color: '#00c896' }}>{players.length}</span> player{players.length !== 1 ? 's' : ''}
         </p>
@@ -427,7 +430,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div style={fillHeight ? { overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 } : { overflowX: 'auto' }}>
         <table className="w-full text-sm" style={{ minWidth: 500 }}>
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--border)' }}>
@@ -489,7 +492,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
                           )
                         })()}
                         {!(availOverride[p.id] ?? p.available) && !show('availability') && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>Not Avail.</span>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase whitespace-nowrap" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>Not Avail.</span>
                         )}
                       </div>
                     </Link>
@@ -501,7 +504,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
                       <td className="px-4 py-2.5">
                         <button
                           onClick={e => { e.stopPropagation(); toggleAvailable(p) }}
-                          className="text-[11px] px-1.5 py-0.5 rounded font-medium tracking-wider uppercase transition-all cursor-pointer"
+                          className="text-[11px] px-1.5 py-0.5 rounded font-medium tracking-wider uppercase transition-all cursor-pointer whitespace-nowrap"
                           style={isAvail
                             ? { background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }
                             : { background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
@@ -595,10 +598,12 @@ export default function DatabasesClient({
   ownedDbs,
   sharedDbs,
   importableDatabases,
+  userName,
 }: {
   ownedDbs: DbItem[]
   sharedDbs: DbItem[]
   importableDatabases: { id: string; name: string }[]
+  userName: string
 }) {
   const allDbs = [...ownedDbs, ...sharedDbs]
   const firstId = ownedDbs[0]?.id ?? sharedDbs[0]?.id
@@ -609,7 +614,26 @@ export default function DatabasesClient({
   const [aiQuery, setAiQuery] = useState('')
   const [reportData, setReportData] = useState<{ players: PlayerSnapshot[]; databaseId: string; databaseName: string } | null>(null)
   const [filterActive, setFilterActive] = useState(false)
+  const [scoutOpen, setScoutOpen] = useState(false)
+  const [isNarrow, setIsNarrow] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    const check = () => setIsNarrow(window.innerWidth < 1100)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
+
+  function showToast(message: string) {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast(message)
+    toastTimer.current = setTimeout(() => setToast(null), 3500)
+  }
 
   // Delete only available when exactly one owned list is selected
   const singleSelected = selectedIds.length === 1 ? allDbs.find(db => db.id === selectedIds[0]) : null
@@ -633,6 +657,7 @@ export default function DatabasesClient({
   const isAllLists = selectedIds.length === 0
   const selectedDbId = isAllLists ? (allDbs[0]?.id ?? '') : (selectedIds[0] ?? '')
   const selectedDbName = isAllLists ? 'All Lists' : (allDbs.find(d => d.id === selectedIds[0])?.name ?? 'List')
+  const splitPanelActive = scoutOpen && !isNarrow
 
   function openReport(players: PlayerSnapshot[]) {
     setReportData({ players, databaseId: selectedDbId, databaseName: selectedDbName })
@@ -643,7 +668,7 @@ export default function DatabasesClient({
       {/* Page header */}
       <div className="flex items-center gap-3 mb-4">
         <div className="mr-auto pl-3 border-l-2" style={{ borderColor: '#00c896' }}>
-          <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Players Watch List</h1>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>ScoutLink Studio</h1>
           {allDbs.length > 0 && (
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>
               <span style={{ color: '#00c896' }}>{allDbs.reduce((s, d) => s + d.playerCount, 0)}</span> players · {allDbs.length} list{allDbs.length !== 1 ? 's' : ''}
@@ -666,6 +691,23 @@ export default function DatabasesClient({
         )}
         <ImportDatabasesButton databases={importableDatabases} />
         <CreateDatabaseButton />
+        <button
+          onClick={() => setScoutOpen(o => !o)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+          style={scoutOpen
+            ? { background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)', boxShadow: '0 0 0 3px rgba(0,200,150,0.08)' }
+            : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+          onMouseEnter={e => { if (!scoutOpen) { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' } }}
+          onMouseLeave={e => { if (!scoutOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' } }}
+        >
+          {scoutOpen && (
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#00c896', boxShadow: '0 0 6px rgba(0,200,150,0.7)', animation: 'pulse 1.5s infinite' }} />
+          )}
+          <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          </svg>
+          Web Scout
+        </button>
       </div>
 
       {/* Delete confirmation modal */}
@@ -702,8 +744,20 @@ export default function DatabasesClient({
         </div>
       )}
 
+      {/* ── Split layout ───────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', flexDirection: isNarrow && scoutOpen ? 'column' : 'row', gap: 0, ...(splitPanelActive ? { height: 'calc(100vh - 116px)' } : {}) }}>
+
+      {/* ── Left: list panel ─────────────────────────────────────── */}
+      <div style={{
+        flexShrink: 0,
+        width: isNarrow || !scoutOpen ? '100%' : '44%',
+        transition: 'width 0.35s cubic-bezier(.4,0,.2,1)',
+        minWidth: 0,
+        ...(splitPanelActive ? { height: '100%', display: 'flex', flexDirection: 'column' as const, paddingRight: 2 } : {}),
+      }}>
+
       {/* Unified scope + search panel */}
-      <div className="rounded-2xl border mb-4 overflow-visible" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
+      <div className="rounded-2xl border mb-4 overflow-visible" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(splitPanelActive ? { flexShrink: 0 } : {}) }}>
 
         {/* Row 1 — List selector */}
         <div className="flex items-center gap-2 flex-wrap px-4 py-3 border-b" style={{ background: 'var(--subtle-bg)', borderColor: 'var(--border)', borderRadius: '1rem 1rem 0 0' }}>
@@ -789,8 +843,68 @@ export default function DatabasesClient({
               databaseIds={isAllLists ? allDbs.map(d => d.id) : selectedIds}
               allDbs={allDbs}
               onCreateReport={openReport}
+              fillHeight={splitPanelActive}
             />
       )}
+
+      </div> {/* end left panel */}
+
+      {/* ── Divider (side-by-side mode only) ────────────────────── */}
+      <div style={{
+        flexShrink: 0,
+        width: (!isNarrow && scoutOpen) ? 3 : 0,
+        alignSelf: 'stretch',
+        background: 'var(--border-strong)',
+        margin: (!isNarrow && scoutOpen) ? '0 12px' : 0,
+        borderRadius: 2,
+        transition: 'all 0.35s cubic-bezier(.4,0,.2,1)',
+      }} />
+
+      {/* ── Right: scout panel ───────────────────────────────────── */}
+      <div style={{
+        flex: isNarrow ? 'none' : 1,
+        width: isNarrow ? '100%' : undefined,
+        height: isNarrow && !scoutOpen ? 0 : splitPanelActive ? '100%' : undefined,
+        marginTop: isNarrow && scoutOpen ? 12 : 0,
+        minWidth: 0,
+        opacity: scoutOpen ? 1 : 0,
+        pointerEvents: scoutOpen ? 'auto' : 'none',
+        transition: 'opacity 0.3s ease, height 0.35s cubic-bezier(.4,0,.2,1)',
+        overflow: 'hidden',
+      }}>
+        <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(splitPanelActive ? { display: 'flex', flexDirection: 'column', height: '100%' } : {}) }}>
+          <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#00c896', boxShadow: '0 0 6px rgba(0,200,150,0.7)', animation: 'pulse 1.5s infinite' }} />
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Web Scout</span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>→ adding to <strong style={{ color: 'var(--text-secondary)' }}>{selectedDbName}</strong></span>
+            </div>
+            <button
+              onClick={() => setScoutOpen(false)}
+              className="w-6 h-6 flex items-center justify-center rounded-md transition-colors"
+              style={{ color: 'var(--text-faint)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+          <div style={splitPanelActive ? { overflowY: 'auto', flex: 1, minHeight: 0 } : {}}>
+            <SearchClient
+              panelMode
+              targetDatabaseId={selectedDbId}
+              targetListName={selectedDbName}
+              onPlayerAdded={(name) => showToast(`${name} added to ${selectedDbName}`)}
+              databases={allDbs.map(d => ({ id: d.id, name: d.name }))}
+              userName={userName}
+            />
+          </div>
+        </div>
+      </div>
+
+      </div> {/* end split container */}
 
       {/* Create Report modal */}
       {reportData && (
@@ -801,6 +915,30 @@ export default function DatabasesClient({
           onClose={() => setReportData(null)}
         />
       )}
+
+      {/* ── Toast notification ─────────────────────────────────── */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 28,
+          left: '50%',
+          transform: `translateX(-50%) translateY(${toast ? 0 : 16}px)`,
+          opacity: toast ? 1 : 0,
+          pointerEvents: 'none',
+          transition: 'opacity 0.25s ease, transform 0.25s ease',
+          zIndex: 100,
+        }}
+      >
+        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-full text-sm font-medium"
+          style={{ background: 'var(--card-bg)', border: '1px solid rgba(0,200,150,0.4)', color: 'var(--text-primary)', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+          <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.2)', border: '1px solid rgba(0,200,150,0.5)' }}>
+            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="#00c896">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+          </div>
+          <span>{toast}</span>
+        </div>
+      </div>
     </>
   )
 }
@@ -888,8 +1026,8 @@ function ScoutAIBar({ databaseIds, bare, onResults }: {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center" style={{ background: 'rgba(255,255,255,0.01)' }}>
-      <p className="text-white/30 text-sm">{message}</p>
+    <div className="rounded-2xl border border-dashed p-12 text-center" style={{ borderColor: 'var(--border)' }}>
+      <p className="text-sm" style={{ color: 'var(--text-faint)' }}>{message}</p>
     </div>
   )
 }

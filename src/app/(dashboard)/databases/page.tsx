@@ -49,6 +49,7 @@ export default async function DatabasesPage() {
       ownedDbs={ownedSerialized}
       sharedDbs={sharedSerialized}
       importableDatabases={importableDatabases}
+      userName={user.user_metadata?.full_name || user.email || 'Agent'}
     />
   )
 }

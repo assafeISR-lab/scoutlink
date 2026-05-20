@@ -94,7 +94,14 @@ interface PlayerEditData {
   customExtras: { key: string; value: string }[]
 }
 
-export default function SearchClient({ databases, userName }: { databases: Database[]; userName: string }) {
+export default function SearchClient({ databases, userName, panelMode, targetDatabaseId, targetListName, onPlayerAdded }: {
+  databases: Database[]
+  userName: string
+  panelMode?: boolean
+  targetDatabaseId?: string
+  targetListName?: string
+  onPlayerAdded?: (playerName: string) => void
+}) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PlayerResult[]>([])
   const [siteStats, setSiteStats] = useState<SiteStat[]>([])
@@ -184,29 +191,31 @@ export default function SearchClient({ databases, userName }: { databases: Datab
   const activePlayer = results[activeTabIdx] ?? null
 
   return (
-    <div className="-mt-8">
+    <div className={panelMode ? '' : '-mt-8'}>
 
       {/* ── Sticky top bar ─────────────────────────────────────── */}
       <div
-        className="sticky top-0 z-20 border-b"
-        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: '0 1px 6px rgba(0,0,0,.07)' }}
+        className={panelMode ? 'border-b' : 'sticky top-0 z-20 border-b'}
+        style={{ background: panelMode ? 'var(--subtle-bg)' : 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: panelMode ? 'none' : '0 1px 6px rgba(0,0,0,.07)', ...(panelMode ? { position: 'sticky', top: 0, zIndex: 10 } : {}) }}
       >
         {/* CSS grid: auto | 1fr | auto — both rows share the same columns so
             "N results" sits under "Web Scout" and tabs align with the search input */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', columnGap: 12, paddingLeft: 32, paddingRight: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: panelMode ? '1fr auto' : 'auto 1fr auto', columnGap: panelMode ? 8 : 12, paddingLeft: panelMode ? 12 : 32, paddingRight: panelMode ? 12 : 32 }}>
 
-          {/* ── Row 1, Col 1: Title ── */}
-          <div className="flex items-center gap-2 py-3 flex-shrink-0">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,200,150,0.15)', border: '1px solid rgba(0,200,150,0.3)' }}>
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="#00c896">
-                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-              </svg>
+          {/* ── Row 1, Col 1: Title (full mode only) ── */}
+          {!panelMode && (
+            <div className="flex items-center gap-2 py-3 flex-shrink-0">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'rgba(0,200,150,0.15)', border: '1px solid rgba(0,200,150,0.3)' }}>
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="#00c896">
+                  <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+              </div>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Web Scout</span>
             </div>
-            <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Web Scout</span>
-          </div>
+          )}
 
-          {/* ── Row 1, Col 2: Search form ── */}
-          <form onSubmit={handleSearch} className="flex items-center gap-2 py-3" style={{ maxWidth: 560 }}>
+          {/* ── Row 1, Col 2 (or 1 in panelMode): Search form ── */}
+          <form onSubmit={handleSearch} className="flex items-center gap-2 py-3" style={{ maxWidth: panelMode ? 'none' : 560 }}>
             <div className="flex-1 relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" viewBox="0 0 24 24" fill="rgba(0,200,150,0.5)">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -278,16 +287,18 @@ export default function SearchClient({ databases, userName }: { databases: Datab
 
           {/* ── Row 2 (tabs) — only when results exist ── */}
           {searched && !loading && results.length > 0 && <>
-            {/* Col 1: results count */}
-            <div className="flex items-center gap-2 flex-shrink-0" style={{ height: 46, borderTop: '1px solid var(--border)' }}>
-              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                {results.length} result{results.length !== 1 ? 's' : ''}
-              </span>
-              <div className="w-px h-4 flex-shrink-0" style={{ background: 'var(--border)' }} />
-            </div>
+            {/* Col 1: results count (full mode only) */}
+            {!panelMode && (
+              <div className="flex items-center gap-2 flex-shrink-0" style={{ height: 46, borderTop: '1px solid var(--border)' }}>
+                <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {results.length} result{results.length !== 1 ? 's' : ''}
+                </span>
+                <div className="w-px h-4 flex-shrink-0" style={{ background: 'var(--border)' }} />
+              </div>
+            )}
 
-            {/* Col 2: tab buttons */}
-            <div className="flex items-center gap-1 overflow-x-auto" style={{ height: 46, borderTop: '1px solid var(--border)' }}>
+            {/* Col 2 (or spans full width in panelMode): tab buttons */}
+            <div className="flex items-center gap-1 overflow-x-auto" style={{ height: 46, borderTop: '1px solid var(--border)', ...(panelMode ? { gridColumn: '1 / -1' } : {}) }}>
               {results.map((player, i) => {
                 const initials = player.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
                 const isActive = i === activeTabIdx
@@ -322,15 +333,15 @@ export default function SearchClient({ databases, userName }: { databases: Datab
               })}
             </div>
 
-            {/* Col 3: empty — keeps grid structure */}
-            <div style={{ height: 46, borderTop: '1px solid var(--border)' }} />
+            {/* Col 3: empty — keeps grid structure (full mode only) */}
+            {!panelMode && <div style={{ height: 46, borderTop: '1px solid var(--border)' }} />}
           </>}
 
         </div>
       </div>
 
       {/* ── Main content ───────────────────────────────────────── */}
-      <div className="pt-[54px] pb-[18px]">
+      <div className={panelMode ? 'px-4 pt-4 pb-4' : 'pt-[54px] pb-[18px]'}>
 
         {/* Loading */}
         {loading && (
@@ -367,6 +378,10 @@ export default function SearchClient({ databases, userName }: { databases: Datab
             databases={databases}
             userName={userName}
             visibleParams={visibleParams}
+            panelMode={panelMode}
+            targetDatabaseId={targetDatabaseId}
+            targetListName={targetListName}
+            onPlayerAdded={onPlayerAdded}
           />
         )}
 
@@ -605,11 +620,15 @@ function formatDateStr(val: string | null | undefined): string | null {
 
 // ─── Player Card ──────────────────────────────────────────────────────────────
 
-function PlayerCard({ player, databases, userName, visibleParams }: {
+function PlayerCard({ player, databases, userName, visibleParams, panelMode, targetDatabaseId, targetListName, onPlayerAdded }: {
   player: PlayerResult
   databases: Database[]
   userName: string
   visibleParams: Set<string>
+  panelMode?: boolean
+  targetDatabaseId?: string
+  targetListName?: string
+  onPlayerAdded?: (playerName: string) => void
 }) {
   const show = (label: string) => {
     const key = FIELD_PARAM_KEY[label] ?? label
@@ -732,12 +751,20 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
           <button
             onClick={() => setMerging(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
-            style={{ background: 'var(--subtle-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--text-faint)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
+            style={panelMode && targetListName
+              ? { background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)' }
+              : { background: 'var(--subtle-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+            onMouseEnter={e => {
+              if (panelMode && targetListName) { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,200,150,0.1)' }
+              else { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--text-faint)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.boxShadow = 'none'
+              if (!(panelMode && targetListName)) { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.borderColor = 'var(--border)' }
+            }}
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
-            Import to List
+            {panelMode && targetListName ? `Add to ${targetListName}` : 'Import to List'}
           </button>
         </div>
       </div>
@@ -900,6 +927,8 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
           editData={editData}
           databases={databases}
           onClose={() => setMerging(false)}
+          preSelectedDbId={targetDatabaseId}
+          onPlayerAdded={onPlayerAdded}
         />
       )}
     </div>
@@ -999,7 +1028,6 @@ function EditableField({ label, displayValue, editValue, onChange, highlight, is
     border: '1px solid rgba(0,200,150,0.3)',
     color: 'var(--text-primary)',
     caretColor: '#00c896',
-    colorScheme: 'dark' as const,
   }
   const onFocusStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     e.currentTarget.style.borderColor = 'rgba(0,200,150,0.6)'
@@ -1045,14 +1073,16 @@ function parseMarketValueToNumber(v: string | null): number | null {
   return Math.round(num)
 }
 
-function ImportModal({ player, editData, databases, onClose }: {
+function ImportModal({ player, editData, databases, onClose, preSelectedDbId, onPlayerAdded }: {
   player: PlayerResult
   editData: PlayerEditData
   databases: Database[]
   onClose: () => void
+  preSelectedDbId?: string
+  onPlayerAdded?: (playerName: string) => void
 }) {
   const router = useRouter()
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(preSelectedDbId ? [preSelectedDbId] : []))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -1150,12 +1180,18 @@ function ImportModal({ player, editData, databases, onClose }: {
         setLoading(false)
         return
       }
-      const firstDbId = [...selectedIds][0]
-      const firstResult = results.find(r => r.dbId === firstDbId)
-      if (firstResult?.data?.id) {
-        router.push(`/databases/${firstDbId}/players/${firstResult.data.id}`)
-      } else {
+      if (preSelectedDbId) {
+        window.dispatchEvent(new CustomEvent('scoutlink:player-added'))
+        onPlayerAdded?.(player.name)
         onClose()
+      } else {
+        const firstDbId = [...selectedIds][0]
+        const firstResult = results.find(r => r.dbId === firstDbId)
+        if (firstResult?.data?.id) {
+          router.push(`/databases/${firstDbId}/players/${firstResult.data.id}`)
+        } else {
+          onClose()
+        }
       }
     } catch {
       setError('Something went wrong')
@@ -1168,7 +1204,7 @@ function ImportModal({ player, editData, databases, onClose }: {
       <div className="w-full max-w-md rounded-2xl border max-h-[90vh] flex flex-col" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
 
         <div className="px-6 pt-5 pb-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-          <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Import into database</h2>
+          <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{preSelectedDbId ? 'Add player to list' : 'Import into database'}</h2>
           <div className="flex items-center gap-3 p-3 rounded-xl mt-2" style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)' }}>
             {photoSrc && <img src={photoSrc} alt={player.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
             <div className="min-w-0">
@@ -1179,13 +1215,16 @@ function ImportModal({ player, editData, databases, onClose }: {
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-5">
-          <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--text-faint)' }}>Choose databases</p>
+          <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--text-faint)' }}>
+            {preSelectedDbId ? 'Choose list' : 'Choose databases'}
+          </p>
           {databases.length === 0 ? (
             <p className="text-sm" style={{ color: '#f87171' }}>You have no databases. Create one first.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {databases.map(db => {
                 const checked = selectedIds.has(db.id)
+                const isCurrent = db.id === preSelectedDbId
                 return (
                   <label key={db.id} className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all" style={{
                     background: checked ? 'rgba(0,200,150,0.08)' : 'var(--subtle-bg)',
@@ -1193,6 +1232,7 @@ function ImportModal({ player, editData, databases, onClose }: {
                   }}>
                     <input type="checkbox" checked={checked} onChange={() => toggleDb(db.id)} className="accent-[#00c896] w-4 h-4 flex-shrink-0" />
                     <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{db.name}</span>
+                    {isCurrent && !checked && <span className="ml-auto text-[10px]" style={{ color: 'var(--text-faint)' }}>Current list</span>}
                     {checked && <span className="ml-auto text-[10px]" style={{ color: '#00c896' }}>Selected</span>}
                   </label>
                 )
@@ -1215,7 +1255,7 @@ function ImportModal({ player, editData, databases, onClose }: {
               style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
               onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,200,150,0.25)' }}
               onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}>
-              {selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
+              {preSelectedDbId ? 'Add to List' : selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
             </button>
           </div>
         )}

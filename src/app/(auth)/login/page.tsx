@@ -28,7 +28,7 @@ export default function LoginPage() {
     } else {
       // Ensure agent record exists — idempotent, safe for existing users
       await fetch('/api/agent/create', { method: 'POST' })
-      router.push('/dashboard')
+      router.push('/databases')
       router.refresh()
     }
   }

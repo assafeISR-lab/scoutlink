@@ -35,7 +35,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL('/databases', request.url))
   }
 
   return supabaseResponse
