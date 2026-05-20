@@ -78,12 +78,12 @@ export default function Sidebar({ userName, userEmail, userInitial, userId, play
   }
 
   const mainItems = [
-    { icon: <IconDashboard />, label: 'Scout Board', color: '#00c896', href: '/dashboard' },
     { icon: <IconSearch />, label: 'Web Scout a Player', color: '#6c8fff', href: '/search' },
   ]
   const toolItems = [
     { icon: <IconReports />, label: 'Reports', color: '#ff9f43', href: '/reports' },
     { icon: <IconCalendar />, label: 'Calendar', color: '#ff6b9d', href: '/calendar' },
+    { icon: <IconDashboard />, label: 'ScoutBoardLog', color: '#00c896', href: '/dashboard' },
   ]
 
   return (

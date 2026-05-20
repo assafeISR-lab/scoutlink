@@ -211,28 +211,12 @@ interface Props {
 
 export default function SearchParamsPanel({ onChange }: Props) {
   const [active, setActive] = useState<Set<string>>(() => new Set(PARAM_KEYS))
-  const [customKeys, setCustomKeys] = useState<string[]>([])
-  const [customActive, setCustomActive] = useState<Set<string>>(() => new Set())
-  const [newParam, setNewParam] = useState('')
 
   useEffect(() => {
-    const savedActive  = loadActive()
-    const builtInLabels = new Set(Object.values(PARAM_LABELS).map(l => l.toLowerCase()))
-    const savedCustomK = loadCustomKeys().filter(
-      k => !(PARAM_KEYS as readonly string[]).includes(k) && !builtInLabels.has(k.toLowerCase())
-    )
-    const savedCustomA = new Set([...loadCustomActive()].filter(k => savedCustomK.includes(k)))
-    localStorage.setItem(CUSTOM_KEYS_KEY,   JSON.stringify(savedCustomK))
-    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...savedCustomA]))
+    const savedActive = loadActive()
     setActive(savedActive)
-    setCustomKeys(savedCustomK)
-    setCustomActive(savedCustomA)
-    notify(savedActive, savedCustomA)
+    onChange?.(savedActive)
   }, [])
-
-  function notify(builtIn: Set<string>, custom: Set<string>) {
-    onChange?.(new Set([...builtIn, ...custom]))
-  }
 
   function toggle(key: string) {
     const next = new Set(active)
@@ -240,64 +224,26 @@ export default function SearchParamsPanel({ onChange }: Props) {
     else next.add(key)
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]))
     setActive(next)
-    notify(next, customActive)
-  }
-
-  function toggleCustom(key: string) {
-    const next = new Set(customActive)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...next]))
-    setCustomActive(next)
-    notify(active, next)
+    onChange?.(next)
   }
 
   function selectAll() {
-    const nextActive = new Set<string>(PARAM_KEYS)
-    const nextCustomActive = new Set<string>(customKeys)
-    setActive(nextActive)
-    setCustomActive(nextCustomActive)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...nextActive]))
-    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...nextCustomActive]))
-    notify(nextActive, nextCustomActive)
+    const next = new Set<string>(PARAM_KEYS)
+    setActive(next)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]))
+    onChange?.(next)
   }
 
   function clearAll() {
     const empty = new Set<string>()
     setActive(empty)
-    setCustomActive(empty)
     localStorage.setItem(STORAGE_KEY, JSON.stringify([]))
-    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([]))
-    notify(empty, empty)
+    onChange?.(empty)
   }
 
-  function addCustomParam() {
-    const label = newParam.trim()
-    if (!label || customKeys.includes(label)) return
-    const next = [...customKeys, label]
-    const nextActive = new Set([...customActive, label])
-    setCustomKeys(next)
-    setCustomActive(nextActive)
-    setNewParam('')
-    localStorage.setItem(CUSTOM_KEYS_KEY, JSON.stringify(next))
-    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...nextActive]))
-    notify(active, nextActive)
-  }
-
-  function removeCustomParam(key: string) {
-    const next = customKeys.filter(k => k !== key)
-    const nextActive = new Set(customActive)
-    nextActive.delete(key)
-    setCustomKeys(next)
-    setCustomActive(nextActive)
-    localStorage.setItem(CUSTOM_KEYS_KEY, JSON.stringify(next))
-    localStorage.setItem(CUSTOM_ACTIVE_KEY, JSON.stringify([...nextActive]))
-    notify(active, nextActive)
-  }
-
-  const totalActive = active.size + customActive.size
-  const totalAll = PARAM_KEYS.length + customKeys.length
-  const allChecked = active.size === PARAM_KEYS.length && customActive.size === customKeys.length
+  const totalActive = active.size
+  const totalAll = PARAM_KEYS.length
+  const allChecked = active.size === PARAM_KEYS.length
 
   return (
     <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'var(--card-bg)' }}>
@@ -333,61 +279,6 @@ export default function SearchParamsPanel({ onChange }: Props) {
             </label>
           )
         })}
-      </div>
-
-      {/* Custom parameters */}
-      {customKeys.length > 0 && (
-        <div className="border-t border-white/8 divide-y divide-white/5">
-          {customKeys.map(key => {
-            const checked = customActive.has(key)
-            return (
-              <div key={key} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/3">
-                <Checkbox checked={checked} onToggle={() => toggleCustom(key)} />
-                <span
-                  className="text-xs flex-1 cursor-pointer"
-                  onClick={() => toggleCustom(key)}
-                  style={{ color: checked ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)' }}
-                >
-                  {key}
-                </span>
-                <button
-                  onClick={() => removeCustomParam(key)}
-                  className="w-4 h-4 flex items-center justify-center flex-shrink-0 rounded transition-colors hover:bg-white/10"
-                  title="Remove"
-                >
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="rgba(255,255,255,0.3)">
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                  </svg>
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Add custom parameter input */}
-      <div className="px-4 py-3 border-t border-white/8" style={{ background: 'var(--subtle-bg)' }}>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newParam}
-            onChange={e => setNewParam(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') addCustomParam() }}
-            placeholder="Add parameter…"
-            className="flex-1 text-xs px-3 py-1.5 rounded-lg text-white placeholder-white/20 focus:outline-none transition-colors"
-            style={{ background: 'var(--hover-bg)', border: '1px solid var(--border)' }}
-            onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,200,150,0.4)'}
-            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
-          />
-          <button
-            onClick={addCustomParam}
-            disabled={!newParam.trim()}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-black disabled:opacity-30 transition-all"
-            style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
-          >
-            Add
-          </button>
-        </div>
       </div>
 
       {/* Footer count */}
