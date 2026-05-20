@@ -8,7 +8,6 @@ import CreateDatabaseButton from './CreateDatabaseButton'
 import ImportDatabasesButton from './ImportDatabasesButton'
 import ColumnPicker from './[id]/ColumnPicker'
 import AddPlayerButton from './[id]/AddPlayerButton'
-import EditPlayerModal, { type SavedPlayerFields } from './EditPlayerModal'
 import CreateReportModal, { type PlayerSnapshot } from './CreateReportModal'
 import { loadActive, loadCustomActive } from '@/app/(dashboard)/search/SearchParamsPanel'
 
@@ -277,7 +276,6 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
   const [refreshKey, setRefreshKey] = useState(0)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [editingPlayer, setEditingPlayer] = useState<PlayerRow | null>(null)
 
   const [fallbackCols] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return TABLE_COLS
@@ -325,16 +323,6 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
     setPlayers(prev => prev ? prev.filter(x => x.id !== p.id) : prev)
     setConfirmDeleteId(null)
     setDeletingId(null)
-  }
-
-  function handlePlayerSaved(updated: SavedPlayerFields) {
-    if (!editingPlayer) return
-    setPlayers(prev => prev
-      ? prev.map(p => p.id === editingPlayer.id ? { ...p, ...updated } : p)
-      : prev
-    )
-    setAvailOverride(prev => { const next = { ...prev }; delete next[editingPlayer.id]; return next })
-    setEditingPlayer(null)
   }
 
   const show = (key: string) => columnConfig !== null ? columnConfig.includes(key) : fallbackCols.has(key)
@@ -438,15 +426,6 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
           )}
         </div>
       </div>
-
-      {editingPlayer && (
-        <EditPlayerModal
-          player={editingPlayer}
-          singleId={singleId}
-          onClose={() => setEditingPlayer(null)}
-          onSaved={handlePlayerSaved}
-        />
-      )}
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -587,16 +566,6 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
                       </div>
                     ) : (
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={e => { e.stopPropagation(); setConfirmDeleteId(null); setEditingPlayer(p) }}
-                          className="w-6 h-6 flex items-center justify-center rounded-md"
-                          style={{ background: 'rgba(108,143,255,0.08)', color: '#6c8fff' }}
-                          title="Edit player"
-                        >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                          </svg>
-                        </button>
                         <button
                           onClick={e => { e.stopPropagation(); setConfirmDeleteId(p.id) }}
                           className="w-6 h-6 flex items-center justify-center rounded-md"
