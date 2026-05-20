@@ -525,7 +525,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport }: { databaseI
                           onClick={e => { e.stopPropagation(); toggleAvailable(p) }}
                           className="text-[11px] px-2 py-0.5 rounded-full font-medium transition-all cursor-pointer"
                           style={isAvail
-                            ? { background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }
+                            ? { background: '#00c896', color: '#fff', border: '1px solid #00c896' }
                             : { background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
                           onMouseEnter={e => { e.currentTarget.style.opacity = '0.75' }}
                           onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
@@ -745,7 +745,7 @@ export default function DatabasesClient({
             onClick={() => setSelectedIds([])}
             className="px-3 py-1 rounded-full text-xs font-medium transition-all"
             style={isAllLists ? {
-              background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)',
+              background: '#00c896', color: '#fff', border: '1px solid #00c896',
             } : {
               background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)',
             }}
@@ -762,7 +762,7 @@ export default function DatabasesClient({
                 onClick={() => togglePill(db.id)}
                 className="px-3 py-1 rounded-full text-xs font-medium transition-all"
                 style={active ? {
-                  background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)',
+                  background: '#00c896', color: '#fff', border: '1px solid #00c896',
                 } : {
                   background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)',
                 }}
