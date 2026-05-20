@@ -279,6 +279,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
                 disabled={saving || !noteContent.trim()}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-black disabled:opacity-50 transition-all"
                 style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,200,150,0.25)' }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
                 {saving ? 'Saving…' : 'Save Note'}
@@ -489,9 +491,9 @@ function Row({ label, display, manual = false, highlight = false, isEditing, inp
           disabled={!onBoolChange}
           className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
           style={{
-            background: boolValue ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
-            color: boolValue ? '#00c896' : '#ff6464',
-            border: `1px solid ${boolValue ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+            background: boolValue ? '#00c896' : 'rgba(255,80,80,0.1)',
+            color: boolValue ? '#fff' : '#ff6464',
+            border: `1px solid ${boolValue ? '#00c896' : 'rgba(255,80,80,0.25)'}`,
             cursor: onBoolChange ? 'pointer' : 'default',
           }}
         >

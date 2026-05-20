@@ -224,8 +224,10 @@ export default function SearchClient({ databases, userName }: { databases: Datab
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="px-4 py-2 rounded-xl font-semibold text-sm text-black disabled:opacity-50 transition-all hover:opacity-90 flex-shrink-0"
+              className="px-4 py-2 rounded-xl font-semibold text-sm text-black disabled:opacity-50 transition-all flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,200,150,0.25)' }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
             >
               {loading ? 'Searching…' : 'Search'}
             </button>
@@ -293,23 +295,23 @@ export default function SearchClient({ databases, userName }: { databases: Datab
                     onClick={() => setActiveTabIdx(i)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg flex-shrink-0 transition-all text-xs font-medium"
                     style={{
-                      background: isActive ? 'rgba(0,200,150,0.1)' : 'transparent',
-                      border: `1.5px solid ${isActive ? 'rgba(0,200,150,0.3)' : 'transparent'}`,
-                      color: isActive ? '#00c896' : 'var(--text-muted)',
+                      background: isActive ? '#00c896' : 'transparent',
+                      border: `1.5px solid ${isActive ? '#00c896' : 'transparent'}`,
+                      color: isActive ? '#fff' : 'var(--text-muted)',
                     }}
                   >
                     <div
                       className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0"
                       style={{
-                        background: isActive ? 'rgba(0,200,150,0.2)' : 'var(--hover-bg)',
-                        color: isActive ? '#00c896' : 'var(--text-faint)',
+                        background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--hover-bg)',
+                        color: isActive ? '#fff' : 'var(--text-faint)',
                       }}
                     >
                       {initials}
                     </div>
                     <span>{player.name}</span>
                     {player.team && (
-                      <span className="text-[10px]" style={{ color: isActive ? 'rgba(0,200,150,0.5)' : 'var(--text-faint)' }}>
+                      <span className="text-[10px]" style={{ color: isActive ? 'rgba(255,255,255,0.6)' : 'var(--text-faint)' }}>
                         · {player.team}
                       </span>
                     )}
@@ -727,8 +729,10 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
           {/* Import button */}
           <button
             onClick={() => setMerging(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-black transition-all hover:opacity-90"
-            style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+            style={{ background: 'var(--subtle-bg)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--text-faint)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
             Import to List
@@ -783,9 +787,9 @@ function PlayerCard({ player, databases, userName, visibleParams }: {
                   onClick={() => setEditData(prev => ({ ...prev, available: !prev.available }))}
                   className="text-[11px] font-semibold px-2 py-0.5 rounded-full transition-all"
                   style={{
-                    background: editData.available ? 'rgba(0,200,150,0.12)' : 'rgba(255,80,80,0.1)',
-                    color: editData.available ? '#00c896' : '#ff6464',
-                    border: `1px solid ${editData.available ? 'rgba(0,200,150,0.3)' : 'rgba(255,80,80,0.25)'}`,
+                    background: editData.available ? '#00c896' : 'rgba(255,80,80,0.1)',
+                    color: editData.available ? '#fff' : '#ff6464',
+                    border: `1px solid ${editData.available ? '#00c896' : 'rgba(255,80,80,0.25)'}`,
                   }}
                 >
                   {editData.available ? 'Available' : 'Not Available'}
@@ -1189,8 +1193,10 @@ function ImportModal({ player, editData, databases, onClose }: {
           <div className="px-6 py-4 border-t flex gap-3 flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm transition-colors" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>Cancel</button>
             <button onClick={handleImport} disabled={selectedIds.size === 0 || databases.length === 0}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50 transition-all"
+              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,200,150,0.25)' }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}>
               {selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
             </button>
           </div>
