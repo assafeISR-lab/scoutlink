@@ -72,8 +72,10 @@ export default function CreatePlayerReportButton({ player, databaseId, databaseN
     <>
       <button
         onClick={() => { setOpen(true); setName(''); setError('') }}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all"
-        style={{ background: 'rgba(255,159,67,0.12)', color: '#ff9f43', border: '1px solid rgba(255,159,67,0.25)' }}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+        style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-faint)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
         title="Create Report"
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -117,8 +119,10 @@ export default function CreatePlayerReportButton({ player, databaseId, databaseN
               <button
                 onClick={handleCreate}
                 disabled={loading || !name.trim()}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 transition-all"
                 style={{ background: 'linear-gradient(135deg, #ff9f43, #f38b2a)', color: '#fff' }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,159,67,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
               >
                 {loading ? 'Creating...' : 'Create Report'}
               </button>

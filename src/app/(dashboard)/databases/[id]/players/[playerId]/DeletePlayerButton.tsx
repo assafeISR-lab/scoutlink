@@ -35,8 +35,10 @@ export default function DeletePlayerButton({ databaseId, playerId, playerName }:
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm"
-        style={{ background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.8)', border: '1px solid rgba(239,68,68,0.15)' }}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm transition-all"
+        style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
         Delete
@@ -73,7 +75,9 @@ export default function DeletePlayerButton({ databaseId, playerId, playerName }:
                 onClick={handleDelete}
                 disabled={loading}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'var(--text-primary)' }}
+                style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff' }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(239,68,68,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
               >
                 {loading ? 'Deleting...' : 'Yes, Delete'}
               </button>
