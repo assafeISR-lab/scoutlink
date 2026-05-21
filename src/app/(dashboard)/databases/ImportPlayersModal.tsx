@@ -122,6 +122,9 @@ export default function ImportPlayersModal({
 }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+  const phantomScrollRef = useRef<HTMLDivElement>(null)
+  const [tableScrollWidth, setTableScrollWidth] = useState(0)
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
 
@@ -323,6 +326,28 @@ export default function ImportPlayersModal({
     }
   }
 
+  // ── Phantom scrollbar sync ────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (step !== 3) return
+    const el = tableScrollRef.current
+    if (!el) return
+    const measure = () => setTableScrollWidth(el.scrollWidth)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [step, editCols.length])
+
+  function onTableScroll() {
+    if (phantomScrollRef.current && tableScrollRef.current)
+      phantomScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft
+  }
+  function onPhantomScroll() {
+    if (tableScrollRef.current && phantomScrollRef.current)
+      tableScrollRef.current.scrollLeft = phantomScrollRef.current.scrollLeft
+  }
+
   // ── Derived counts ────────────────────────────────────────────────────────
 
   const activeRows    = editRows.filter(r => !r.deleted)
@@ -511,7 +536,12 @@ export default function ImportPlayersModal({
               </p>
 
               {/* Editable table */}
-              <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0, border: '1px solid var(--border-strong)', borderRadius: 12 }}>
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', border: '1px solid var(--border-strong)', borderRadius: 12, overflow: 'hidden' }}>
+                <div
+                  ref={tableScrollRef}
+                  onScroll={onTableScroll}
+                  style={{ overflowX: 'hidden', overflowY: 'auto', flex: 1, minHeight: 0 }}
+                >
                 <table style={{ borderCollapse: 'collapse', minWidth: editCols.length * 140 + 200 }}>
                   <thead>
                     <tr style={{ background: 'var(--subtle-bg)', position: 'sticky', top: 0, zIndex: 10 }}>
@@ -582,6 +612,15 @@ export default function ImportPlayersModal({
                     ))}
                   </tbody>
                 </table>
+                </div>
+                {/* Phantom scrollbar — always visible at the bottom of the table area */}
+                <div
+                  ref={phantomScrollRef}
+                  onScroll={onPhantomScroll}
+                  style={{ overflowX: 'auto', overflowY: 'hidden', flexShrink: 0, height: 12 }}
+                >
+                  <div style={{ width: tableScrollWidth, height: 1 }} />
+                </div>
               </div>
             </div>
           )}
