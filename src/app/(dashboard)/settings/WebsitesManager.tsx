@@ -16,7 +16,7 @@ const SCRAPERS = [
     name: 'Sofascore',
     url: 'https://www.sofascore.com',
     domain: 'sofascore.com',
-    comingSoon: ['Heat Map'],
+    comingSoon: [],
     color: '#1a3a6b',
     accent: '#3a7bd5',
   },
