@@ -204,15 +204,15 @@ export const sofascoreScraper: SiteScraper = {
               seasonStats = JSON.stringify({ seasons })
             }
 
-            // Process heatmap
+            // Process heatmap — API returns { points: [{x,y,count},...] }
             if (heatmapRes?.ok) {
               try {
                 const hmData = await heatmapRes.json() as Record<string, unknown>
-                const pts = hmData.heatmap as Array<{ x: number; y: number }> | undefined
+                const pts = hmData.points as Array<{ x: number; y: number; count?: number }> | undefined
                 if (pts && pts.length > 0) {
                   const [year, { tName }] = candidateYears[0]
                   const maxVal = Math.max(...pts.flatMap(p => [p.x, p.y]))
-                  const normalized = maxVal <= 1.0 ? pts.map(p => ({ x: p.x * 100, y: p.y * 100 })) : pts
+                  const normalized = maxVal <= 1.0 ? pts.map(p => ({ x: p.x * 100, y: p.y * 100 })) : pts.map(p => ({ x: p.x, y: p.y }))
                   heatmap = JSON.stringify({ points: normalized, season: year, tournament: tName })
                 }
               } catch { /* skip heatmap */ }
