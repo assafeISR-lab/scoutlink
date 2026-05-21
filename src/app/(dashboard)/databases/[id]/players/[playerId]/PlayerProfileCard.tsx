@@ -79,6 +79,27 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   const [noteAdding,  setNoteAdding]  = useState(false)
   const [noteContent, setNoteContent] = useState('')
   const [localActiveFm, setLocalActiveFm] = useState(false)
+  const [heatmapRefreshing, setHeatmapRefreshing] = useState(false)
+  const [heatmapError, setHeatmapError] = useState('')
+
+  async function handleRefreshHeatmap() {
+    setHeatmapRefreshing(true)
+    setHeatmapError('')
+    try {
+      const res = await fetch(`/api/databases/${databaseId}/players/${player.id}/refresh-heatmap`, { method: 'POST' })
+      const data = await res.json() as { heatmap?: string | null; error?: string }
+      if (!res.ok) { setHeatmapError(data.error || 'Failed'); return }
+      if (data.heatmap) {
+        setForm(f => ({ ...f, heatmap: data.heatmap! }))
+      } else {
+        setHeatmapError('No heatmap data on Sofascore')
+      }
+    } catch {
+      setHeatmapError('Network error')
+    } finally {
+      setHeatmapRefreshing(false)
+    }
+  }
 
   const initialForm = () => ({
     // DB fields
@@ -366,7 +387,25 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Col 1: Heat Map */}
         <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
+            {canWrite && scUrl && (
+              <button
+                onClick={handleRefreshHeatmap}
+                disabled={heatmapRefreshing}
+                title="Refresh heatmap from Sofascore"
+                className="opacity-40 hover:opacity-80 transition-opacity disabled:opacity-20"
+                style={{ lineHeight: 0 }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ color: 'var(--text-muted)', animation: heatmapRefreshing ? 'spin 1s linear infinite' : 'none' }}>
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                </svg>
+              </button>
+            )}
+          </div>
+          {heatmapError && <p className="text-[9px]" style={{ color: '#f87171' }}>{heatmapError}</p>}
           <HeatmapDisplay json={form.heatmap || null} />
         </div>
 

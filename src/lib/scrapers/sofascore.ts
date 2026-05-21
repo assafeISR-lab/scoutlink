@@ -270,3 +270,70 @@ function formatMarketValue(value: number | null | undefined): string | null {
   if (value >= 1_000) return `€${Math.round(value / 1_000)}k`
   return `€${value}`
 }
+
+// Re-fetch heatmap for a player already in the DB (used by the refresh-heatmap API route)
+export async function fetchSofascoreHeatmap(playerId: number): Promise<string | null> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 12000)
+  try {
+    const seasonsRes = await apiFetch(
+      `https://api.sofascore.com/api/v1/player/${playerId}/statistics/seasons`,
+      controller.signal
+    )
+    if (!seasonsRes.ok) return null
+
+    type TournSeason = { uniqueTournament: { id: number; name: string }; seasons: { id: number; year: string }[] }
+    const seasonsData = await seasonsRes.json() as Record<string, unknown>
+    const tournamentSeasons = seasonsData.uniqueTournamentSeasons as TournSeason[] | undefined
+    if (!tournamentSeasons?.length) return null
+
+    const yearMap = new Map<string, { tId: number; tName: string; sId: number }>()
+    for (const ts of tournamentSeasons) {
+      for (const sv of ts.seasons) {
+        if (!yearMap.has(sv.year)) {
+          yearMap.set(sv.year, { tId: ts.uniqueTournament.id, tName: ts.uniqueTournament.name, sId: sv.id })
+        }
+      }
+    }
+
+    const normYearKey = (y: string): number => {
+      const n = parseInt(y.includes('/') ? y.split('/')[0] : y)
+      return n < 100 ? 2000 + n : n
+    }
+
+    const seenCanon = new Set<number>()
+    const candidateYears = [...yearMap.entries()]
+      .sort((a, b) => {
+        const diff = normYearKey(b[0]) - normYearKey(a[0])
+        if (diff !== 0) return diff
+        return (a[0].includes('/') ? 0 : 1) - (b[0].includes('/') ? 0 : 1)
+      })
+      .reduce<Array<[string, { tId: number; tName: string; sId: number }]>>((acc, entry) => {
+        const canon = normYearKey(entry[0])
+        if (!seenCanon.has(canon)) { seenCanon.add(canon); acc.push(entry) }
+        return acc
+      }, [])
+
+    if (!candidateYears.length) return null
+    const [year, { tId, tName, sId }] = candidateYears[0]
+
+    const heatmapRes = await apiFetch(
+      `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/heatmap`,
+      controller.signal
+    ).catch(() => null)
+
+    if (!heatmapRes?.ok) return null
+
+    const hmData = await heatmapRes.json() as Record<string, unknown>
+    const pts = hmData.points as Array<{ x: number; y: number; count?: number }> | undefined
+    if (!pts?.length) return null
+
+    const maxVal = Math.max(...pts.flatMap(p => [p.x, p.y]))
+    const normalized = maxVal <= 1.0 ? pts.map(p => ({ x: p.x * 100, y: p.y * 100 })) : pts.map(p => ({ x: p.x, y: p.y }))
+    return JSON.stringify({ points: normalized, season: year, tournament: tName })
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
