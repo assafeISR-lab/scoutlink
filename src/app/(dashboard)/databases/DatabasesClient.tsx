@@ -1057,7 +1057,12 @@ export default function DatabasesClient({
               onListLoaded={players => {
                 if (pendingAutoSelectRef.current && players.length > 0) {
                   pendingAutoSelectRef.current = false
-                  handlePlayerSelect(players[0])
+                  const first = [...players].sort((a, b) => {
+                    const an = `${a.firstName} ${a.lastName}`.toLowerCase()
+                    const bn = `${b.firstName} ${b.lastName}`.toLowerCase()
+                    return an < bn ? -1 : an > bn ? 1 : 0
+                  })[0]
+                  handlePlayerSelect(first)
                 }
               }}
             />
