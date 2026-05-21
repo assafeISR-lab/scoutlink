@@ -78,12 +78,14 @@ export default function HeatmapDisplay({ json }: { json: string | null }) {
         {/* Bottom penalty spot */}
         <circle cx={PW / 2} cy={PH - 11} r={0.6} fill="rgba(255,255,255,0.55)" />
 
-        {/* Heatmap dots — overlapping circles create density effect */}
+        {/* Heatmap dots — overlapping circles create density effect.
+            Sofascore: x = length (0=own goal → 100=opponent goal), y = width.
+            SVG is portrait so length maps to cy (vertical) and width to cx. */}
         {data.points.map((pt, i) => (
           <circle
             key={i}
-            cx={(pt.x / 100) * PW}
-            cy={(pt.y / 100) * PH}
+            cx={(pt.y / 100) * PW}
+            cy={(pt.x / 100) * PH}
             r={3.8}
             fill="rgba(255,110,0,0.13)"
           />
