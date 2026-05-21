@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { getScraperForUrl, type ScrapedPlayer, type MergedPlayer } from '@/lib/scrapers'
+import { getScraperForUrl, scrapePlayerByUrl, type ScrapedPlayer, type MergedPlayer } from '@/lib/scrapers'
 
 const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 const normName = (n: string) => stripAccents(n.trim().toLowerCase().replace(/\s+/g, ' '))
@@ -106,9 +106,39 @@ function mergePlayers(allResults: ScrapedPlayer[], paramSources: Record<string, 
   return merged
 }
 
+// Extract a player name from a supported profile URL by reading the slug.
+// e.g. ".../28106491-declan-rice" → "Declan Rice"
+function extractNameFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace(/^www\./, '')
+    const segments = u.pathname.split('/').filter(Boolean)
+
+    let slug: string | null = null
+
+    if (host.includes('fminside.net')) {
+      // /players/{dbVer}/{id}-{name-slug}
+      const last = segments[segments.length - 1]
+      slug = last.replace(/^\d+-/, '') // strip leading numeric id
+    } else if (host.includes('transfermarkt.')) {
+      // /{name-slug}/profil/spieler/{id}
+      slug = segments[0] ?? null
+    } else if (host.includes('sofascore.com')) {
+      // /player/{slug}/{id}
+      const idx = segments.indexOf('player')
+      slug = idx >= 0 ? (segments[idx + 1] ?? null) : null
+    }
+
+    if (!slug) return null
+    return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).trim() || null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
-  const query: string = body.q ?? ''
+  let query: string = body.q ?? ''
   const paramSources: Record<string, string> = body.paramSources ?? {}
 
   if (!query || query.trim().length < 2) {
@@ -117,6 +147,20 @@ export async function POST(req: NextRequest) {
 
   const user = await getSessionUser()
   if (!user) return NextResponse.json({ players: [] })
+
+  // URL-based scouting: extract player name from the URL slug, then run a
+  // full multi-site search exactly as if the user had typed the name.
+  if (/^https?:\/\//i.test(query.trim())) {
+    const name = extractNameFromUrl(query.trim())
+    if (!name) {
+      return NextResponse.json({
+        players: [],
+        siteStats: [],
+        urlError: 'Could not extract a player name from this URL. Make sure it links directly to a player profile on Transfermarkt, Sofascore, or FMInside.',
+      })
+    }
+    query = name
+  }
 
   // Fetch user's active websites
   const websites = await prisma.agentWebsite.findMany({

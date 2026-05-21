@@ -134,6 +134,100 @@ export const transfermarktScraper: SiteScraper = {
   },
 }
 
+// Scrape a single player by their Transfermarkt profile URL.
+// URL format: https://www.transfermarkt.com/{slug}/profil/spieler/{id}
+export async function scrapeByUrl(url: string): Promise<ScrapedPlayer | null> {
+  const match = url.match(/transfermarkt\.\w+\/(.+?)\/(?:profil|[^/]+)\/spieler\/(\d+)/)
+  if (!match) return null
+  const [, slug, playerId] = match
+  const profileUrl = `https://www.transfermarkt.com/${slug}/profil/spieler/${playerId}`
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 10000)
+  try {
+    const res = await sbFetch(profileUrl, false, controller.signal)
+    if (!res.ok) return null
+    const html = await res.text()
+
+    // Name from page title: "Sadio Mané - Profil | Transfermarkt"
+    const titleMatch = html.match(/<title>([^<|–\-]+)/)
+    const name = titleMatch?.[1]?.trim()
+    if (!name) return null
+
+    const heightMatch = html.match(/([12][,\.]\d{2})\s+m\b/) ?? html.match(/(\d{3})\s*cm/i)
+    let heightCm: number | null = null
+    if (heightMatch) {
+      const raw = heightMatch[1]
+      heightCm = (raw.includes(',') || raw.includes('.'))
+        ? Math.round(parseFloat(raw.replace(',', '.')) * 100)
+        : parseInt(raw)
+    }
+
+    const dobMatch = html.match(/(\d{2})\.(\d{2})\.(\d{4})/)
+    const dateOfBirth = dobMatch ? `${dobMatch[3]}-${dobMatch[2]}-${dobMatch[1]}` : null
+
+    let passports: string | null = null
+    const citizenBlock = html.match(/Citizenship:[\s\S]{0,600}?<\/li>/)?.[0] ?? ''
+    if (citizenBlock) {
+      const imgs = [...citizenBlock.matchAll(/<img[^>]+>/gi)]
+      const titles = imgs.map(m => m[0].match(/title="([^"]+)"/)?.[1]).filter(Boolean) as string[]
+      if (titles.length > 0) passports = titles.join(', ')
+    }
+
+    let joiningDate: string | null = null
+    const joinMatch = html.match(/Joined:\s*<span[^>]*class="data-header__content"[^>]*>(\d{2}\/\d{2}\/\d{4})<\/span>/)
+    if (joinMatch) {
+      const [day, month, year] = joinMatch[1].split('/')
+      joiningDate = `${year}-${month}-${day}`
+    }
+
+    const posMatch = html.match(/<td[^>]*class="zentriert"[^>]*>\s*([A-Z]{1,3})\s*<\/td>/)
+    const position = posMatch ? normalizePosition(posMatch[1]) : null
+
+    const natMatch = html.match(/class="[^"]*flagge[^"]*"[^>]+alt="([^"]+)"/i)
+      ?? html.match(/alt="([^"]+)"[^>]*class="[^"]*flagge[^"]*"/i)
+    const nationality = natMatch?.[1]?.trim() ?? null
+
+    const clubMatch = html.match(/href="\/[^"]+\/(?:startseite|kader)\/verein\/\d+"[^>]*title="([^"]+)"/)
+      ?? html.match(/href="\/[^"]+\/(?:startseite|kader)\/verein\/\d+"[^>]*>([^<]+)<\/a>/)
+    const club = clubMatch?.[1]?.trim() ?? null
+
+    const photoMatch = html.match(/src="(https?:\/\/[^"]+\/portrait\/[^"]+\.(?:jpg|png|webp)[^"]*)"/i)
+    const photo = photoMatch?.[1] ?? null
+
+    const mvMatch = html.match(/<td[^>]*class="rechts hauptlink"[^>]*>([^<]+)<\/td>/)
+    const marketValue = mvMatch?.[1]?.trim() ?? null
+
+    return {
+      id: `tm-${playerId}`,
+      name,
+      nationality,
+      team: club,
+      league: null,
+      position,
+      dateOfBirth,
+      heightCm,
+      preferredFoot: null,
+      contractUntil: null,
+      passports,
+      joiningDate,
+      photo,
+      description: null,
+      marketValue,
+      fmWages: null,
+      fmAttributes: null,
+      seasonStats: null,
+      heatmap: null,
+      sourceUrl: profileUrl,
+      sourceName: 'Transfermarkt',
+    }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 function normalizePosition(pos: string): string {
   const map: Record<string, string> = {
     GK: 'Goalkeeper', TW: 'Goalkeeper',

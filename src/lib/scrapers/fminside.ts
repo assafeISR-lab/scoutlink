@@ -157,6 +157,64 @@ export const fmInsideScraper: SiteScraper = {
   },
 }
 
+// Scrape a single player by their FMInside profile URL.
+// URL format: https://fminside.net/players/{dbVer}/{id}-{slug}
+export async function scrapeByUrl(url: string): Promise<ScrapedPlayer | null> {
+  const match = url.match(/fminside\.net\/players\/([\w-]+)\/((\d+)-([^/?#]+))/)
+  if (!match) return null
+  const [, dbVer, fullSlug, playerId] = match
+  const profileUrl = `https://fminside.net/players/${dbVer}/${fullSlug}`
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 10000)
+  try {
+    const res = await sbFetch(profileUrl, false, controller.signal)
+    if (!res.ok) return null
+    const html = await res.text()
+
+    // Name from page title: "Player Name | FMInside"
+    const titleMatch = html.match(/<title>([^|<]+)/)
+    const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/)
+    const name = (titleMatch?.[1] ?? h1Match?.[1])?.trim()
+    if (!name) return null
+
+    const natMatch = html.match(/class="flag"[^>]*code="([^"]+)"/)
+    const posMatch = html.match(/<span[^>]*position="([^"]+)"/)
+    const clubMatch = html.match(/href="\/clubs\/[^"]*">(?:<img[^>]*>)?([^<]+)<\/a>/)
+
+    const fmVer = dbVer.replace(/[^0-9]/g, '') || '26'
+    const photo = `https://img.fminside.net/facesfm${fmVer}/${playerId}.png`
+
+    return {
+      id: `fmi-${playerId}`,
+      name,
+      nationality: natMatch?.[1]?.trim() ?? null,
+      team: clubMatch?.[1]?.trim() ?? null,
+      league: null,
+      position: posMatch ? normalizePosition(posMatch[1]) : null,
+      dateOfBirth: null,
+      heightCm: null,
+      preferredFoot: null,
+      contractUntil: null,
+      passports: null,
+      joiningDate: null,
+      photo,
+      description: null,
+      marketValue: null,
+      fmWages: parseWages(html),
+      fmAttributes: parseAttributes(html),
+      seasonStats: null,
+      heatmap: null,
+      sourceUrl: profileUrl,
+      sourceName: 'FMInside',
+    }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 function cleanHtml(raw: string): string {
   return raw
     .replace(/<acronym[^>]*title="Thousand"[^>]*>K<\/acronym>/gi, 'K')

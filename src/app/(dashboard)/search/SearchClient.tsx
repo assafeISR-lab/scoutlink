@@ -111,6 +111,7 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [noSitesSelected, setNoSitesSelected] = useState(false)
+  const [urlError, setUrlError] = useState('')
   const [visibleParams, setVisibleParams] = useState<Set<string>>(new Set())
   const [activeTabIdx, setActiveTabIdx] = useState(0)
   const [coverageOpen, setCoverageOpen] = useState(false)
@@ -142,6 +143,7 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
     setLoading(true)
     setSearched(true)
     setNoSitesSelected(false)
+    setUrlError('')
     setSiteStats([])
     setActiveTabIdx(0)
     setCoverageOpen(false)
@@ -159,7 +161,10 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
       })
       const data = res.ok ? await res.json() : {}
       const players: PlayerResult[] = data.players || []
-      if (players.length === 0 && !data.noSitesSelected) {
+      const isUrl = /^https?:\/\//i.test(query.trim())
+      if (data.urlError) {
+        setUrlError(data.urlError as string)
+      } else if (players.length === 0 && !data.noSitesSelected && !isUrl) {
         players.push({
           id: `manual-${query.trim()}`,
           name: query.trim(),
@@ -351,6 +356,16 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
           <div className="flex flex-col items-center justify-center gap-4 py-16">
             <ScoutLinkBallLoader size={88} />
             <p className="text-sm" style={{ color: 'var(--text-faint)' }}>Searching player database…</p>
+          </div>
+        )}
+
+        {/* URL scout error */}
+        {!loading && urlError && (
+          <div className="rounded-2xl border border-dashed p-10 text-center" style={{ borderColor: 'rgba(255,100,100,0.3)', background: 'rgba(255,100,100,0.03)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(255,100,100,0.1)', border: '1px solid rgba(255,100,100,0.25)' }}>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="rgba(255,100,100,0.8)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            </div>
+            <p className="text-sm" style={{ color: 'rgba(255,130,130,0.9)' }}>{urlError}</p>
           </div>
         )}
 

@@ -75,6 +75,10 @@ function emptySeasonData(): SeasonData {
   return { year: '', tournament: '', apps: 0, min: 0, goals: 0, assists: 0, rating: null, xG: null, xA: null, shotsOnTarget: 0, keyPasses: 0, dribbles: 0, passAcc: null, tackles: 0, interceptions: 0, yc: 0, rc: 0 }
 }
 
+function padToThree(seasons: SeasonData[]): SeasonData[] {
+  return [...seasons, emptySeasonData(), emptySeasonData(), emptySeasonData()].slice(0, 3)
+}
+
 const CELL_INPUT_STYLE: React.CSSProperties = {
   width: '100%',
   background: 'rgba(0,200,150,0.07)',
@@ -95,7 +99,7 @@ export function SeasonStatsEditor({ json, onChange, onCellBlur }: {
   onCellBlur?: () => void
 }) {
   const init: MultiSeasonStats = (() => { try { return JSON.parse(json) } catch { return { seasons: [] } } })()
-  const [seasons, setSeasons] = useState<SeasonData[]>(init.seasons ?? [])
+  const [seasons, setSeasons] = useState<SeasonData[]>(padToThree(init.seasons ?? []))
   const [activeCell, setActiveCell] = useState<string | null>(null)
 
   function commit(next: SeasonData[]) {
@@ -197,30 +201,11 @@ export function SeasonStatsEditor({ json, onChange, onCellBlur }: {
           <tr>
             <th style={{ textAlign: 'left', paddingRight: 6, paddingBottom: 2, minWidth: 64 }} />
             {seasons.map((_, i) => (
-              <th key={i} style={{ textAlign: 'right', paddingLeft: 4, paddingBottom: 2, minWidth: 52, verticalAlign: 'bottom' }} className="group/col">
+              <th key={i} style={{ textAlign: 'right', paddingLeft: 4, paddingBottom: 2, minWidth: 52, verticalAlign: 'bottom' }}>
                 <HeaderCell col={i} field="year" />
                 <div style={{ marginTop: 2 }}><HeaderCell col={i} field="tournament" /></div>
-                <button
-                  type="button"
-                  onClick={e => { e.stopPropagation(); commit(seasons.filter((_, j) => j !== i)) }}
-                  className="opacity-0 group-hover/col:opacity-100 transition-opacity"
-                  style={{ color: 'rgba(255,80,80,0.55)', fontSize: 7, background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'right', paddingTop: 2, lineHeight: 1 }}
-                >
-                  remove
-                </button>
               </th>
             ))}
-            {seasons.length < 3 && (
-              <th style={{ paddingLeft: 6, verticalAlign: 'bottom', paddingBottom: 2 }}>
-                <button
-                  type="button"
-                  onClick={e => { e.stopPropagation(); commit([...seasons, emptySeasonData()]) }}
-                  style={{ color: '#00c896', opacity: 0.6, fontSize: 8, background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                >
-                  + Season
-                </button>
-              </th>
-            )}
           </tr>
         </thead>
         <tbody>
@@ -234,7 +219,6 @@ export function SeasonStatsEditor({ json, onChange, onCellBlur }: {
                   <DataCell col={i} field={field} />
                 </td>
               ))}
-              {seasons.length < 3 && <td />}
             </tr>
           ))}
         </tbody>
@@ -247,30 +231,7 @@ export default function SeasonStatsGrid({ json }: { json: string }) {
   let data: MultiSeasonStats
   try { data = JSON.parse(json) as MultiSeasonStats } catch { data = { seasons: [] } }
 
-  if (!data.seasons?.length) {
-    return (
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse" style={{ fontSize: 9 }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: 'left', paddingRight: 6, paddingBottom: 2, minWidth: 64 }} />
-              <th style={{ textAlign: 'right', paddingLeft: 4, paddingBottom: 2, minWidth: 40 }}>
-                <div style={{ color: 'var(--text-faint)', fontWeight: 700 }}>—</div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {STAT_ROWS.map(([label]) => (
-              <tr key={label} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ paddingTop: 2, paddingBottom: 2, paddingRight: 6, color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{label}</td>
-                <td style={{ paddingTop: 2, paddingBottom: 2, paddingLeft: 4, textAlign: 'right', color: 'var(--text-faint)', fontWeight: 600 }}>—</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )
-  }
+  const seasons = padToThree(data.seasons ?? [])
 
   return (
     <div className="overflow-x-auto">
@@ -278,11 +239,11 @@ export default function SeasonStatsGrid({ json }: { json: string }) {
         <thead>
           <tr>
             <th style={{ textAlign: 'left', paddingRight: 6, paddingBottom: 2, color: 'var(--text-muted)', fontWeight: 500, minWidth: 64 }} />
-            {data.seasons.map(s => (
-              <th key={s.year} style={{ textAlign: 'right', paddingLeft: 4, paddingBottom: 2, minWidth: 40, verticalAlign: 'bottom' }}>
-                <div style={{ color: '#00c896', fontWeight: 700 }}>{s.year}</div>
-                <div style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>
-                  {s.tournament}
+            {seasons.map((s, i) => (
+              <th key={i} style={{ textAlign: 'right', paddingLeft: 4, paddingBottom: 2, minWidth: 40, verticalAlign: 'bottom' }}>
+                <div style={{ color: s.year ? '#00c896' : 'var(--text-faint)', fontWeight: 700 }}>{s.year || '—'}</div>
+                <div style={{ color: s.tournament ? 'var(--text-muted)' : 'var(--text-faint)', fontWeight: 400, fontSize: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>
+                  {s.tournament || '—'}
                 </div>
               </th>
             ))}
@@ -294,8 +255,8 @@ export default function SeasonStatsGrid({ json }: { json: string }) {
               <td style={{ paddingTop: 2, paddingBottom: 2, paddingRight: 6, color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>
                 {label}
               </td>
-              {data.seasons.map(s => (
-                <td key={s.year} style={{ paddingTop: 2, paddingBottom: 2, paddingLeft: 4, textAlign: 'right', color: 'var(--text-primary)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+              {seasons.map((s, i) => (
+                <td key={i} style={{ paddingTop: 2, paddingBottom: 2, paddingLeft: 4, textAlign: 'right', color: s.year ? 'var(--text-primary)' : 'var(--text-faint)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                   {getValue(s)}
                 </td>
               ))}
