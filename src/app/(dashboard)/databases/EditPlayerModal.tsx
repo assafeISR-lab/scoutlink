@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import LinkChips from '@/components/LinkChips'
 import { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
+import HeatmapDisplay from '@/components/HeatmapDisplay'
 
 // Minimal player shape needed by this modal — matches PlayerRow in DatabasesClient
 export interface PlayerForEdit {
@@ -52,7 +53,7 @@ interface EditForm {
   recentForm: string; transfermarktUrl: string; sofascoreUrl: string
   fmInsideUrl: string; instagram: string; twitter: string; tiktok: string
   highlights: string; playerPhone: string; agentPhone: string
-  sentBy: string; description: string; fmAttributes: string; seasonStats: string
+  sentBy: string; description: string; fmAttributes: string; seasonStats: string; heatmap: string
 }
 
 const CUSTOM_FIELD_KEYS: (keyof EditForm)[] = [
@@ -60,7 +61,7 @@ const CUSTOM_FIELD_KEYS: (keyof EditForm)[] = [
   'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
   'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
   'instagram', 'twitter', 'tiktok', 'highlights',
-  'playerPhone', 'agentPhone', 'sentBy', 'description', 'fmAttributes', 'seasonStats',
+  'playerPhone', 'agentPhone', 'sentBy', 'description', 'fmAttributes', 'seasonStats', 'heatmap',
 ]
 
 function initForm(player: PlayerForEdit): EditForm {
@@ -102,6 +103,7 @@ function initForm(player: PlayerForEdit): EditForm {
     description:      cf('description'),
     fmAttributes:     cf('fmAttributes'),
     seasonStats:      cf('seasonStats') || '{"seasons":[]}',
+    heatmap:          cf('heatmap'),
   }
 }
 
@@ -342,11 +344,7 @@ export default function EditPlayerModal({ player, singleId, onClose, onSaved }: 
           <div className="grid grid-cols-3" style={{ background: 'var(--subtle-bg)', borderTop: '1px solid var(--border)' }}>
             <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
               <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
-              <div className="flex flex-col items-center justify-center gap-2 flex-1 rounded-lg" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-                <span style={{ fontSize: 28, opacity: 0.25 }}>🗺️</span>
-                <span className="text-[10px] text-center" style={{ color: 'var(--text-faint)' }}>Position heat map coming soon</span>
-                <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.2)' }}>Coming Soon</span>
-              </div>
+              <HeatmapDisplay json={form.heatmap || null} />
             </div>
             <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
               <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Season Stats</p>

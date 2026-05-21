@@ -7,6 +7,7 @@ import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
+import HeatmapDisplay from '@/components/HeatmapDisplay'
 import { loadActive } from '@/app/(dashboard)/search/SearchParamsPanel'
 import { positionPillStyle } from '@/lib/positionColor'
 
@@ -111,6 +112,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     highlights:        cf('highlights'),
     fmAttributes:      cf('fmAttributes'),
     seasonStats:       cf('seasonStats'),
+    heatmap:           cf('heatmap'),
     description:       cf('description'),
     sentBy:            cf('sentBy'),
     playerPhone:       cf('playerPhone'),
@@ -143,7 +145,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
     // Split changed fields into DB fields and custom fields
     const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','available'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','description','sentBy','playerPhone','agentPhone']
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -365,11 +367,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         {/* Col 1: Heat Map */}
         <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
           <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
-          <div className="flex flex-col items-center justify-center gap-2 flex-1 rounded-lg" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-            <span style={{ fontSize: 28, opacity: 0.25 }}>🗺️</span>
-            <span className="text-[10px] text-center" style={{ color: 'var(--text-faint)' }}>Position heat map coming soon</span>
-            <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.2)' }}>Coming Soon</span>
-          </div>
+          <HeatmapDisplay json={form.heatmap || null} />
         </div>
 
         {/* Col 2: Season Stats */}

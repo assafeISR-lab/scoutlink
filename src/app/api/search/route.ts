@@ -46,6 +46,7 @@ function buildMerged(group: ScrapedPlayer[], paramSources: Record<string, string
     fmWages:       pick('fmWages',        'fmWages',       fm),
     fmAttributes:  pick('fmAttributes',   'fmAttributes',  fm),
     seasonStats:   pick('seasonStats',    'seasonStats',   sc, tm),
+    heatmap:       pick<string>('heatMap', 'heatmap',      sc),
     transfermarktUrl: tm?.sourceUrl ?? null,
     sofascoreUrl:     sc?.sourceUrl ?? null,
     fmInsideUrl:      fm?.sourceUrl ?? null,

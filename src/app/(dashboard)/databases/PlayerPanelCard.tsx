@@ -5,6 +5,7 @@ import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
+import HeatmapDisplay from '@/components/HeatmapDisplay'
 import { positionPillStyle } from '@/lib/positionColor'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -657,10 +658,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
         {/* Heat Map */}
         <div className="p-3 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
           <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
-          <div className="flex flex-col items-center justify-center gap-1.5 rounded-lg" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-            <span style={{ fontSize: 24, opacity: 0.2 }}>🗺️</span>
-            <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.2)' }}>Coming Soon</span>
-          </div>
+          <HeatmapDisplay json={cf('heatmap') || null} />
         </div>
 
         {/* Season Stats */}

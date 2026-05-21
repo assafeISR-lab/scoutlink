@@ -350,11 +350,6 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                 {/* Heat Map */}
                 <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
                   <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
-                  <div className="flex flex-col items-center justify-center gap-2 flex-1 rounded-lg" style={{ minHeight: 80, border: '1px dashed var(--border)' }}>
-                    <span style={{ fontSize: 28, opacity: 0.25 }}>🗺️</span>
-                    <span className="text-[10px] text-center" style={{ color: 'var(--text-faint)' }}>Position heat map coming soon</span>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.2)' }}>Coming Soon</span>
-                  </div>
                 </div>
 
                 {/* Season Stats */}

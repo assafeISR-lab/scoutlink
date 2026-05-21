@@ -65,6 +65,7 @@ export const sofascoreScraper: SiteScraper = {
       let league: string | null = null
       let position = POSITION_MAP[p.position as string] ?? p.position as string ?? null
       let seasonStats: string | null = null
+      let heatmap: string | null = null
 
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 12000)
@@ -148,15 +149,23 @@ export const sofascoreScraper: SiteScraper = {
               }, [])
               .slice(0, 6)
 
-            // Fetch stats for all candidates in parallel (direct API, no ScrapingBee)
-            const statsResponses = await Promise.allSettled(
-              candidateYears.map(([, { tId, sId }]) =>
-                apiFetch(
-                  `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/statistics/overall`,
-                  controller.signal
+            // Fetch stats for all candidates + heatmap for most recent season in parallel
+            const [statsResponses, heatmapRes] = await Promise.all([
+              Promise.allSettled(
+                candidateYears.map(([, { tId, sId }]) =>
+                  apiFetch(
+                    `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/statistics/overall`,
+                    controller.signal
+                  )
                 )
-              )
-            )
+              ),
+              candidateYears.length > 0
+                ? apiFetch(
+                    `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${candidateYears[0][1].tId}/season/${candidateYears[0][1].sId}/heatmap`,
+                    controller.signal
+                  ).catch(() => null)
+                : Promise.resolve(null),
+            ])
 
             const parseStat = (n: number | undefined, decimals: number): number | null =>
               n != null ? parseFloat(n.toFixed(decimals)) : null
@@ -194,6 +203,20 @@ export const sofascoreScraper: SiteScraper = {
             if (seasons.length > 0) {
               seasonStats = JSON.stringify({ seasons })
             }
+
+            // Process heatmap
+            if (heatmapRes?.ok) {
+              try {
+                const hmData = await heatmapRes.json() as Record<string, unknown>
+                const pts = hmData.heatmap as Array<{ x: number; y: number }> | undefined
+                if (pts && pts.length > 0) {
+                  const [year, { tName }] = candidateYears[0]
+                  const maxVal = Math.max(...pts.flatMap(p => [p.x, p.y]))
+                  const normalized = maxVal <= 1.0 ? pts.map(p => ({ x: p.x * 100, y: p.y * 100 })) : pts
+                  heatmap = JSON.stringify({ points: normalized, season: year, tournament: tName })
+                }
+              } catch { /* skip heatmap */ }
+            }
           }
         }
       } catch { /* use basic data only */ } finally {
@@ -219,6 +242,7 @@ export const sofascoreScraper: SiteScraper = {
         fmWages: null,
         fmAttributes: null,
         seasonStats,
+        heatmap,
         sourceUrl: `https://www.sofascore.com/player/${p.slug ?? (p.name as string)?.toLowerCase().replace(/\s+/g, '-')}/${playerId}`,
         sourceName: 'Sofascore',
       } as ScrapedPlayer

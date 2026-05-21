@@ -70,6 +70,7 @@ export const transfermarktScraper: SiteScraper = {
         fmWages: null,
         fmAttributes: null,
         seasonStats: null,
+        heatmap: null,
         sourceUrl: `https://www.transfermarkt.com/${slug}/profil/spieler/${playerId}`,
         sourceName: 'Transfermarkt',
         _profileUrl: `https://www.transfermarkt.com/${slug}/profil/spieler/${playerId}`,

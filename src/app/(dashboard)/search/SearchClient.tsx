@@ -8,9 +8,10 @@ import FMRadarChart from '@/components/FMRadarChart'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import LinkChips from '@/components/LinkChips'
+import HeatmapDisplay from '@/components/HeatmapDisplay'
 import { positionPillStyle } from '@/lib/positionColor'
 
-const COMING_SOON = new Set<string>(['heatMap'])
+const COMING_SOON = new Set<string>()
 
 const POS_ALIASES: Record<string, string> = {
   DC: 'Centre-Back', CB: 'Centre-Back',
@@ -38,6 +39,7 @@ interface PlayerResult {
   fmWages: string | null
   fmAttributes: string | null
   seasonStats: string | null
+  heatmap: string | null
   transfermarktUrl: string | null
   sofascoreUrl: string | null
   fmInsideUrl: string | null
@@ -72,6 +74,7 @@ interface PlayerEditData {
   contractExpiry: string
   fmAttributes: string
   seasonStats: string
+  heatmap: string
   description: string
   available: boolean
   playsNational: boolean
@@ -164,7 +167,7 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
           dateOfBirth: null, heightCm: null, preferredFoot: null,
           contractUntil: null, passports: null, joiningDate: null,
           photo: null, description: null, marketValue: null, fmWages: null,
-          fmAttributes: null, seasonStats: null, transfermarktUrl: null,
+          fmAttributes: null, seasonStats: null, heatmap: null, transfermarktUrl: null,
           sofascoreUrl: null, fmInsideUrl: null, sources: [],
         })
       }
@@ -179,7 +182,7 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
         dateOfBirth: null, heightCm: null, preferredFoot: null,
         contractUntil: null, passports: null, joiningDate: null,
         photo: null, description: null, marketValue: null, fmWages: null,
-        fmAttributes: null, seasonStats: null, transfermarktUrl: null,
+        fmAttributes: null, seasonStats: null, heatmap: null, transfermarktUrl: null,
         sofascoreUrl: null, fmInsideUrl: null, sources: [],
       }])
       setSiteStats([])
@@ -414,6 +417,7 @@ function isFound(results: PlayerResult[], key: string): boolean {
     case 'fmWages':           return results.some(p => !!p.fmWages)
     case 'fmAttributes':      return results.some(p => !!p.fmAttributes)
     case 'seasonStats':       return results.some(p => !!p.seasonStats)
+    case 'heatMap':           return results.some(p => !!p.heatmap)
     default:                  return false
   }
 }
@@ -652,6 +656,7 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
     contractExpiry: player.contractUntil ?? '',
     fmAttributes: player.fmAttributes ?? '',
     seasonStats: player.seasonStats ?? '',
+    heatmap: player.heatmap ?? '',
     description: player.description ?? '',
     available: true,
     playsNational: false,
@@ -867,14 +872,10 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
 
           {/* Heat Map */}
           <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
-            {show('Heat Map') && (
+            {show('Heat Map') && editData.heatmap && (
               <>
                 <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Heat Map</p>
-                <div className="flex flex-col items-center justify-center gap-2 rounded-xl text-center" style={{ minHeight: 120, border: '1.5px dashed var(--border)', padding: 16 }}>
-                  <span style={{ fontSize: 28, opacity: 0.25 }}>🗺️</span>
-                  <span className="text-[11px] leading-snug" style={{ color: 'var(--text-faint)' }}>Heat map shows player<br/>positioning on the pitch</span>
-                  <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,0.08)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.2)' }}>Coming Soon</span>
-                </div>
+                <HeatmapDisplay json={editData.heatmap} />
               </>
             )}
           </div>
@@ -1136,6 +1137,7 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
       ...(editData.fmWages?.trim()       || player.fmWages       ? { fmWages: editData.fmWages?.trim() || player.fmWages! } : {}),
       ...(editData.fmAttributes?.trim()  || player.fmAttributes  ? { fmAttributes: editData.fmAttributes?.trim() || player.fmAttributes! } : {}),
       ...(editData.seasonStats?.trim()   || player.seasonStats   ? { seasonStats: editData.seasonStats?.trim() || player.seasonStats! } : {}),
+      ...(editData.heatmap?.trim()       || player.heatmap       ? { heatmap: editData.heatmap?.trim() || player.heatmap! } : {}),
       ...(editData.description?.trim()   || player.description   ? { description: editData.description?.trim() || player.description! } : {}),
       ...(tmUrl ? { transfermarktUrl: tmUrl } : {}),
       ...(scUrl ? { sofascoreUrl: scUrl } : {}),

@@ -47,6 +47,7 @@ export const theSportsDbScraper: SiteScraper = {
             fmWages: null,
             fmAttributes: null,
             seasonStats: null,
+            heatmap: null,
             sourceUrl: `https://www.thesportsdb.com/player/${p.idPlayer}`,
             sourceName: 'TheSportsDB',
           }
