@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import SearchAllLists from './SearchAllLists'
+import SearchAllLists, { type Player as SearchListPlayer } from './SearchAllLists'
 import SearchClient from '@/app/(dashboard)/search/SearchClient'
+import PlayerPanelCard, { prefetchPlayer } from './PlayerPanelCard'
 import CreateDatabaseButton from './CreateDatabaseButton'
 import ImportDatabasesButton from './ImportDatabasesButton'
 import ColumnPicker from './[id]/ColumnPicker'
@@ -101,6 +102,42 @@ function fmtWages(v: number | null): string {
   return `£${v}/w`
 }
 
+function aiResultToPlayerRow(r: AIResult): PlayerRow {
+  return {
+    id: r.player.id,
+    databaseId: r.player.databaseId,
+    databaseName: r.player.databaseName,
+    firstName: r.player.firstName,
+    lastName: r.player.lastName,
+    position: r.player.position,
+    clubName: r.player.clubName,
+    nationality: r.player.nationality,
+    dateOfBirth: null,
+    heightCm: r.player.heightCm,
+    marketValue: r.player.marketValue,
+    available: true,
+    customFields: r.player.photo ? [{ fieldName: 'photo', value: r.player.photo }] : [],
+  }
+}
+
+function searchListPlayerToPlayerRow(p: SearchListPlayer): PlayerRow {
+  return {
+    id: p.id,
+    databaseId: p.databaseId,
+    databaseName: p.databaseName,
+    firstName: p.firstName,
+    lastName: p.lastName,
+    position: p.position,
+    clubName: p.clubName,
+    nationality: p.nationality,
+    dateOfBirth: p.dateOfBirth,
+    heightCm: p.heightCm,
+    marketValue: p.marketValue,
+    available: true,
+    customFields: p.customFields,
+  }
+}
+
 function RowAvatar({ player }: { player: PlayerRow }) {
   const [failed, setFailed] = useState(false)
   const photo = player.customFields.find(f => f.fieldName === 'photo')?.value ?? ''
@@ -157,11 +194,13 @@ function SortTh({ label, sortKey, current, dir, onSort }: {
 
 // ─── AI Results Panel ─────────────────────────────────────────────────────────
 
-function AIResultsPanel({ results, query, onCreateReport, onClose }: {
+function AIResultsPanel({ results, query, onCreateReport, onClose, onPlayerSelect, selectedPlayerId }: {
   results: AIResult[]
   query: string
   onCreateReport?: (players: PlayerSnapshot[]) => void
   onClose: () => void
+  onPlayerSelect?: (player: PlayerRow) => void
+  selectedPlayerId?: string
 }) {
   function toSnap(r: AIResult): PlayerSnapshot {
     return {
@@ -219,23 +258,31 @@ function AIResultsPanel({ results, query, onCreateReport, onClose }: {
       <div>
         {results.map((r, i) => {
           const sc = r.score >= 80 ? '#00c896' : r.score >= 60 ? '#ff9f43' : '#ef4444'
+          const isSelected = selectedPlayerId === r.player.id
           return (
             <div key={r.player.id}
-              className="flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors"
-              style={{ borderColor: 'var(--border)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              className="flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors cursor-pointer group"
+              style={{ borderColor: 'var(--border)', background: isSelected ? 'rgba(0,200,150,0.06)' : 'transparent', boxShadow: isSelected ? 'inset 3px 0 0 #00c896' : 'none' }}
+              onClick={() => onPlayerSelect?.(aiResultToPlayerRow(r))}
+              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--hover-bg)' }}
+              onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}>
               <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold"
                 style={{ background: `${sc}18`, color: sc, border: `1px solid ${sc}30` }}>
                 {i + 1}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium transition-colors" style={{ color: isSelected ? '#00c896' : 'var(--text-primary)' }}>
+                    {r.player.firstName} {r.player.lastName}
+                  </span>
                   <Link
                     href={`/databases/${r.player.databaseId}/players/${r.player.id}`}
-                    className="text-sm font-medium hover:text-[#00c896] transition-colors"
-                    style={{ color: 'var(--text-primary)' }}>
-                    {r.player.firstName} {r.player.lastName}
+                    onClick={e => e.stopPropagation()}
+                    className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity flex-shrink-0"
+                    style={{ color: 'var(--text-faint)' }}
+                    title="Open full profile"
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
                   </Link>
                   {r.player.position && (() => { const s = positionPillStyle(r.player.position); return s
                     ? <span className="text-[10px] px-1.5 py-0.5 rounded" style={s}>{r.player.position}</span>
@@ -263,7 +310,7 @@ function AIResultsPanel({ results, query, onCreateReport, onClose }: {
 
 // ─── Inline Players Table ─────────────────────────────────────────────────────
 
-function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }: { databaseIds: string[]; allDbs: DbItem[]; onCreateReport?: (players: PlayerSnapshot[]) => void; fillHeight?: boolean }) {
+function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, onPlayerSelect, selectedPlayerId, showOnlyIds, onListLoaded }: { databaseIds: string[]; allDbs: DbItem[]; onCreateReport?: (players: PlayerSnapshot[]) => void; fillHeight?: boolean; onPlayerSelect?: (player: PlayerRow) => void; selectedPlayerId?: string; showOnlyIds?: Set<string>; onListLoaded?: (players: PlayerRow[]) => void }) {
   const isMulti = databaseIds.length > 1
   const singleId = !isMulti ? databaseIds[0] : undefined
 
@@ -282,24 +329,51 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }:
     return new Set([...loadActive(), ...loadCustomActive()].filter(k => TABLE_COLS.has(k)))
   })
 
+  const prevIdsRef = useRef(databaseIds.join(','))
+  const pendingSelectRef = useRef<string | null>(null)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    const handler = () => setRefreshKey(k => k + 1)
+    if (!selectedPlayerId) return
+    // Defer until after the browser has recalculated layout (especially important
+    // when the panel was just opened and the flex container height was just set)
+    const rafId = requestAnimationFrame(() => {
+      const row = tableScrollRef.current?.querySelector(`[data-player-id="${selectedPlayerId}"]`)
+      row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(rafId)
+  }, [selectedPlayerId])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const playerId = (e as CustomEvent<{ playerId?: string }>).detail?.playerId
+      if (playerId) pendingSelectRef.current = playerId
+      setRefreshKey(k => k + 1)
+    }
     window.addEventListener('scoutlink:player-added', handler)
     return () => window.removeEventListener('scoutlink:player-added', handler)
   }, [])
 
   useEffect(() => {
-    setLoading(true)
-    setPlayers(null)
-    setColumnConfig(null)
-    setAvailOverride({})
+    const currentIds = databaseIds.join(',')
+    const idsChanged = prevIdsRef.current !== currentIds
+    prevIdsRef.current = currentIds
+
+    if (idsChanged) {
+      setLoading(true)
+      setPlayers(null)
+      setColumnConfig(null)
+      setAvailOverride({})
+    }
+
     const url = isMulti
       ? `/api/players?databaseIds=${databaseIds.join(',')}`
       : `/api/databases/${databaseIds[0]}/players`
     fetch(url)
       .then(r => r.json())
       .then(d => {
-        setPlayers(d.players ?? [])
+        const newPlayers: PlayerRow[] = d.players ?? []
+        setPlayers(newPlayers)
         if (!isMulti) {
           const saved: string[] | null = d.columnConfig ?? null
           if (saved !== null) {
@@ -310,6 +384,12 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }:
             setColumnConfig(null)
           }
         }
+        if (pendingSelectRef.current) {
+          const target = newPlayers.find(p => p.id === pendingSelectRef.current)
+          pendingSelectRef.current = null
+          if (target) onPlayerSelect?.(target)
+        }
+        onListLoaded?.(newPlayers)
         setLoading(false)
       })
       .catch(() => { setPlayers([]); setLoading(false) })
@@ -379,6 +459,8 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }:
     })
   }, [players, sortKey, sortDir, availOverride])
 
+  const displayRows = showOnlyIds ? sorted.filter(p => showOnlyIds.has(p.id)) : sorted
+
   if (loading) {
     return (
       <div className="rounded-2xl border flex items-center justify-center py-16" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(fillHeight ? { flex: 1, minHeight: 0 } : {}) }}>
@@ -402,12 +484,16 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }:
       {/* Header bar */}
       <div className={`flex items-center justify-between px-4 py-3 border-b${fillHeight ? ' flex-shrink-0' : ''}`} style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
         <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-          <span style={{ color: '#00c896' }}>{players.length}</span> player{players.length !== 1 ? 's' : ''}
+          {showOnlyIds ? (
+            <><span style={{ color: '#00c896' }}>{displayRows.length}</span><span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> of </span><span style={{ color: '#00c896' }}>{players.length}</span> player{players.length !== 1 ? 's' : ''}</>
+          ) : (
+            <><span style={{ color: '#00c896' }}>{players.length}</span> player{players.length !== 1 ? 's' : ''}</>
+          )}
         </p>
         <div className="flex items-center gap-2">
-          {onCreateReport && players && players.length > 0 && (
+          {onCreateReport && displayRows.length > 0 && (
             <button
-              onClick={() => onCreateReport(players.map(rowToSnapshot))}
+              onClick={() => onCreateReport(displayRows.map(rowToSnapshot))}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
               style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-faint)' }}
@@ -430,7 +516,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }:
       </div>
 
       {/* Table */}
-      <div style={fillHeight ? { overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 } : { overflowX: 'auto' }}>
+      <div ref={tableScrollRef} style={fillHeight ? { overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 } : { overflowX: 'auto' }}>
         <table className="w-full text-sm" style={{ minWidth: 500 }}>
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--border)' }}>
@@ -450,7 +536,14 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }:
             </tr>
           </thead>
           <tbody>
-            {sorted.map(p => {
+            {displayRows.length === 0 && showOnlyIds ? (
+              <tr>
+                <td colSpan={99} className="px-5 py-10 text-center text-sm" style={{ color: 'var(--text-faint)' }}>
+                  No players match these filters
+                </td>
+              </tr>
+            ) : null}
+            {displayRows.map(p => {
               const cf = (key: string) => p.customFields.find(f => f.fieldName === key)?.value ?? ''
               const age = calcAge(p.dateOfBirth)
               const contractYear = (() => {
@@ -460,11 +553,15 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }:
                 return isNaN(d.getTime()) ? null : d.getFullYear()
               })()
               const wages = (() => { const n = parseFloat(cf('fmWages')); return isNaN(n) ? null : n })()
+              const isSelected = selectedPlayerId === p.id
               return (
-                <tr key={p.id} className="border-b last:border-0 transition-colors group"
-                  style={{ borderColor: 'var(--border)' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <tr key={p.id}
+                  data-player-id={p.id}
+                  className={`border-b last:border-0 transition-colors group${onPlayerSelect ? ' cursor-pointer' : ''}`}
+                  style={{ borderColor: 'var(--border)', ...(isSelected ? { background: 'rgba(0,200,150,0.06)', boxShadow: 'inset 3px 0 0 #00c896' } : {}) }}
+                  onClick={() => onPlayerSelect?.(p)}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--hover-bg)'; prefetchPlayer(p.databaseId ?? singleId ?? '', p.id) }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}>
 
                   {isMulti && (() => {
                     const dbName = p.databaseName ?? allDbs.find(d => d.id === p.databaseId)?.name ?? ''
@@ -478,24 +575,56 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight }:
                     )
                   })()}
                   <td className="px-4 py-2.5">
-                    <Link href={`/databases/${p.databaseId ?? singleId}/players/${p.id}`} className="flex items-center gap-2.5 group">
-                      <RowAvatar player={p} />
-                      <div className="min-w-0">
-                        {(() => {
-                          const fullName = `${p.firstName} ${p.lastName}`
-                          return (
-                            <p className="text-sm font-semibold truncate transition-colors group-hover:text-[#00c896]"
-                              title={fullName.length > 30 ? fullName : undefined}
-                              style={{ color: 'var(--text-primary)' }}>
-                              {trunc(fullName)}
-                            </p>
-                          )
-                        })()}
-                        {!(availOverride[p.id] ?? p.available) && !show('availability') && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase whitespace-nowrap" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>Not Avail.</span>
-                        )}
+                    {onPlayerSelect ? (
+                      <div className="flex items-center gap-2.5">
+                        <RowAvatar player={p} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {(() => {
+                              const fullName = `${p.firstName} ${p.lastName}`
+                              return (
+                                <p className="text-sm font-semibold truncate flex-1"
+                                  title={fullName.length > 30 ? fullName : undefined}
+                                  style={{ color: isSelected ? '#00c896' : 'var(--text-primary)' }}>
+                                  {trunc(fullName)}
+                                </p>
+                              )
+                            })()}
+                            <Link
+                              href={`/databases/${p.databaseId ?? singleId}/players/${p.id}`}
+                              onClick={e => e.stopPropagation()}
+                              className="opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity flex-shrink-0"
+                              style={{ color: 'var(--text-faint)' }}
+                              title="Open full profile"
+                            >
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                            </Link>
+                          </div>
+                          {!(availOverride[p.id] ?? p.available) && !show('availability') && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase whitespace-nowrap" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>Not Avail.</span>
+                          )}
+                        </div>
                       </div>
-                    </Link>
+                    ) : (
+                      <Link href={`/databases/${p.databaseId ?? singleId}/players/${p.id}`} className="flex items-center gap-2.5 group">
+                        <RowAvatar player={p} />
+                        <div className="min-w-0">
+                          {(() => {
+                            const fullName = `${p.firstName} ${p.lastName}`
+                            return (
+                              <p className="text-sm font-semibold truncate transition-colors group-hover:text-[#00c896]"
+                                title={fullName.length > 30 ? fullName : undefined}
+                                style={{ color: 'var(--text-primary)' }}>
+                                {trunc(fullName)}
+                              </p>
+                            )
+                          })()}
+                          {!(availOverride[p.id] ?? p.available) && !show('availability') && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase whitespace-nowrap" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>Not Avail.</span>
+                          )}
+                        </div>
+                      </Link>
+                    )}
                   </td>
 
                   {show('availability') && (() => {
@@ -599,11 +728,13 @@ export default function DatabasesClient({
   sharedDbs,
   importableDatabases,
   userName,
+  userId: _userId,
 }: {
   ownedDbs: DbItem[]
   sharedDbs: DbItem[]
   importableDatabases: { id: string; name: string }[]
   userName: string
+  userId: string
 }) {
   const allDbs = [...ownedDbs, ...sharedDbs]
   const firstId = ownedDbs[0]?.id ?? sharedDbs[0]?.id
@@ -614,7 +745,19 @@ export default function DatabasesClient({
   const [aiQuery, setAiQuery] = useState('')
   const [reportData, setReportData] = useState<{ players: PlayerSnapshot[]; databaseId: string; databaseName: string } | null>(null)
   const [filterActive, setFilterActive] = useState(false)
+  const [filteredPlayerIds, setFilteredPlayerIds] = useState<string[] | null>(null)
+  const [aiSearching, setAiSearching] = useState(false)
+  const [filterLoading, setFilterLoading] = useState(false)
   const [scoutOpen, setScoutOpen] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerRow | null>(null)
+  const [playerAction, setPlayerAction] = useState<'report' | 'delete' | null>(null)
+  const [playerCanWrite, setPlayerCanWrite] = useState(false)
+  const [playerDirty, setPlayerDirty] = useState(false)
+  const [playerSaving, setPlayerSaving] = useState(false)
+  const [playerSaved, setPlayerSaved] = useState(false)
+  const playerFlushRef = useRef<(() => Promise<void>) | undefined>(undefined)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingAutoSelectRef = useRef(false)
   const [isNarrow, setIsNarrow] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -627,12 +770,29 @@ export default function DatabasesClient({
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
+  useEffect(() => {
+    setAiResults(null)
+    playerFlushRef.current?.()
+    setScoutOpen(false)
+    setSelectedPlayer(null)
+    setPlayerCanWrite(false)
+    setPlayerAction(null)
+    setPlayerDirty(false)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    setPlayerSaving(false)
+    setPlayerSaved(false)
+    pendingAutoSelectRef.current = true
+  }, [selectedIds.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => () => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+  }, [])
 
   function showToast(message: string) {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast(message)
-    toastTimer.current = setTimeout(() => setToast(null), 3500)
+    toastTimer.current = setTimeout(() => setToast(null), 2500)
   }
 
   // Delete only available when exactly one owned list is selected
@@ -657,7 +817,44 @@ export default function DatabasesClient({
   const isAllLists = selectedIds.length === 0
   const selectedDbId = isAllLists ? (allDbs[0]?.id ?? '') : (selectedIds[0] ?? '')
   const selectedDbName = isAllLists ? 'All Lists' : (allDbs.find(d => d.id === selectedIds[0])?.name ?? 'List')
-  const splitPanelActive = scoutOpen && !isNarrow
+  const playerPanelOpen = selectedPlayer !== null
+  const rightPanelOpen = scoutOpen || playerPanelOpen
+  const splitPanelActive = rightPanelOpen && !isNarrow
+
+  function resetSaveState() {
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    setPlayerSaving(false)
+    setPlayerSaved(false)
+  }
+
+  function handlePlayerSelect(player: PlayerRow) {
+    playerFlushRef.current?.()
+    setSelectedPlayer(player)
+    setScoutOpen(false)
+    setPlayerCanWrite(false)
+    setPlayerAction(null)
+    setPlayerDirty(false)
+    resetSaveState()
+  }
+
+  function closeRightPanel() {
+    playerFlushRef.current?.()
+    setScoutOpen(false)
+    setSelectedPlayer(null)
+    setPlayerCanWrite(false)
+    setPlayerAction(null)
+    setPlayerDirty(false)
+    resetSaveState()
+  }
+
+  function handleSavePlayer() {
+    if (!playerDirty) return
+    ;(document.activeElement as HTMLElement)?.blur()
+    setPlayerSaving(true)
+    setPlayerSaved(false)
+    playerFlushRef.current?.()  // fire and forget
+    setPlayerDirty(false)
+  }
 
   function openReport(players: PlayerSnapshot[]) {
     setReportData({ players, databaseId: selectedDbId, databaseName: selectedDbName })
@@ -692,7 +889,7 @@ export default function DatabasesClient({
         <ImportDatabasesButton databases={importableDatabases} />
         <CreateDatabaseButton />
         <button
-          onClick={() => setScoutOpen(o => !o)}
+          onClick={() => { if (selectedPlayer) playerFlushRef.current?.(); setScoutOpen(o => !o); setSelectedPlayer(null); setPlayerDirty(false); resetSaveState() }}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
           style={scoutOpen
             ? { background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)', boxShadow: '0 0 0 3px rgba(0,200,150,0.08)' }
@@ -745,12 +942,12 @@ export default function DatabasesClient({
       )}
 
       {/* ── Split layout ───────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', flexDirection: isNarrow && scoutOpen ? 'column' : 'row', gap: 0, ...(splitPanelActive ? { height: 'calc(100vh - 116px)' } : {}) }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', flexDirection: isNarrow && rightPanelOpen ? 'column' : 'row', gap: 0, ...(splitPanelActive ? { height: 'calc(100vh - 116px)' } : {}) }}>
 
       {/* ── Left: list panel ─────────────────────────────────────── */}
       <div style={{
         flexShrink: 0,
-        width: isNarrow || !scoutOpen ? '100%' : '44%',
+        width: isNarrow || !rightPanelOpen ? '100%' : '44%',
         transition: 'width 0.35s cubic-bezier(.4,0,.2,1)',
         minWidth: 0,
         ...(splitPanelActive ? { height: '100%', display: 'flex', flexDirection: 'column' as const, paddingRight: 2 } : {}),
@@ -802,41 +999,51 @@ export default function DatabasesClient({
         </div>
 
         {/* Row 2 — AI search */}
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b relative" style={{ borderColor: 'var(--border)' }}>
           <span className="w-7 flex-shrink-0 flex items-center justify-center" style={{ color: 'rgba(0,200,150,0.55)' }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/>
             </svg>
           </span>
-          <ScoutAIBar bare databaseIds={isAllLists ? undefined : selectedIds} onResults={(results, query) => { setAiResults(results); setAiQuery(query) }} />
+          <ScoutAIBar bare databaseIds={isAllLists ? undefined : selectedIds} onSearchingChange={setAiSearching} onResults={(results, query) => {
+            setAiResults(results)
+            setAiQuery(query)
+            if (results.length > 0) handlePlayerSelect(aiResultToPlayerRow(results[0]))
+          }} />
+          {aiSearching && <ProgressBar />}
         </div>
 
         {/* Row 3 — Filter / keyword search */}
-        <div className="flex items-start gap-2 px-4 py-2.5">
+        <div className="flex items-start gap-2 px-4 py-2.5 relative">
           <span className="w-7 flex-shrink-0 flex items-center justify-center mt-1" style={{ color: 'var(--text-faint)' }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
             </svg>
           </span>
           <div className="flex-1 min-w-0">
-            <SearchAllLists bare databaseIds={isAllLists ? undefined : selectedIds} onCreateReport={openReport} onActiveChange={setFilterActive} />
+            <SearchAllLists bare databaseIds={isAllLists ? undefined : selectedIds} onCreateReport={openReport} onActiveChange={setFilterActive} onLoadingChange={setFilterLoading} onFilteredIds={setFilteredPlayerIds} onPlayerSelect={p => handlePlayerSelect(searchListPlayerToPlayerRow(p))} selectedPlayerId={selectedPlayer?.id} />
           </div>
+          {filterLoading && <ProgressBar />}
         </div>
 
       </div>
 
       {/* AI results */}
       {aiResults && aiResults.length > 0 && (
-        <AIResultsPanel
-          results={aiResults}
-          query={aiQuery}
-          onCreateReport={openReport}
-          onClose={() => setAiResults(null)}
-        />
+        <div style={splitPanelActive ? { flex: 1, minHeight: 0, overflowY: 'auto' } : {}}>
+          <AIResultsPanel
+            results={aiResults}
+            query={aiQuery}
+            onCreateReport={openReport}
+            onClose={() => setAiResults(null)}
+            onPlayerSelect={handlePlayerSelect}
+            selectedPlayerId={selectedPlayer?.id}
+          />
+        </div>
       )}
 
-      {/* Player table — hidden while a search is active */}
-      {!filterActive && !(aiResults && aiResults.length > 0) && (
+      {/* Player table — always visible unless AI results are shown */}
+      {!(aiResults && aiResults.length > 0) && (
         allDbs.length === 0
           ? <EmptyState message="You haven't created any lists yet." />
           : <InlinePlayersTable
@@ -844,6 +1051,15 @@ export default function DatabasesClient({
               allDbs={allDbs}
               onCreateReport={openReport}
               fillHeight={splitPanelActive}
+              onPlayerSelect={handlePlayerSelect}
+              selectedPlayerId={selectedPlayer?.id}
+              showOnlyIds={filteredPlayerIds !== null ? new Set(filteredPlayerIds) : undefined}
+              onListLoaded={players => {
+                if (pendingAutoSelectRef.current && players.length > 0) {
+                  pendingAutoSelectRef.current = false
+                  handlePlayerSelect(players[0])
+                }
+              }}
             />
       )}
 
@@ -852,54 +1068,136 @@ export default function DatabasesClient({
       {/* ── Divider (side-by-side mode only) ────────────────────── */}
       <div style={{
         flexShrink: 0,
-        width: (!isNarrow && scoutOpen) ? 3 : 0,
+        width: (!isNarrow && rightPanelOpen) ? 3 : 0,
         alignSelf: 'stretch',
         background: 'var(--border-strong)',
-        margin: (!isNarrow && scoutOpen) ? '0 12px' : 0,
+        margin: (!isNarrow && rightPanelOpen) ? '0 12px' : 0,
         borderRadius: 2,
         transition: 'all 0.35s cubic-bezier(.4,0,.2,1)',
       }} />
 
-      {/* ── Right: scout panel ───────────────────────────────────── */}
+      {/* ── Right: scout / player panel ──────────────────────────── */}
       <div style={{
         flex: isNarrow ? 'none' : 1,
         width: isNarrow ? '100%' : undefined,
-        height: isNarrow && !scoutOpen ? 0 : splitPanelActive ? '100%' : undefined,
-        marginTop: isNarrow && scoutOpen ? 12 : 0,
+        height: isNarrow && !rightPanelOpen ? 0 : splitPanelActive ? '100%' : undefined,
+        marginTop: isNarrow && rightPanelOpen ? 12 : 0,
         minWidth: 0,
-        opacity: scoutOpen ? 1 : 0,
-        pointerEvents: scoutOpen ? 'auto' : 'none',
+        opacity: rightPanelOpen ? 1 : 0,
+        pointerEvents: rightPanelOpen ? 'auto' : 'none',
         transition: 'opacity 0.3s ease, height 0.35s cubic-bezier(.4,0,.2,1)',
         overflow: 'hidden',
       }}>
         <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(splitPanelActive ? { display: 'flex', flexDirection: 'column', height: '100%' } : {}) }}>
+          {/* Panel header — changes based on mode */}
           <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#00c896', boxShadow: '0 0 6px rgba(0,200,150,0.7)', animation: 'pulse 1.5s infinite' }} />
-              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Web Scout</span>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>→ adding to <strong style={{ color: 'var(--text-secondary)' }}>{selectedDbName}</strong></span>
+            {scoutOpen ? (
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#00c896', boxShadow: '0 0 6px rgba(0,200,150,0.7)', animation: 'pulse 1.5s infinite' }} />
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Web Scout</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>→ adding to <strong style={{ color: 'var(--text-secondary)' }}>{selectedDbName}</strong></span>
+              </div>
+            ) : selectedPlayer ? (
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)' }}>
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="#00c896"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+                <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{selectedPlayer.firstName} {selectedPlayer.lastName}</span>
+              </div>
+            ) : null}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {playerPanelOpen && selectedPlayer && (
+                <>
+                  <button
+                    onClick={handleSavePlayer}
+                    disabled={playerSaving || (!playerDirty && !playerSaved)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                    style={playerSaving
+                      ? { background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.4)', cursor: 'default' }
+                      : playerSaved && !playerDirty
+                        ? { background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.45)', cursor: 'default' }
+                        : playerDirty
+                          ? { background: 'rgba(0,200,150,0.08)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)' }
+                          : { background: 'transparent', color: 'var(--text-faint)', border: '1px solid var(--border)', cursor: 'default' }}
+                  >
+                    {playerSaving ? (
+                      <><div className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin flex-shrink-0" />Saving…</>
+                    ) : playerSaved && !playerDirty ? (
+                      <><div className="w-3 h-3 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.2)', border: '1px solid rgba(0,200,150,0.5)' }}><svg className="w-2 h-2" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>Saved</>
+                    ) : (
+                      <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zm-5 16a3 3 0 110-6 3 3 0 010 6zm3-10H5V5h10v4z"/></svg>Save</>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setPlayerAction('report')}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,159,67,0.08)'; e.currentTarget.style.color = '#ff9f43'; e.currentTarget.style.borderColor = 'rgba(255,159,67,0.3)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    Create Report
+                  </button>
+                  {playerCanWrite && (
+                    <button
+                      onClick={() => setPlayerAction('delete')}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                      style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                    >
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                      Delete
+                    </button>
+                  )}
+                </>
+              )}
+              <button
+                onClick={closeRightPanel}
+                className="w-6 h-6 flex items-center justify-center rounded-md transition-colors"
+                style={{ color: 'var(--text-faint)', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
             </div>
-            <button
-              onClick={() => setScoutOpen(false)}
-              className="w-6 h-6 flex items-center justify-center rounded-md transition-colors"
-              style={{ color: 'var(--text-faint)', border: '1px solid var(--border)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-              </svg>
-            </button>
           </div>
+          {/* Panel body — SearchClient always mounted (state survives), PlayerQuickPanel keyed by id */}
           <div style={splitPanelActive ? { overflowY: 'auto', flex: 1, minHeight: 0 } : {}}>
-            <SearchClient
-              panelMode
-              targetDatabaseId={selectedDbId}
-              targetListName={selectedDbName}
-              onPlayerAdded={(name) => showToast(`${name} added to ${selectedDbName}`)}
-              databases={allDbs.map(d => ({ id: d.id, name: d.name }))}
-              userName={userName}
-            />
+            <div style={{ display: scoutOpen ? 'block' : 'none' }}>
+              <SearchClient
+                panelMode
+                targetDatabaseId={selectedDbId}
+                targetListName={selectedDbName}
+                onPlayerAdded={(name) => showToast(`${name} added to ${selectedDbName}`)}
+                databases={allDbs.map(d => ({ id: d.id, name: d.name }))}
+                userName={userName}
+              />
+            </div>
+            {playerPanelOpen && selectedPlayer && (
+              <PlayerPanelCard
+                key={selectedPlayer.id}
+                playerId={selectedPlayer.id}
+                dbId={selectedPlayer.databaseId ?? selectedDbId}
+                initialPlayer={selectedPlayer}
+                initialCanWrite={(() => { const db = allDbs.find(d => d.id === (selectedPlayer.databaseId ?? selectedDbId)); return !!db && (db.permission === 'owner' || db.permission === 'contributor') })()}
+                onDeleted={() => { setSelectedPlayer(null); setPlayerCanWrite(false); setPlayerDirty(false); resetSaveState() }}
+                triggerAction={playerAction}
+                onTriggerHandled={() => setPlayerAction(null)}
+                onLoaded={(cw) => setPlayerCanWrite(cw)}
+                onSaveComplete={() => {
+                  setPlayerSaving(false)
+                  setPlayerSaved(true)
+                  if (savedTimer.current) clearTimeout(savedTimer.current)
+                  savedTimer.current = setTimeout(() => setPlayerSaved(false), 2000)
+                }}
+                flushRef={playerFlushRef}
+                onDirtyChange={setPlayerDirty}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -944,20 +1242,23 @@ export default function DatabasesClient({
 }
 
 
-function ScoutAIBar({ databaseIds, bare, onResults }: {
+function ScoutAIBar({ databaseIds, bare, onResults, onSearchingChange }: {
   databaseIds?: string[]
   bare?: boolean
   onResults?: (results: AIResult[], query: string) => void
+  onSearchingChange?: (v: boolean) => void
 }) {
   const [value, setValue] = useState('')
   const [searching, setSearching] = useState(false)
   const router = useRouter()
 
+  function setSearchingState(v: boolean) { setSearching(v); onSearchingChange?.(v) }
+
   async function submit() {
     const q = value.trim()
     if (!q) return
     if (onResults) {
-      setSearching(true)
+      setSearchingState(true)
       try {
         const body: Record<string, string> = { message: q }
         if (databaseIds?.length === 1) body.databaseId = databaseIds[0]
@@ -969,7 +1270,7 @@ function ScoutAIBar({ databaseIds, bare, onResults }: {
         const data = await res.json()
         onResults(data.results ?? [], q)
       } catch { /* ignore */ } finally {
-        setSearching(false)
+        setSearchingState(false)
       }
     } else {
       const params = new URLSearchParams()
@@ -1031,3 +1332,16 @@ function EmptyState({ message }: { message: string }) {
     </div>
   )
 }
+
+function ProgressBar() {
+  return (
+    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, overflow: 'hidden' }}>
+      <div style={{
+        position: 'absolute', width: '45%', height: '100%',
+        background: 'linear-gradient(90deg, transparent, #00c896, rgba(0,200,150,0.4))',
+        animation: 'sl-progress 1.4s ease-in-out infinite',
+      }} />
+    </div>
+  )
+}
+

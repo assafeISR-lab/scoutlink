@@ -178,6 +178,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
       }))
     }
 
+    const hadNote = !!noteContent.trim()
     const results = await Promise.all(saves)
     setSaving(false)
 
@@ -186,7 +187,9 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
       setChangedFields(new Set())
       setNoteAdding(false)
       setNoteContent('')
-      router.refresh()
+      // Only refresh the server component when a note was added (needs to appear in the list).
+      // Field edits are already reflected in local form state — no second roundtrip needed.
+      if (hadNote) router.refresh()
     } else {
       setSaveError('Failed to save')
     }

@@ -2,85 +2,125 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string; playerId: string }> }) {
+  const { id: databaseId, playerId } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const [db, player] = await Promise.all([
+    prisma.playerDatabase.findUnique({
+      where: { id: databaseId },
+      include: { access: { where: { agentId: user.id } } },
+    }),
+    prisma.player.findUnique({
+      where: { id: playerId },
+      include: {
+        notes: { include: { agent: true }, orderBy: { createdAt: 'desc' } },
+        fieldSources: { where: { isActive: true } },
+        addedBy: { select: { fullName: true } },
+        customFields: true,
+      },
+    }),
+  ])
+
+  if (!db) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const isOwner = db.ownerId === user.id
+  if (!isOwner && db.access.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!player || player.databaseId !== databaseId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const canWrite = isOwner || db.access[0]?.permission === 'contributor'
+
+  return NextResponse.json({
+    player: {
+      ...player,
+      dateOfBirth: player.dateOfBirth?.toISOString() ?? null,
+      createdAt: player.createdAt.toISOString(),
+      notes: player.notes.map(n => ({ ...n, createdAt: n.createdAt.toISOString() })),
+    },
+    canWrite,
+    currentUserId: user.id,
+  })
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; playerId: string }> }) {
   const { id: databaseId, playerId } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId }, include: { access: { where: { agentId: user.id } } } })
+  // Parse body + DB access check + player ownership check all in parallel
+  const [body, db, playerCheck] = await Promise.all([
+    req.json(),
+    prisma.playerDatabase.findUnique({ where: { id: databaseId }, include: { access: { where: { agentId: user.id } } } }),
+    prisma.player.findUnique({ where: { id: playerId }, select: { databaseId: true } }),
+  ])
+
   if (!db) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const isOwner = db.ownerId === user.id
   const isContributor = db.access[0]?.permission === 'contributor'
   if (!isOwner && !isContributor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
-  const body = await req.json()
-
-  const playerCheck = await prisma.player.findUnique({ where: { id: playerId }, select: { databaseId: true } })
   if (!playerCheck || playerCheck.databaseId !== databaseId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const player = await prisma.player.update({
-    where: { id: playerId },
-    data: {
-      firstName: body.firstName?.trim() || undefined,
-      lastName: body.lastName?.trim() || undefined,
-      middleName: body.middleName?.trim() || null,
-      position: body.position?.trim() || null,
-      clubName: body.clubName?.trim() || null,
-      nationality: body.nationality?.trim() || null,
-      agentName: body.agentName?.trim() || null,
-      dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : null,
-      heightCm: body.heightCm != null && body.heightCm !== '' ? parseFloat(body.heightCm) : null,
-      marketValue: body.marketValue != null && body.marketValue !== '' ? parseFloat(body.marketValue) * 1_000_000 : null,
-      playsNational: body.playsNational ?? undefined,
-      available:    body.available ?? undefined,
-    },
-  })
+  // Only include fields that are explicitly present in the request body.
+  // Absent fields must be omitted (not set to null) so partial saves don't wipe other columns.
+  const dbData: Record<string, unknown> = {}
+  if ('firstName'    in body) dbData.firstName    = body.firstName?.trim()    || undefined
+  if ('lastName'     in body) dbData.lastName     = body.lastName?.trim()     || undefined
+  if ('middleName'   in body) dbData.middleName   = body.middleName?.trim()   || null
+  if ('position'     in body) dbData.position     = body.position?.trim()     || null
+  if ('clubName'     in body) dbData.clubName     = body.clubName?.trim()     || null
+  if ('nationality'  in body) dbData.nationality  = body.nationality?.trim()  || null
+  if ('agentName'    in body) dbData.agentName    = body.agentName?.trim()    || null
+  if ('dateOfBirth'  in body) dbData.dateOfBirth  = body.dateOfBirth ? new Date(body.dateOfBirth) : null
+  if ('heightCm'     in body) dbData.heightCm     = body.heightCm != null && body.heightCm !== '' ? parseFloat(body.heightCm) : null
+  if ('marketValue'  in body) dbData.marketValue  = body.marketValue != null && body.marketValue !== '' ? parseFloat(body.marketValue) * 1_000_000 : null
+  if ('playsNational' in body) dbData.playsNational = body.playsNational ?? undefined
+  if ('available'    in body) dbData.available    = body.available ?? undefined
 
-  // Mark manually-changed fields in FieldSource
   const changedFields: string[] = Array.isArray(body.changedFields) ? body.changedFields : []
-  if (changedFields.length > 0) {
-    const fieldValues: Record<string, string | null> = {
-      position:      body.position?.trim()     || null,
-      clubName:      body.clubName?.trim()      || null,
-      nationality:   body.nationality?.trim()   || null,
-      agentName:     body.agentName?.trim()     || null,
-      dateOfBirth:   body.dateOfBirth           || null,
-      heightCm:      body.heightCm !== '' && body.heightCm != null ? String(parseFloat(body.heightCm)) : null,
-      marketValue:   body.marketValue !== '' && body.marketValue != null ? String(parseFloat(body.marketValue) * 1_000_000) : null,
-      playsNational: String(body.playsNational ?? false),
-      available:    String(body.available ?? true),
-    }
-
-    for (const fieldName of changedFields) {
-      const value = fieldValues[fieldName]
-      // Deactivate any existing active sources for this field
-      await prisma.fieldSource.updateMany({
-        where: { playerId, fieldName, isActive: true },
-        data:  { isActive: false },
-      })
-      // Create new manual source if there is a value
-      if (value !== null && value !== '') {
-        await prisma.fieldSource.create({
-          data: { playerId, fieldName, value, sourceName: 'manual', sourceUrl: null, isActive: true },
-        })
-      }
-    }
-  }
-
-  // Handle custom fields (extra fields not in the Player model)
   const customFieldUpdates: Record<string, string> = body.customFields ?? {}
-  for (const [fieldName, rawValue] of Object.entries(customFieldUpdates)) {
-    const value = String(rawValue ?? '').trim()
-    const existing = await prisma.customField.findFirst({ where: { playerId, fieldName } })
-    if (value === '') {
-      if (existing) await prisma.customField.delete({ where: { id: existing.id } })
-    } else if (existing) {
-      await prisma.customField.update({ where: { id: existing.id }, data: { value } })
-    } else {
-      await prisma.customField.create({ data: { playerId, fieldName, value } })
-    }
+
+  const fieldValues: Record<string, string | null> = {
+    position:      body.position?.trim()     || null,
+    clubName:      body.clubName?.trim()      || null,
+    nationality:   body.nationality?.trim()   || null,
+    agentName:     body.agentName?.trim()     || null,
+    dateOfBirth:   body.dateOfBirth           || null,
+    heightCm:      body.heightCm !== '' && body.heightCm != null ? String(parseFloat(body.heightCm)) : null,
+    marketValue:   body.marketValue !== '' && body.marketValue != null ? String(parseFloat(body.marketValue) * 1_000_000) : null,
+    playsNational: String(body.playsNational ?? false),
+    available:     String(body.available ?? true),
   }
+
+  const customFieldEntries = Object.entries(customFieldUpdates)
+  const customFieldNames = customFieldEntries.map(([k]) => k)
+  const nonEmptyCustom = customFieldEntries.filter(([, v]) => String(v ?? '').trim() !== '')
+
+  // Round 1: player update + FieldSource deactivations + CustomField deletes — all in parallel
+  // No dependencies between them: FieldSources and CustomFields only need playerId (from URL).
+  // CustomFields use delete-then-recreate (no unique constraint in schema, so no upsert available).
+  const [player] = await Promise.all([
+    prisma.player.update({ where: { id: playerId }, data: dbData }),
+    ...changedFields.map(f =>
+      prisma.fieldSource.updateMany({ where: { playerId, fieldName: f, isActive: true }, data: { isActive: false } })
+    ),
+    ...(customFieldNames.length > 0
+      ? [prisma.customField.deleteMany({ where: { playerId, fieldName: { in: customFieldNames } } })]
+      : []),
+  ] as const)
+
+  // Round 2: create new FieldSources + CustomFields in parallel (after deactivations/deletes above)
+  const newSources = changedFields
+    .filter(f => fieldValues[f] !== null && fieldValues[f] !== '')
+    .map(f => ({ playerId, fieldName: f, value: fieldValues[f] as string, sourceName: 'manual', sourceUrl: null, isActive: true }))
+
+  await Promise.all([
+    ...(newSources.length > 0 ? [prisma.fieldSource.createMany({ data: newSources })] : []),
+    ...(nonEmptyCustom.length > 0
+      ? [prisma.customField.createMany({ data: nonEmptyCustom.map(([fieldName, value]) => ({ playerId, fieldName, value: String(value).trim() })) })]
+      : []),
+  ])
 
   return NextResponse.json(player)
 }
