@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import NotesSection from './NotesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
@@ -17,13 +16,6 @@ interface FieldSource {
   sourceName: string
   sourceUrl: string | null
   isActive: boolean
-}
-
-interface Note {
-  id: string
-  content: string
-  createdAt: Date
-  agent: { id: string; fullName: string }
 }
 
 interface CustomFieldEntry {
@@ -49,7 +41,6 @@ interface PlayerData {
   createdAt: Date
   fieldSources: FieldSource[]
   customFields: CustomFieldEntry[]
-  notes: Note[]
 }
 
 interface Props {
@@ -64,23 +55,20 @@ interface Props {
 const toDateStr = (d: Date | null) => d ? new Date(d).toISOString().split('T')[0] : ''
 
 export default function PlayerProfileCard({ player, addedByName, currentUserId, databaseId, canWrite, actionButtons }: Props) {
-  const router = useRouter()
-
   // Helper to get custom field value
   const cf = (name: string) => player.customFields.find(f => f.fieldName === name)?.value ?? ''
 
-  // ── Edit state ────────────────────────────────────────────────────────────
-  const [photoEnabled, setPhotoEnabled] = useState(true)
-  useEffect(() => { setPhotoEnabled(loadActive().has('photo')) }, [])
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [photoEnabled,     setPhotoEnabled]     = useState(true)
+  const [saving,           setSaving]           = useState(false)
+  const [saveError,        setSaveError]        = useState('')
+  const [changedFields,    setChangedFields]    = useState<Set<string>>(new Set())
+  const [localActiveFm,    setLocalActiveFm]    = useState(false)
+  const [heatmapRefreshing,setHeatmapRefreshing]= useState(false)
+  const [heatmapError,     setHeatmapError]     = useState('')
 
-  const [saving,    setSaving]      = useState(false)
-  const [saveError, setSaveError]   = useState('')
-  const [changedFields, setChangedFields] = useState<Set<string>>(new Set())
-  const [noteAdding,  setNoteAdding]  = useState(false)
-  const [noteContent, setNoteContent] = useState('')
-  const [localActiveFm, setLocalActiveFm] = useState(false)
-  const [heatmapRefreshing, setHeatmapRefreshing] = useState(false)
-  const [heatmapError, setHeatmapError] = useState('')
+  // ── Effects ───────────────────────────────────────────────────────────────
+  useEffect(() => { setPhotoEnabled(loadActive().has('photo')) }, [])
 
   async function handleRefreshHeatmap() {
     setHeatmapRefreshing(true)
@@ -179,40 +167,24 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
       }
     }
 
-    const saves: Promise<Response>[] = []
-
-    if (changedDbFields.length > 0 || Object.keys(customFieldsPayload).length > 0) {
-      saves.push(fetch(`/api/databases/${databaseId}/players/${player.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          changedFields: changedDbFields,
-          customFields: customFieldsPayload,
-        }),
-      }))
+    if (changedDbFields.length === 0 && Object.keys(customFieldsPayload).length === 0) {
+      setSaving(false)
+      return
     }
 
-    if (noteContent.trim()) {
-      saves.push(fetch(`/api/databases/${databaseId}/players/${player.id}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: noteContent.trim() }),
-      }))
-    }
-
-    const hadNote = !!noteContent.trim()
-    const results = await Promise.all(saves)
+    const res = await fetch(`/api/databases/${databaseId}/players/${player.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...form,
+        changedFields: changedDbFields,
+        customFields: customFieldsPayload,
+      }),
+    })
     setSaving(false)
 
-    const failed = results.find(r => !r.ok)
-    if (!failed) {
+    if (res.ok) {
       setChangedFields(new Set())
-      setNoteAdding(false)
-      setNoteContent('')
-      // Only refresh the server component when a note was added (needs to appear in the list).
-      // Field edits are already reflected in local form state — no second roundtrip needed.
-      if (hadNote) router.refresh()
     } else {
       setSaveError('Failed to save')
     }
@@ -294,29 +266,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {noteAdding && (
-            <>
-              {saveError && <span className="text-xs text-red-400">{saveError}</span>}
-              <button
-                onClick={() => { setNoteAdding(false); setNoteContent(''); setSaveError('') }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all"
-                style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || !noteContent.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-black disabled:opacity-50 transition-all"
-                style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,200,150,0.25)' }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-                {saving ? 'Saving…' : 'Save Note'}
-              </button>
-            </>
-          )}
+          {saveError && <span className="text-xs text-red-400">{saveError}</span>}
           {actionButtons}
         </div>
       </div>
@@ -456,17 +406,12 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         </div>
         <div className="p-5">
           <NotesSection
-          notes={player.notes}
-          currentUserId={currentUserId}
-          databaseId={databaseId}
-          playerId={player.id}
-          canWrite={canWrite}
-          adding={noteAdding}
-          noteContent={noteContent}
-          onStartAdding={() => setNoteAdding(true)}
-          onCancelAdding={() => { setNoteAdding(false); setNoteContent('') }}
-          onNoteContentChange={setNoteContent}
-        />
+            key={player.id}
+            databaseId={databaseId}
+            playerId={player.id}
+            canWrite={canWrite}
+            currentUserId={currentUserId}
+          />
         </div>
       </div>
     </div>

@@ -56,6 +56,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
       </div>
 
       <PlayerProfileCard
+        key={playerId}
         player={player}
         addedByName={player.addedBy.fullName}
         currentUserId={user.id}

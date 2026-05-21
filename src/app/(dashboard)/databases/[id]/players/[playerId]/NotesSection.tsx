@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 interface Note {
   id: string
@@ -27,20 +26,45 @@ function timeAgo(date: Date) {
   return `${years} year${years !== 1 ? 's' : ''} ago`
 }
 
-export default function NotesSection({ notes, currentUserId, databaseId, playerId, canWrite, adding, noteContent, onStartAdding, onCancelAdding, onNoteContentChange }: {
-  notes: Note[]
-  currentUserId: string
+export default function NotesSection({ databaseId, playerId, canWrite, currentUserId }: {
   databaseId: string
   playerId: string
   canWrite: boolean
-  adding: boolean
-  noteContent: string
-  onStartAdding: () => void
-  onCancelAdding: () => void
-  onNoteContentChange: (v: string) => void
+  currentUserId: string
 }) {
+  const [notes, setNotes] = useState<Note[]>([])
+  const [loading, setLoading] = useState(true)
+  const [adding, setAdding] = useState(false)
+  const [content, setContent] = useState('')
+  const [saving, setSaving] = useState(false)
   const [view, setView] = useState<'notes' | 'timeline'>('notes')
-  const router = useRouter()
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetch(`/api/databases/${databaseId}/players/${playerId}/notes`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+      .then((data: Note[]) => { if (!cancelled) { setNotes(data); setLoading(false) } })
+      .catch(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [databaseId, playerId])
+
+  async function handleSaveNote() {
+    if (!content.trim()) return
+    setSaving(true)
+    const res = await fetch(`/api/databases/${databaseId}/players/${playerId}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.trim() }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      const newNote = await res.json()
+      setNotes(prev => [newNote, ...prev])
+      setAdding(false)
+      setContent('')
+    }
+  }
 
   return (
     <div>
@@ -70,22 +94,33 @@ export default function NotesSection({ notes, currentUserId, databaseId, playerI
         </div>
       )}
 
+      {/* Loading state */}
+      {loading && (
+        <p className="text-sm mb-4" style={{ color: 'var(--text-faint)' }}>Loading notes…</p>
+      )}
+
       {/* Empty state */}
-      {notes.length === 0 && (
+      {!loading && notes.length === 0 && (
         <p className="text-sm mb-4" style={{ color: 'var(--text-faint)' }}>No notes yet.</p>
       )}
 
       {/* List view */}
-      {view === 'notes' && notes.length > 0 && (
+      {!loading && view === 'notes' && notes.length > 0 && (
         <div className="space-y-3 mb-4">
           {notes.map(note => (
-            <NoteItem key={note.id} note={note} isOwn={note.agent.id === currentUserId} />
+            <NoteItem
+              key={note.id}
+              note={note}
+              isOwn={note.agent.id === currentUserId}
+              onDeleted={id => setNotes(prev => prev.filter(n => n.id !== id))}
+              onEdited={(id, c) => setNotes(prev => prev.map(n => n.id === id ? { ...n, content: c } : n))}
+            />
           ))}
         </div>
       )}
 
       {/* Timeline view */}
-      {view === 'timeline' && notes.length > 0 && (
+      {!loading && view === 'timeline' && notes.length > 0 && (
         <div className="relative mb-4">
           <div className="absolute left-[7px] top-2 bottom-2 w-px" style={{ background: 'linear-gradient(180deg, #00c896, rgba(0,200,150,0.1))' }} />
           <div className="space-y-6 pl-6">
@@ -114,7 +149,7 @@ export default function NotesSection({ notes, currentUserId, databaseId, playerI
         <div style={{ borderTop: notes.length > 0 ? '1px solid var(--border)' : 'none', paddingTop: notes.length > 0 ? 12 : 0 }}>
           {!adding ? (
             <button
-              onClick={onStartAdding}
+              onClick={() => setAdding(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
               style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
             >
@@ -125,24 +160,35 @@ export default function NotesSection({ notes, currentUserId, databaseId, playerI
             <div className="flex flex-col gap-2">
               <textarea
                 autoFocus
-                value={noteContent}
-                onChange={e => onNoteContentChange(e.target.value)}
+                value={content}
+                onChange={e => setContent(e.target.value)}
                 placeholder="Add a scouting note..."
                 rows={3}
                 className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none resize-none"
                 style={{ color: 'var(--text-primary)', background: 'var(--input-bg)', border: '1px solid var(--border)' }}
                 onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
                 onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSaveNote() }}
               />
-              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Click "Save Changes" above to save the note.</p>
-              <button
-                type="button"
-                onClick={onCancelAdding}
-                className="self-start px-4 py-2 rounded-xl text-sm font-medium transition-all"
-                style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-              >
-                Cancel
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSaveNote}
+                  disabled={saving || !content.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-black disabled:opacity-50 transition-all"
+                  style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                  {saving ? 'Saving…' : 'Save Note'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAdding(false); setContent('') }}
+                  className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                  style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -151,29 +197,36 @@ export default function NotesSection({ notes, currentUserId, databaseId, playerI
   )
 }
 
-function NoteItem({ note, isOwn }: { note: Note; isOwn: boolean }) {
+function NoteItem({ note, isOwn, onDeleted, onEdited }: {
+  note: Note
+  isOwn: boolean
+  onDeleted: (id: string) => void
+  onEdited: (id: string, content: string) => void
+}) {
   const [editing, setEditing] = useState(false)
   const [content, setContent] = useState(note.content)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleSave() {
     if (!content.trim() || content === note.content) { setEditing(false); return }
     setLoading(true)
-    await fetch(`/api/notes/${note.id}`, {
+    const res = await fetch(`/api/notes/${note.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
     })
     setLoading(false)
-    setEditing(false)
-    router.refresh()
+    if (res.ok) {
+      setEditing(false)
+      onEdited(note.id, content.trim())
+    }
   }
 
   async function handleDelete() {
     setLoading(true)
-    await fetch(`/api/notes/${note.id}`, { method: 'DELETE' })
-    router.refresh()
+    const res = await fetch(`/api/notes/${note.id}`, { method: 'DELETE' })
+    if (res.ok) onDeleted(note.id)
+    else setLoading(false)
   }
 
   return (

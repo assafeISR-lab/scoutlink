@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import ThemeToggle from './ThemeToggle'
+import HelpPanel from './HelpPanel'
 
 interface SidebarProps {
   userName: string
@@ -15,6 +16,7 @@ interface SidebarProps {
 export default function Sidebar({ userName, userEmail, userInitial }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const onDatabases = pathname.startsWith('/databases')
 
@@ -73,7 +75,17 @@ export default function Sidebar({ userName, userEmail, userInitial }: SidebarPro
           <NavItem key={item.href} icon={item.icon} label={item.label} color={item.color} href={item.href} active={pathname === item.href} />
         ))}
         <NavItem icon={<IconSettings />} label="Settings" color="#8b8fa8" href="/settings" active={pathname === '/settings'} />
+        <button
+          onClick={() => setHelpOpen(true)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full text-left"
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}
+        >
+          <span className="w-4 h-4 flex-shrink-0" style={{ color: '#a78bfa' }}><IconHelp /></span>
+          <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>Help</span>
+        </button>
       </nav>
+      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {/* User */}
       <div className="px-4 py-4 border-t border-white/5 flex flex-col gap-2">
@@ -131,3 +143,4 @@ function IconDatabase() { return <svg viewBox="0 0 24 24" fill="currentColor"><p
 function IconReports() { return <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> }
 function IconCalendar() { return <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/></svg> }
 function IconSettings() { return <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg> }
+function IconHelp() { return <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg> }
