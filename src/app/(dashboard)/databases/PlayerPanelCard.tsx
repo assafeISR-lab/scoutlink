@@ -37,10 +37,10 @@ type FullPlayer = {
 
 // ── Prefetch cache ─────────────────────────────────────────────────────────────
 
-type CachedPlayer = { player: FullPlayer; canWrite: boolean; currentUserId: string }
+export type CachedPlayer = { player: FullPlayer; canWrite: boolean; currentUserId: string }
 const playerCache = new Map<string, CachedPlayer>()
 
-function setCacheEntry(key: string, d: CachedPlayer) {
+export function setCacheEntry(key: string, d: CachedPlayer) {
   playerCache.set(key, d)
   if (playerCache.size > 20) {
     const oldest = playerCache.keys().next().value

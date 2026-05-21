@@ -25,3 +25,11 @@ export async function createClient() {
     }
   )
 }
+
+// Fast auth: validates JWT locally from cookie — no network round-trip to Supabase auth server.
+// Use instead of getUser() for all API routes where session revocation detection is not required.
+export async function getSessionUser() {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.user ?? null
+}

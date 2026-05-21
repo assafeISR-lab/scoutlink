@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 
 // POST — share database with a user by email
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: databaseId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId, ownerId: user.id } })
@@ -33,8 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 // GET — list current shares (owner only)
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: databaseId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId, ownerId: user.id } })
@@ -51,8 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 // DELETE — remove access for a specific agent
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: databaseId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = await prisma.playerDatabase.findUnique({ where: { id: databaseId, ownerId: user.id } })

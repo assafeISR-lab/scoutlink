@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SearchAllLists, { type Player as SearchListPlayer } from './SearchAllLists'
 import SearchClient from '@/app/(dashboard)/search/SearchClient'
-import PlayerPanelCard, { prefetchPlayer } from './PlayerPanelCard'
+import PlayerPanelCard, { prefetchPlayer, setCacheEntry, type CachedPlayer } from './PlayerPanelCard'
 import CreateDatabaseButton from './CreateDatabaseButton'
 import ImportDatabasesButton from './ImportDatabasesButton'
 import ColumnPicker from './[id]/ColumnPicker'
@@ -40,7 +40,12 @@ type PlayerRow = {
   marketValue: number | null
   available: boolean
   playsNational?: boolean
-  customFields: { fieldName: string; value: string }[]
+  createdAt?: string
+  customFields: { id?: string; fieldName: string; value: string }[]
+  // Full data included in the list response — used to pre-warm the panel cache
+  notes?: { id: string; content: string; createdAt: string; agent: { id: string; fullName: string } }[]
+  fieldSources?: { id: string; fieldName: string; sourceName: string; sourceUrl: string | null; isActive: boolean }[]
+  addedBy?: { fullName: string }
 }
 
 type AIResult = {
@@ -373,6 +378,34 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
       .then(r => r.json())
       .then(d => {
         const newPlayers: PlayerRow[] = d.players ?? []
+
+        // Pre-warm the player panel cache from the list response so clicking any player
+        // (including the auto-selected first one) skips the second API round-trip.
+        if (!isMulti && singleId && d.canWrite !== undefined) {
+          const canWrite: boolean = d.canWrite
+          const currentUserId: string = d.currentUserId ?? ''
+          for (const p of newPlayers) {
+            if (!p.notes || !p.fieldSources || !p.addedBy) continue
+            const entry: CachedPlayer = {
+              player: {
+                id: p.id, firstName: p.firstName, middleName: p.middleName ?? null,
+                lastName: p.lastName, position: p.position, nationality: p.nationality,
+                dateOfBirth: p.dateOfBirth, heightCm: p.heightCm, clubName: p.clubName,
+                marketValue: p.marketValue, agentName: p.agentName ?? null,
+                playsNational: p.playsNational ?? false, available: p.available,
+                createdAt: p.createdAt ?? new Date().toISOString(),
+                fieldSources: p.fieldSources,
+                customFields: p.customFields as { id: string; fieldName: string; value: string }[],
+                notes: p.notes,
+                addedBy: p.addedBy,
+              },
+              canWrite,
+              currentUserId,
+            }
+            setCacheEntry(`${singleId}:${p.id}`, entry)
+          }
+        }
+
         setPlayers(newPlayers)
         if (!isMulti) {
           const saved: string[] | null = d.columnConfig ?? null

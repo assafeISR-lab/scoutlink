@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getSessionUser } from '@/lib/supabase/server'
 
 // Domains with working scrapers that handle bot-protection themselves — always free
 const SCRAPER_DOMAINS = [
@@ -88,8 +88,7 @@ async function detectLoginRequired(url: string): Promise<{ requiresLogin: boolea
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { url } = await req.json()
