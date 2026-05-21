@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { PARAM_LABELS, buildParamsBySource, loadParamSources } from '../search/SearchParamsPanel'
 
-const SCRAPERS = [
+const SCRAPERS: { name: string; url: string; domain: string; comingSoon: string[]; color: string; accent: string }[] = [
   {
     name: 'Transfermarkt',
     url: 'https://www.transfermarkt.com',

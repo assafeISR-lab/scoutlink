@@ -1126,7 +1126,7 @@ export default function DatabasesClient({
         transition: 'opacity 0.3s ease, height 0.35s cubic-bezier(.4,0,.2,1)',
         overflow: 'hidden',
       }}>
-        <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(splitPanelActive ? { display: 'flex', flexDirection: 'column', height: '100%' } : {}) }}>
+        <div className="rounded-2xl border" style={{ overflow: 'clip', background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(splitPanelActive ? { display: 'flex', flexDirection: 'column', height: '100%' } : {}) }}>
           {/* Panel header — changes based on mode */}
           <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
             {scoutOpen ? (
