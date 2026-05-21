@@ -553,6 +553,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
         <table className="w-full text-sm" style={{ minWidth: 500 }}>
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--border)' }}>
+              <th className="pl-4 pr-2 py-2.5 text-right text-[10px] uppercase tracking-widest font-medium w-8 flex-shrink-0" style={{ color: 'var(--text-faint)' }}>#</th>
               {isMulti && <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-widest font-medium whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>List</th>}
               <SortTh label="Player"       sortKey="name"          {...thProps} />
               {show('availability') && <SortTh label="Status"      sortKey="availability" {...thProps} />}
@@ -576,7 +577,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
                 </td>
               </tr>
             ) : null}
-            {displayRows.map(p => {
+            {displayRows.map((p, rowIdx) => {
               const cf = (key: string) => p.customFields.find(f => f.fieldName === key)?.value ?? ''
               const age = calcAge(p.dateOfBirth)
               const contractYear = (() => {
@@ -595,6 +596,8 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
                   onClick={() => onPlayerSelect?.(p)}
                   onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--hover-bg)'; prefetchPlayer(p.databaseId ?? singleId ?? '', p.id) }}
                   onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}>
+
+                  <td className="pl-4 pr-2 py-2.5 text-right tabular-nums select-none" style={{ color: 'var(--text-faint)', fontSize: 11 }}>{rowIdx + 1}</td>
 
                   {isMulti && (() => {
                     const dbName = p.databaseName ?? allDbs.find(d => d.id === p.databaseId)?.name ?? ''
