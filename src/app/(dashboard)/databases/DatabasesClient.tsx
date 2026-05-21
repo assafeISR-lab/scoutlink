@@ -769,7 +769,7 @@ export default function DatabasesClient({
   userName: string
   userId: string
 }) {
-  const allDbs = [...ownedDbs, ...sharedDbs]
+  const [allDbs, setAllDbs] = useState<DbItem[]>([...ownedDbs, ...sharedDbs])
   const firstId = ownedDbs[0]?.id ?? sharedDbs[0]?.id
   const [selectedIds, setSelectedIds] = useState<string[]>(firstId ? [firstId] : [])
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -843,6 +843,7 @@ export default function DatabasesClient({
     setConfirmDelete(false)
     setDeleting(false)
     const remaining = allDbs.filter(db => db.id !== singleSelected.id)
+    setAllDbs(remaining)
     setSelectedIds(remaining.length ? [remaining[0].id] : [])
     router.refresh()
   }
@@ -1088,6 +1089,23 @@ export default function DatabasesClient({
               selectedPlayerId={selectedPlayer?.id}
               showOnlyIds={filteredPlayerIds !== null ? new Set(filteredPlayerIds) : undefined}
               onListLoaded={players => {
+                // Keep playerCount in list tags in sync with actual loaded data
+                if (isAllLists) {
+                  const countMap = players.reduce<Record<string, number>>((acc, p) => {
+                    const id = p.databaseId ?? ''
+                    acc[id] = (acc[id] ?? 0) + 1
+                    return acc
+                  }, {})
+                  setAllDbs(prev => prev.map(db =>
+                    countMap[db.id] !== undefined ? { ...db, playerCount: countMap[db.id] } : db
+                  ))
+                } else if (selectedIds.length === 1) {
+                  const dbId = selectedIds[0]
+                  setAllDbs(prev => prev.map(db =>
+                    db.id === dbId ? { ...db, playerCount: players.length } : db
+                  ))
+                }
+
                 if (pendingAutoSelectRef.current && players.length > 0) {
                   pendingAutoSelectRef.current = false
                   const first = [...players].sort((a, b) => {
