@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import LinkChips from '@/components/LinkChips'
 import { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
+import { positionPillStyle } from '@/lib/positionColor'
 
 interface Form {
   // DB model fields
@@ -73,7 +73,6 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
   const [form, setForm]       = useState<Form>(EMPTY)
-  const router = useRouter()
 
   function set(field: keyof Form, value: string | boolean) {
     setForm(f => ({ ...f, [field]: value }))
@@ -110,7 +109,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
         customFields,
       }),
     })
-    if (res.ok) { handleClose(); router.refresh(); window.dispatchEvent(new Event('scoutlink:player-added')) }
+    if (res.ok) { const d = await res.json(); handleClose(); window.dispatchEvent(new CustomEvent('scoutlink:player-added', { detail: { playerId: d.id } })) }
     else { const d = await res.json(); setError(d.error || 'Something went wrong') }
     setLoading(false)
   }
@@ -176,9 +175,12 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                       style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px', color: 'var(--text-primary)', caretColor: '#00c896', width: 140 }} />
                   </div>
                   <div className="flex items-center flex-wrap" style={{ gap: '4px 6px' }}>
-                    <input value={form.position} onChange={e => set('position', e.target.value)} placeholder="Position"
-                      className="text-xs px-2 py-0.5 rounded-full font-medium focus:outline-none transition-colors"
-                      style={{ background: '#00c89615', color: '#00c896', border: '1px solid #00c89630', caretColor: '#00c896', width: form.position ? `${Math.max(70, form.position.length * 8)}px` : '80px' }} />
+                    {form.position && (() => {
+                      const s = positionPillStyle(form.position)
+                      return s
+                        ? <span className="text-[10px] px-1.5 py-0.5 rounded" style={s}>{form.position}</span>
+                        : <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{form.position}</span>
+                    })()}
                     {form.clubName    && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.clubName}</span></>}
                     {form.league      && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: '#00c896' }}>{form.league}</span></>}
                     {form.nationality && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.nationality}</span></>}
@@ -195,19 +197,19 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                 <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
                   <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Physical</p>
                   <div>
-                    <CardRow label="Nationality">
-                      <CardInput value={form.nationality} onChange={v => set('nationality', v)} placeholder="e.g. Spanish" />
-                    </CardRow>
-                    <CardRow label="Date of Birth">
-                      <DateInput value={form.dateOfBirth} onChange={v => set('dateOfBirth', v)} />
-                    </CardRow>
-                    <CardRow label="Age">
-                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-faint)' }}>{age !== null ? `${age} yrs` : '—'}</span>
+                    <CardRow label="Position">
+                      <CardInput value={form.position} onChange={v => set('position', v)} placeholder="e.g. Centre-Back" />
                     </CardRow>
                     <CardRow label="Height (cm)">
                       <CardInput value={form.heightCm} onChange={v => set('heightCm', v)} placeholder="e.g. 182" type="number" />
                     </CardRow>
-                    <CardRow label="Preferred Foot">
+                    <CardRow label="Age">
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-faint)' }}>{age !== null ? `${age} yrs` : '—'}</span>
+                    </CardRow>
+                    <CardRow label="Date of Birth">
+                      <DateInput value={form.dateOfBirth} onChange={v => set('dateOfBirth', v)} />
+                    </CardRow>
+                    <CardRow label="Foot">
                       <select value={form.foot} onChange={e => set('foot', e.target.value)}
                         className="text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5"
                         style={{ width: 90, color: form.foot ? 'var(--text-primary)' : 'var(--text-faint)', border: '1px solid transparent' }}
@@ -219,6 +221,9 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                         <option value="Left">Left</option>
                         <option value="Both">Both</option>
                       </select>
+                    </CardRow>
+                    <CardRow label="Nationality">
+                      <CardInput value={form.nationality} onChange={v => set('nationality', v)} placeholder="e.g. Spanish" />
                     </CardRow>
                     <CardRow label="Passports">
                       <CardInput value={form.passports} onChange={v => set('passports', v)} placeholder="e.g. ES, IT" />
