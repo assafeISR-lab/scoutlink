@@ -88,7 +88,7 @@ export const transfermarktScraper: SiteScraper = {
           if (!profileRes.ok) return p
           const profileHtml = await profileRes.text()
 
-          const heightMatch = profileHtml.match(/([12][,\.]\d{2})\s*m\b/) ?? profileHtml.match(/(\d{3})\s*cm/i)
+          const heightMatch = profileHtml.match(/([12][,\.]\d{2})\s+m\b/) ?? profileHtml.match(/(\d{3})\s*cm/i)
           let heightCm: number | null = null
           if (heightMatch) {
             const raw = heightMatch[1]
