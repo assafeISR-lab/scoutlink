@@ -14,21 +14,26 @@ export default async function SettingsPage() {
   const user = await getUser()
   if (!user) redirect('/login')
 
-  // Parallelize default website upserts
-  await Promise.all(
-    DEFAULT_WEBSITES.map(w =>
-      prisma.agentWebsite.upsert({
-        where: { agentId_url: { agentId: user.id, url: w.url } },
-        create: { ...w, agentId: user.id },
-        update: { loginStatus: w.loginStatus },
-      })
-    )
-  )
-
+  // Seed defaults only when missing — one read, write only on first visit
   const rawWebsites = await prisma.agentWebsite.findMany({
     where: { agentId: user.id },
     orderBy: { createdAt: 'asc' },
   })
+
+  const existingUrls = new Set(rawWebsites.map(w => w.url))
+  const missing = DEFAULT_WEBSITES.filter(w => !existingUrls.has(w.url))
+  if (missing.length > 0) {
+    await prisma.agentWebsite.createMany({
+      data: missing.map(w => ({ ...w, agentId: user.id })),
+      skipDuplicates: true,
+    })
+    rawWebsites.push(
+      ...await prisma.agentWebsite.findMany({
+        where: { agentId: user.id, url: { in: missing.map(w => w.url) } },
+        orderBy: { createdAt: 'asc' },
+      })
+    )
+  }
   const websites = rawWebsites.map(w => ({
     ...w,
     password: w.password ? decrypt(w.password) : null,

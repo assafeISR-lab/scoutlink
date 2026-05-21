@@ -329,10 +329,10 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const [fallbackCols] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return TABLE_COLS
-    return new Set([...loadActive(), ...loadCustomActive()].filter(k => TABLE_COLS.has(k)))
-  })
+  const [fallbackCols, setFallbackCols] = useState<Set<string>>(TABLE_COLS)
+  useEffect(() => {
+    setFallbackCols(new Set([...loadActive(), ...loadCustomActive()].filter(k => TABLE_COLS.has(k))))
+  }, [])
 
   const prevIdsRef = useRef(databaseIds.join(','))
   const pendingSelectRef = useRef<string | null>(null)
