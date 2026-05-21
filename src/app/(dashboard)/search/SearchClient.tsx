@@ -199,7 +199,7 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
       {/* ── Sticky top bar ─────────────────────────────────────── */}
       <div
         className={panelMode ? 'border-b' : 'sticky top-0 z-20 border-b'}
-        style={{ background: panelMode ? 'var(--subtle-bg)' : 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: panelMode ? 'none' : '0 1px 6px rgba(0,0,0,.07)', ...(panelMode ? { position: 'sticky', top: 0, zIndex: 10 } : {}) }}
+        style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: panelMode ? 'none' : '0 1px 6px rgba(0,0,0,.07)', ...(panelMode ? { position: 'sticky', top: 0, zIndex: 10 } : {}) }}
       >
         {/* CSS grid: auto | 1fr | auto — both rows share the same columns so
             "N results" sits under "Web Scout" and tabs align with the search input */}
