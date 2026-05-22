@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { REPORT_COLS, type ReportColDef } from '@/lib/snapshotColumns'
 
 interface PlayerNote {
   content: string
@@ -12,16 +13,8 @@ interface PlayerNote {
 interface Player {
   id: string
   name: string
-  age?: number | null
-  clubName?: string | null
-  position?: string | null
-  nationality?: string | null
-  heightCm?: number | null
-  marketValue?: number | null
-  agentName?: string | null
-  fmAttributes?: string | null
-  playsNational?: boolean
   notes?: PlayerNote[]
+  [key: string]: unknown
 }
 
 interface ReportData {
@@ -33,28 +26,53 @@ interface ReportData {
   players: Player[]
 }
 
+function formatDate(val: unknown): string {
+  if (!val) return ''
+  try {
+    return new Date(String(val) + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  } catch {
+    return String(val)
+  }
+}
+
+function cellText(col: ReportColDef, v: unknown): string {
+  if (v == null || v === '') return ''
+  if (col.type === 'cm')       return `${v} cm`
+  if (col.type === 'currency') return `€${((v as number) / 1_000_000).toFixed(1)}M`
+  if (col.type === 'date')     return formatDate(v)
+  if (col.type === 'status')   return v ? 'Available' : 'Not Avail.'
+  return String(v)
+}
+
 export default function ReportView({ report }: { report: ReportData }) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
+
+  const nameCol: ReportColDef = { key: 'name', label: 'Player' }
+
+  const allCols: ReportColDef[] = [nameCol, ...REPORT_COLS]
+
+  const activeCols = allCols.filter(col =>
+    report.players.some(p => {
+      const v = p[col.key]
+      if (col.type === 'status') return v !== undefined
+      if (typeof v === 'boolean') return true
+      return v != null && v !== ''
+    })
+  )
 
   function handlePrint() {
     window.print()
   }
 
   function handleDownloadCSV() {
-    const headers = ['Name', 'Position', 'Club', 'Nationality', 'Age', 'Height (cm)', 'Market Value', 'Agent', 'FM Attributes', 'National Team']
-    const rows = report.players.map(p => [
-      p.name ?? '',
-      p.position ?? '',
-      p.clubName ?? '',
-      p.nationality ?? '',
-      p.age ?? '',
-      p.heightCm ?? '',
-      p.marketValue != null ? `€${(p.marketValue / 1_000_000).toFixed(1)}M` : '',
-      p.agentName ?? '',
-      p.fmAttributes ?? '',
-      p.playsNational ? 'Yes' : '',
-    ])
+    const headers = activeCols.map(c => c.label)
+    const rows = report.players.map(p =>
+      activeCols.map(col => {
+        if (col.key === 'name') return p.name
+        return cellText(col, p[col.key])
+      })
+    )
     const csv = [headers, ...rows]
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n')
@@ -68,36 +86,18 @@ export default function ReportView({ report }: { report: ReportData }) {
     URL.revokeObjectURL(url)
   }
 
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
   async function handleDelete() {
-    if (!confirm('Delete this report permanently?')) return
     setDeleting(true)
+    setConfirmDelete(false)
     await fetch(`/api/reports/${report.id}`, { method: 'DELETE' })
     router.push('/reports')
     router.refresh()
   }
 
-  const cols: { key: keyof Player; label: string }[] = [
-    { key: 'name',          label: 'Player' },
-    { key: 'position',      label: 'Position' },
-    { key: 'clubName',      label: 'Club' },
-    { key: 'nationality',   label: 'Nationality' },
-    { key: 'age',           label: 'Age' },
-    { key: 'heightCm',      label: 'Height' },
-    { key: 'marketValue',   label: 'Market Value' },
-    { key: 'agentName',     label: 'Agent' },
-    { key: 'fmAttributes',  label: 'FM Attributes' },
-    { key: 'playsNational', label: 'National' },
-  ]
-
-  const activeCols = cols.filter(col =>
-    report.players.some(p => {
-      const v = p[col.key]
-      return v != null && v !== '' && v !== false
-    })
-  )
-
   const allNotes = report.players.flatMap(p =>
-    (p.notes ?? []).map(n => ({ ...n, playerName: p.name }))
+    ((p.notes ?? []) as PlayerNote[]).map(n => ({ ...n, playerName: p.name }))
   )
 
   return (
@@ -122,20 +122,24 @@ export default function ReportView({ report }: { report: ReportData }) {
         <div className="flex items-center gap-2 shrink-0 ml-6">
           <button
             onClick={handleDownloadCSV}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-            style={{ background: 'var(--hover-bg)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+            style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
             </svg>
             CSV
           </button>
           <button
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-            style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)', color: '#00c896' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+            style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <polyline points="6 9 6 2 18 2 18 9" />
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
               <rect x="6" y="14" width="12" height="8" />
@@ -143,18 +147,17 @@ export default function ReportView({ report }: { report: ReportData }) {
             Print
           </button>
           <button
-            onClick={handleDelete}
+            onClick={() => setConfirmDelete(true)}
             disabled={deleting}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+            style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            onMouseEnter={e => { if (!deleting) { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' } }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6M14 11v6" />
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
             </svg>
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting ? 'Deleting…' : 'Delete'}
           </button>
         </div>
       </div>
@@ -172,10 +175,11 @@ export default function ReportView({ report }: { report: ReportData }) {
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No players in this report.</p>
       ) : (
         <div
-          className="rounded-2xl overflow-hidden print:border print:border-gray-300"
-          style={{ background: 'var(--card-solid)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-strong)' }}
+          className="rounded-2xl print:border print:border-gray-300"
+          style={{ background: 'var(--card-solid)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-strong)', overflow: 'hidden' }}
         >
-          <table className="w-full text-sm">
+          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '60vh' }}>
+          <table className="w-full text-sm" style={{ minWidth: 'max-content' }}>
             <thead>
               <tr className="print:bg-gray-100" style={{ borderBottom: '2px solid var(--border-strong)' }}>
                 {activeCols.map((col, ci) => (
@@ -183,8 +187,12 @@ export default function ReportView({ report }: { report: ReportData }) {
                     key={col.key}
                     className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide print:text-gray-600"
                     style={{
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 1,
                       color: 'var(--text-muted)',
-                      background: 'rgba(0,200,150,0.025)',
+                      background: 'var(--card-solid)',
+                      borderBottom: '2px solid var(--border-strong)',
                       borderRight: ci < activeCols.length - 1 ? '1px solid var(--border)' : undefined,
                     }}
                   >
@@ -196,7 +204,7 @@ export default function ReportView({ report }: { report: ReportData }) {
             <tbody>
               {report.players.map((player, i) => (
                 <tr
-                  key={player.id ?? i}
+                  key={String(player.id ?? i)}
                   className="transition-colors print:border-b print:border-gray-200"
                   style={{
                     borderBottom: i < report.players.length - 1 ? '1px solid var(--border)' : undefined,
@@ -204,12 +212,14 @@ export default function ReportView({ report }: { report: ReportData }) {
                   }}
                 >
                   {activeCols.map((col, ci) => {
-                    const v = player[col.key]
+                    const v = col.key === 'name' ? player.name : player[col.key]
                     let display: React.ReactNode
-                    if (col.key === 'heightCm') display = v != null ? `${v} cm` : null
-                    else if (col.key === 'marketValue') display = v != null ? `€${((v as number) / 1_000_000).toFixed(1)}M` : null
-                    else if (col.key === 'playsNational') display = v ? '✓' : null
-                    else display = v != null ? String(v) : null
+                    if (col.key === 'name') {
+                      display = player.name
+                    } else {
+                      const text = cellText(col, v)
+                      display = text || null
+                    }
                     return (
                       <td
                         key={col.key}
@@ -228,6 +238,7 @@ export default function ReportView({ report }: { report: ReportData }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -274,6 +285,81 @@ export default function ReportView({ report }: { report: ReportData }) {
           .print\\:text-gray-400 { color: #9ca3af !important; }
         }
       `}</style>
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+          onClick={() => !deleting && setConfirmDelete(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl overflow-hidden"
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(239,68,68,0.08)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Top accent bar */}
+            <div style={{ height: 3, position: 'relative', overflow: 'hidden', background: deleting ? 'rgba(239,68,68,0.15)' : 'linear-gradient(90deg, #ef4444, #dc2626)' }}>
+              {deleting && (
+                <div style={{ position: 'absolute', top: 0, width: '45%', height: '100%', background: 'linear-gradient(90deg, transparent, #ef4444, rgba(239,68,68,0.4))', animation: 'sl-progress 1.4s ease-in-out infinite' }} />
+              )}
+            </div>
+
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ef4444"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Delete Snapshot</h2>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#ef4444">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/>
+                </svg>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{report.name}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--text-faint)' }}>{report.databaseName} · {report.playerCount} player{report.playerCount !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+
+              <p className="text-xs mb-5" style={{ color: 'var(--text-faint)' }}>
+                The snapshot data will be permanently removed. The original player list is not affected.
+              </p>
+
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
+                  style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-default"
+                  style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', boxShadow: '0 2px 12px rgba(239,68,68,0.25)', cursor: deleting ? 'default' : 'pointer' }}
+                  onMouseEnter={e => { if (!deleting) e.currentTarget.style.boxShadow = '0 4px 20px rgba(239,68,68,0.45)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(239,68,68,0.25)' }}
+                >
+                  {deleting ? 'Deleting…' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

@@ -151,3 +151,11 @@ select:disabled {
 }
 
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.breadcrumb-link {
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+.breadcrumb-link:hover {
+  color: var(--text-secondary);
+}

@@ -82,10 +82,10 @@ function rowToSnapshot(p: PlayerRow): PlayerSnapshot {
     age: calcAge(p.dateOfBirth),
     heightCm: p.heightCm,
     marketValue: p.marketValue,
-    agentName: p.agentName ?? null,
-    fmAttributes: p.customFields.find(f => f.fieldName === 'fmAttributes')?.value ?? null,
-    playsNational: p.playsNational ?? false,
+    dateOfBirth: p.dateOfBirth,
+    available: p.available,
     notes: [],
+    ...Object.fromEntries(p.customFields.map(f => [f.fieldName, f.value])),
   }
 }
 
@@ -217,9 +217,8 @@ function AIResultsPanel({ results, query, onCreateReport, onClose, onPlayerSelec
       age: r.player.age,
       heightCm: r.player.heightCm,
       marketValue: r.player.marketValue,
-      agentName: null,
-      fmAttributes: null,
-      playsNational: false,
+      dateOfBirth: null,
+      available: false,
       notes: [],
     }
   }
@@ -239,11 +238,12 @@ function AIResultsPanel({ results, query, onCreateReport, onClose, onPlayerSelec
               onClick={() => onCreateReport(results.map(toSnap))}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
               style={{ background: 'rgba(255,159,67,0.1)', color: '#ff9f43', border: '1px solid rgba(255,159,67,0.25)' }}
+              title="Saved and visible in Scout Reports"
             >
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
               </svg>
-              Create Report
+              Save Snapshot
             </button>
           )}
           <button
@@ -529,13 +529,14 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
               onClick={() => onCreateReport(displayRows.map(rowToSnapshot))}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
               style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+              title="Saved and visible in Scout Reports"
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-faint)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
               </svg>
-              Create Report
+              Save Snapshot
             </button>
           )}
           {!isMulti && singleId && (
@@ -893,6 +894,11 @@ export default function DatabasesClient({
     setPlayerDirty(false)
   }
 
+  function handleDbCreated(newDb: DbItem) {
+    setAllDbs(prev => [...prev, newDb])
+    setSelectedIds([newDb.id])
+  }
+
   function openReport(players: PlayerSnapshot[]) {
     setReportData({ players, databaseId: selectedDbId, databaseName: selectedDbName })
   }
@@ -924,7 +930,7 @@ export default function DatabasesClient({
           </button>
         )}
         <ImportDatabasesButton databases={importableDatabases} />
-        <CreateDatabaseButton />
+        <CreateDatabaseButton onCreated={handleDbCreated} />
         <button
           onClick={() => { if (selectedPlayer) playerFlushRef.current?.(); setScoutOpen(o => !o); setSelectedPlayer(null); setPlayerDirty(false); resetSaveState() }}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
@@ -946,33 +952,74 @@ export default function DatabasesClient({
 
       {/* Delete confirmation modal */}
       {confirmDelete && singleSelected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }}
-          onClick={() => setConfirmDelete(false)}>
-          <div className="w-full max-w-sm rounded-2xl p-6" style={{ background: 'var(--card-bg)', border: '1px solid rgba(239,68,68,0.3)' }}
-            onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#ef4444">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-              </svg>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+          onClick={() => !deleting && setConfirmDelete(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl overflow-hidden"
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(239,68,68,0.08)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Top accent bar */}
+            <div style={{ height: 3, position: 'relative', overflow: 'hidden', background: deleting ? 'rgba(239,68,68,0.15)' : 'linear-gradient(90deg, #ef4444, #dc2626)' }}>
+              {deleting && (
+                <div style={{ position: 'absolute', top: 0, width: '45%', height: '100%', background: 'linear-gradient(90deg, transparent, #ef4444, rgba(239,68,68,0.4))', animation: 'sl-progress 1.4s ease-in-out infinite' }} />
+              )}
             </div>
-            <h3 className="text-lg font-semibold text-center mb-2" style={{ color: 'var(--text-primary)' }}>
-              Delete &ldquo;{singleSelected.name}&rdquo;?
-            </h3>
-            <p className="text-sm text-center mb-6" style={{ color: 'var(--text-muted)' }}>
-              This will permanently delete all {singleSelected.playerCount} player{singleSelected.playerCount !== 1 ? 's' : ''} in this list. This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(false)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium"
-                style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
-                Cancel
-              </button>
-              <button onClick={handleDelete} disabled={deleting}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50"
-                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
-                {deleting ? 'Deleting…' : 'Delete List'}
-              </button>
+
+            <div className="p-6">
+              {/* Header row */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ef4444"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Delete List</h2>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>This action cannot be undone</p>
+                </div>
+              </div>
+
+              {/* List chip */}
+              <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 3C7.58 3 4 4.79 4 7s3.58 4 8 4 8-1.79 8-4-3.58-4-8-4zM4 9v3c0 2.21 3.58 4 8 4s8-1.79 8-4V9c0 2.21-3.58 4-8 4S4 11.21 4 9zm0 5v3c0 2.21 3.58 4 8 4s8-1.79 8-4v-3c0 2.21-3.58 4-8 4s-8-1.79-8-4z"/></svg>
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{singleSelected.name}</span>
+                {singleSelected.playerCount > 0 && (
+                  <span className="ml-auto text-xs" style={{ color: 'var(--text-faint)' }}>{singleSelected.playerCount} player{singleSelected.playerCount !== 1 ? 's' : ''}</span>
+                )}
+              </div>
+
+              <p className="text-xs mb-5" style={{ color: 'var(--text-faint)' }}>
+                All players and notes in this list will be permanently removed.
+              </p>
+
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
+                  style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-default"
+                  style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', boxShadow: '0 2px 12px rgba(239,68,68,0.25)', cursor: deleting ? 'default' : 'pointer' }}
+                  onMouseEnter={e => { if (!deleting) e.currentTarget.style.boxShadow = '0 4px 20px rgba(239,68,68,0.45)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(239,68,68,0.25)' }}
+                >
+                  {deleting ? 'Deleting…' : 'Delete List'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1186,16 +1233,6 @@ export default function DatabasesClient({
                     ) : (
                       <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zm-5 16a3 3 0 110-6 3 3 0 010 6zm3-10H5V5h10v4z"/></svg>Save</>
                     )}
-                  </button>
-                  <button
-                    onClick={() => setPlayerAction('report')}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
-                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,159,67,0.08)'; e.currentTarget.style.color = '#ff9f43'; e.currentTarget.style.borderColor = 'rgba(255,159,67,0.3)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-                  >
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                    Create Report
                   </button>
                   {playerCanWrite && (
                     <button

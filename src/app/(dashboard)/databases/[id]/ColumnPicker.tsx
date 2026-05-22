@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   PARAM_KEYS, PARAM_LABELS,
@@ -76,18 +76,21 @@ export default function ColumnPicker({ databaseId, columnConfig, onUpdate }: Pro
   const [customKeys, setCustomKeys] = useState<string[]>(() =>
     typeof window === 'undefined' ? [] : loadCustomKeys()
   )
-  const [saving, setSaving] = useState(false)
-  const [error, setError]   = useState('')
+  const [saving, setSaving]             = useState(false)
+  const [error, setError]               = useState('')
+  const [discardWarning, setDiscardWarning] = useState(false)
+  const initialSelectedRef              = useRef<Set<string>>(new Set())
 
   // Re-initialise whenever the drawer transitions to open
   useEffect(() => {
     if (!open) return
     setCustomKeys(loadCustomKeys())
-    setSelected(
-      columnConfig !== null
-        ? new Set(columnConfig.filter(k => TABLE_COLUMNS.has(k)))
-        : new Set([...loadActive(), ...loadCustomActive()].filter(k => TABLE_COLUMNS.has(k)))
-    )
+    const init = columnConfig !== null
+      ? new Set(columnConfig.filter(k => TABLE_COLUMNS.has(k)))
+      : new Set([...loadActive(), ...loadCustomActive()].filter(k => TABLE_COLUMNS.has(k)))
+    setSelected(init)
+    initialSelectedRef.current = new Set(init)
+    setDiscardWarning(false)
     setError('')
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -139,7 +142,18 @@ export default function ColumnPicker({ databaseId, columnConfig, onUpdate }: Pro
   }
 
   const totalSelected   = selected.size
-  const totalToggleable = TABLE_COLUMNS.size  // 12 — the only ones that matter for the count
+  const totalToggleable = TABLE_COLUMNS.size
+
+  const hasChanges = (() => {
+    if (selected.size !== initialSelectedRef.current.size) return true
+    for (const k of selected) if (!initialSelectedRef.current.has(k)) return true
+    return false
+  })()
+
+  function tryClose() {
+    if (hasChanges) { setDiscardWarning(true); return }
+    setOpen(false)
+  }
 
   return (
     <>
@@ -168,20 +182,27 @@ export default function ColumnPicker({ databaseId, columnConfig, onUpdate }: Pro
           {/* Backdrop */}
           <div
             className="fixed inset-0 z-40"
-            style={{ background: 'rgba(0,0,0,0.4)' }}
-            onClick={() => setOpen(false)}
+            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+            onClick={tryClose}
           />
 
           {/* Drawer */}
           <div
-            className="fixed top-0 right-0 h-full z-50 flex flex-col"
+            className="fixed top-0 right-0 h-full z-50 flex flex-col overflow-hidden"
             style={{
               width: 340,
               background: 'var(--card-bg)',
-              borderLeft: '1px solid var(--border)',
-              boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+              borderLeft: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '-8px 0 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,200,150,0.08)',
             }}
           >
+            {/* Top accent bar */}
+            <div style={{ height: 3, flexShrink: 0, position: 'relative', overflow: 'hidden', background: saving ? 'rgba(0,200,150,0.15)' : 'linear-gradient(90deg, #00c896, #00a878)' }}>
+              {saving && (
+                <div style={{ position: 'absolute', top: 0, width: '45%', height: '100%', background: 'linear-gradient(90deg, transparent, #00c896, rgba(0,200,150,0.4))', animation: 'sl-progress 1.4s ease-in-out infinite' }} />
+              )}
+            </div>
+
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
               <div>
@@ -191,9 +212,11 @@ export default function ColumnPicker({ databaseId, columnConfig, onUpdate }: Pro
                 </p>
               </div>
               <button
-                onClick={() => setOpen(false)}
+                onClick={tryClose}
                 className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
-                style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
+                style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -268,23 +291,53 @@ export default function ColumnPicker({ databaseId, columnConfig, onUpdate }: Pro
             {/* Footer */}
             <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
               {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                  style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50 transition-all"
-                  style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
+              {discardWarning ? (
+                <>
+                  <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Discard unsaved changes?</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDiscardWarning(false)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                      style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                    >
+                      Keep Editing
+                    </button>
+                    <button
+                      onClick={() => setOpen(false)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                      style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)', cursor: 'pointer' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)' }}
+                    >
+                      Discard
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex gap-3">
+                  <button
+                    onClick={tryClose}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 transition-all"
+                    style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', color: '#fff', boxShadow: '0 2px 12px rgba(0,200,150,0.25)', cursor: saving ? 'default' : 'pointer' }}
+                    onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,200,150,0.45)' }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,200,150,0.25)' }}
+                  >
+                    {saving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </>

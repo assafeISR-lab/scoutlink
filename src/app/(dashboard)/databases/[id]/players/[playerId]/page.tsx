@@ -76,14 +76,14 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
                 age,
                 heightCm: player.heightCm,
                 marketValue: player.marketValue,
-                agentName: player.agentName,
-                fmAttributes: player.customFields.find(cf => cf.fieldName === 'fmAttributes')?.value ?? null,
-                playsNational: player.playsNational,
+                available: player.available,
+                dateOfBirth: player.dateOfBirth?.toISOString().split('T')[0] ?? null,
                 notes: player.notes.map(n => ({
                   content: n.content,
                   createdAt: n.createdAt.toISOString(),
                   agentName: n.agent?.fullName ?? null,
                 })),
+                ...Object.fromEntries(player.customFields.map(cf => [cf.fieldName, cf.value])),
               }}
             />
             {canWrite && (

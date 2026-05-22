@@ -16,29 +16,37 @@ export default function ReportsList({ reports: initial }: { reports: Report[] })
   const router = useRouter()
   const [reports, setReports] = useState(initial)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  // Snapshots search state
+  const [snapSearch, setSnapSearch] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
+  // Scouting reports search + date state (placeholder only)
+  const [scoutSearch, setScoutSearch] = useState('')
+  const [scoutDateFrom, setScoutDateFrom] = useState('')
+  const [scoutDateTo, setScoutDateTo] = useState('')
+
   async function handleDelete(id: string) {
-    if (!confirm('Delete this report? This cannot be undone.')) return
     setDeleting(id)
+    setConfirmDeleteId(null)
     await fetch(`/api/reports/${id}`, { method: 'DELETE' })
     setReports(r => r.filter(x => x.id !== id))
     setDeleting(null)
     router.refresh()
   }
 
-  function clearFilters() {
-    setSearch('')
+  function clearSnapFilters() {
+    setSnapSearch('')
     setDateFrom('')
     setDateTo('')
   }
 
-  const hasFilters = search.trim() || dateFrom || dateTo
+  const hasSnapFilters = snapSearch.trim() || dateFrom || dateTo
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
+  const filteredSnaps = useMemo(() => {
+    const q = snapSearch.trim().toLowerCase()
     return reports.filter(r => {
       if (q && !r.name.toLowerCase().includes(q) && !r.databaseName.toLowerCase().includes(q)) return false
       if (dateFrom && new Date(r.createdAt) < new Date(dateFrom)) return false
@@ -49,7 +57,7 @@ export default function ReportsList({ reports: initial }: { reports: Report[] })
       }
       return true
     })
-  }, [reports, search, dateFrom, dateTo])
+  }, [reports, snapSearch, dateFrom, dateTo])
 
   const inputStyle: React.CSSProperties = {
     background: 'var(--input-bg)',
@@ -58,149 +66,320 @@ export default function ReportsList({ reports: initial }: { reports: Report[] })
     colorScheme: 'light',
   }
 
-  if (reports.length === 0) {
-    return (
-      <div className="rounded-2xl p-16 text-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border-strong)' }}>
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.2)' }}>
-          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#00c896">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
-          </svg>
-        </div>
-        <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>No reports yet</p>
-        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Go to a database and click &ldquo;Create Report&rdquo; to save a snapshot</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-4">
-      {/* Filter toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ color: 'var(--text-faint)' }}>
-            <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-          </svg>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name or database…"
-            className="w-full pl-9 pr-3 py-2 rounded-xl text-sm focus:outline-none"
-            style={inputStyle}
-            onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-            onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
-          />
+    <>
+    <div className="grid grid-cols-2 gap-6 items-start">
+
+      {/* ── Left: Scout Reports ── */}
+      <div className="flex flex-col gap-4">
+        {/* Section header */}
+        <div className="flex items-center gap-3 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,159,67,0.1)', border: '1px solid rgba(255,159,67,0.25)' }}>
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#ff9f43">
+              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Scout Reports</h2>
+            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Detailed per-player scout reports</p>
+          </div>
         </div>
 
-        {/* Date from */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium shrink-0" style={{ color: 'var(--text-muted)' }}>From</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={e => setDateFrom(e.target.value)}
-            className="px-3 py-2 rounded-xl text-sm focus:outline-none"
-            style={inputStyle}
-            onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-            onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
-          />
+        {/* Search + date filters */}
+        <div className="flex flex-col gap-2">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ color: 'var(--text-faint)' }}>
+              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              value={scoutSearch}
+              onChange={e => setScoutSearch(e.target.value)}
+              placeholder="Search scouting reports…"
+              className="w-full pl-9 pr-3 py-2 rounded-xl text-sm focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = '#ff9f43'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
+            />
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>From</span>
+            <input
+              type="date"
+              value={scoutDateFrom}
+              onChange={e => setScoutDateFrom(e.target.value)}
+              className="px-3 py-1.5 rounded-xl text-sm focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = '#ff9f43'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
+            />
+            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>To</span>
+            <input
+              type="date"
+              value={scoutDateTo}
+              onChange={e => setScoutDateTo(e.target.value)}
+              className="px-3 py-1.5 rounded-xl text-sm focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = '#ff9f43'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
+            />
+            {(scoutSearch.trim() || scoutDateFrom || scoutDateTo) && (
+              <button
+                onClick={() => { setScoutSearch(''); setScoutDateFrom(''); setScoutDateTo('') }}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium"
+                style={{ background: 'var(--hover-bg)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)' }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Date to */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium shrink-0" style={{ color: 'var(--text-muted)' }}>To</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={e => setDateTo(e.target.value)}
-            className="px-3 py-2 rounded-xl text-sm focus:outline-none"
-            style={inputStyle}
-            onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
-            onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
-          />
+        {/* Coming soon placeholder */}
+        <div
+          className="rounded-2xl flex flex-col items-center justify-center text-center px-8 py-16"
+          style={{ background: 'var(--subtle-bg)', border: '1px dashed rgba(255,159,67,0.3)', minHeight: '280px' }}
+        >
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(255,159,67,0.08)', border: '1px solid rgba(255,159,67,0.2)' }}>
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#ff9f43">
+              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+            </svg>
+          </div>
+          <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Coming Soon</p>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-faint)' }}>
+            Full per-player scouting reports with<br />analysis, ratings, and recommendations.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Right: Snapshots ── */}
+      <div className="flex flex-col gap-4">
+        {/* Section header */}
+        <div className="flex items-center gap-3 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.18)' }}>
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#00c896">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Snapshots</h2>
+            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Saved player list exports</p>
+          </div>
         </div>
 
-        {/* Clear */}
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="px-3 py-2 rounded-xl text-xs font-medium transition-colors"
-            style={{ background: 'var(--hover-bg)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)' }}
-          >
-            Clear
-          </button>
+        {/* Search + date filters */}
+        <div className="flex flex-col gap-2">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ color: 'var(--text-faint)' }}>
+              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              value={snapSearch}
+              onChange={e => setSnapSearch(e.target.value)}
+              placeholder="Search by name or database…"
+              className="w-full pl-9 pr-3 py-2 rounded-xl text-sm focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
+            />
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>From</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="px-3 py-1.5 rounded-xl text-sm focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
+            />
+            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>To</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="px-3 py-1.5 rounded-xl text-sm focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = '#00c896'}
+              onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'}
+            />
+            {hasSnapFilters && (
+              <button
+                onClick={clearSnapFilters}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium"
+                style={{ background: 'var(--hover-bg)', border: '1px solid var(--border-strong)', color: 'var(--text-muted)' }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Result count */}
+        {hasSnapFilters && (
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
+            {filteredSnaps.length === 0
+              ? 'No snapshots match your filters'
+              : `${filteredSnaps.length} of ${reports.length} snapshot${reports.length !== 1 ? 's' : ''}`}
+          </p>
+        )}
+
+        {/* List */}
+        {reports.length === 0 ? (
+          <div className="rounded-2xl p-12 text-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border-strong)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.18)' }}>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#00c896">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
+              </svg>
+            </div>
+            <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>No snapshots yet</p>
+            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Go to a database and click &ldquo;Save Snapshot&rdquo;</p>
+          </div>
+        ) : filteredSnaps.length === 0 ? (
+          <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border-strong)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No snapshots match your filters</p>
+            <button onClick={clearSnapFilters} className="mt-2 text-xs font-medium" style={{ color: '#00c896' }}>
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card-solid)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-strong)' }}>
+            {filteredSnaps.map((report, i) => (
+              <div
+                key={report.id}
+                className="flex items-center justify-between px-4 py-3.5 group transition-colors"
+                style={{ borderBottom: i < filteredSnaps.length - 1 ? '1px solid var(--border)' : undefined }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.15)' }}>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#00c896">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                      <Highlight text={report.name} query={snapSearch} />
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      <Highlight text={report.databaseName} query={snapSearch} />
+                      <span className="mx-1.5" style={{ color: 'var(--text-faint)' }}>·</span>
+                      {report.playerCount} player{report.playerCount !== 1 ? 's' : ''}
+                      <span className="mx-1.5" style={{ color: 'var(--text-faint)' }}>·</span>
+                      {new Date(report.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <Link
+                    href={`/reports/${report.id}`}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ background: 'rgba(0,200,150,0.08)', color: '#00c896', border: '1px solid rgba(0,200,150,0.2)' }}
+                  >
+                    View
+                  </Link>
+                  <button
+                    onClick={() => setConfirmDeleteId(report.id)}
+                    disabled={deleting === report.id}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-40"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
+                  >
+                    {deleting === report.id ? '…' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Result count when filtering */}
-      {hasFilters && (
-        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-          {filtered.length === 0 ? 'No reports match your filters' : `${filtered.length} of ${reports.length} report${reports.length !== 1 ? 's' : ''}`}
-        </p>
-      )}
+    </div>
 
-      {/* List */}
-      {filtered.length === 0 ? (
-        <div className="rounded-2xl p-12 text-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border-strong)' }}>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No reports match your filters</p>
-          <button onClick={clearFilters} className="mt-3 text-xs font-medium" style={{ color: '#00c896' }}>
-            Clear filters
-          </button>
-        </div>
-      ) : (
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card-solid)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-strong)' }}>
-          {filtered.map((report, i) => (
+      {/* Delete snapshot confirmation modal */}
+      {confirmDeleteId && (() => {
+        const snap = reports.find(r => r.id === confirmDeleteId)
+        if (!snap) return null
+        const isDeleting = deleting === confirmDeleteId
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+            onClick={() => !isDeleting && setConfirmDeleteId(null)}
+          >
             <div
-              key={report.id}
-              className="flex items-center justify-between px-5 py-4 group transition-colors"
-              style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : undefined }}
+              className="w-full max-w-sm rounded-2xl overflow-hidden"
+              style={{
+                background: 'var(--card-bg)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(239,68,68,0.08)',
+              }}
+              onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.18)' }}>
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="#00c896">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                    <Highlight text={report.name} query={search} />
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    <Highlight text={report.databaseName} query={search} />
-                    <span className="mx-1.5" style={{ color: 'var(--text-faint)' }}>·</span>
-                    {report.playerCount} player{report.playerCount !== 1 ? 's' : ''}
-                    <span className="mx-1.5" style={{ color: 'var(--text-faint)' }}>·</span>
-                    {new Date(report.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
+              {/* Top accent bar */}
+              <div style={{ height: 3, position: 'relative', overflow: 'hidden', background: isDeleting ? 'rgba(239,68,68,0.15)' : 'linear-gradient(90deg, #ef4444, #dc2626)' }}>
+                {isDeleting && (
+                  <div style={{ position: 'absolute', top: 0, width: '45%', height: '100%', background: 'linear-gradient(90deg, transparent, #ef4444, rgba(239,68,68,0.4))', animation: 'sl-progress 1.4s ease-in-out infinite' }} />
+                )}
               </div>
 
-              <div className="flex items-center gap-2 shrink-0 ml-4">
-                <Link
-                  href={`/reports/${report.id}`}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                  style={{ background: 'rgba(0,200,150,0.08)', color: '#00c896', border: '1px solid rgba(0,200,150,0.2)' }}
-                >
-                  View
-                </Link>
-                <button
-                  onClick={() => handleDelete(report.id)}
-                  disabled={deleting === report.id}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors opacity-0 group-hover:opacity-100"
-                  style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
-                >
-                  {deleting === report.id ? '...' : 'Delete'}
-                </button>
+              <div className="p-6">
+                {/* Header row */}
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ef4444"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Delete Snapshot</h2>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>This action cannot be undone</p>
+                  </div>
+                </div>
+
+                {/* Snapshot chip */}
+                <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#ef4444">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/>
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{snap.name}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-faint)' }}>{snap.databaseName} · {snap.playerCount} player{snap.playerCount !== 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+
+                <p className="text-xs mb-5" style={{ color: 'var(--text-faint)' }}>
+                  The snapshot data will be permanently removed. The original player list is not affected.
+                </p>
+
+                <div className="flex gap-2.5">
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    disabled={isDeleting}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDelete(confirmDeleteId)}
+                    disabled={isDeleting}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-default"
+                    style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', boxShadow: '0 2px 12px rgba(239,68,68,0.25)', cursor: isDeleting ? 'default' : 'pointer' }}
+                    onMouseEnter={e => { if (!isDeleting) e.currentTarget.style.boxShadow = '0 4px 20px rgba(239,68,68,0.45)' }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(239,68,68,0.25)' }}
+                  >
+                    {isDeleting ? 'Deleting…' : 'Yes, Delete'}
+                  </button>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+          </div>
+        )
+      })()}
+    </>
   )
 }
 
-// Highlights matching query substring in text
 function Highlight({ text, query }: { text: string; query: string }) {
   const q = query.trim()
   if (!q) return <>{text}</>

@@ -1217,13 +1217,41 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl border max-h-[90vh] flex flex-col" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl overflow-hidden max-h-[90vh] flex flex-col"
+        style={{
+          background: 'var(--card-bg)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,200,150,0.08)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Top accent bar */}
+        <div style={{ height: 3, position: 'relative', overflow: 'hidden', background: loading ? 'rgba(0,200,150,0.15)' : 'linear-gradient(90deg, #00c896, #00a878)', flexShrink: 0 }}>
+          {loading && (
+            <div style={{ position: 'absolute', top: 0, width: '45%', height: '100%', background: 'linear-gradient(90deg, transparent, #00c896, rgba(0,200,150,0.4))', animation: 'sl-progress 1.4s ease-in-out infinite' }} />
+          )}
+        </div>
 
-        <div className="px-6 pt-5 pb-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-          <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{preSelectedDbId ? 'Add player to list' : 'Import into database'}</h2>
-          <div className="flex items-center gap-3 p-3 rounded-xl mt-2" style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)' }}>
-            {photoSrc && <img src={photoSrc} alt={player.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
+        <div className="px-6 pt-5 pb-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+          {/* Header row */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)' }}>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#00c896"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            </div>
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{preSelectedDbId ? 'Add to List' : 'Import Player'}</h2>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>Choose which list to add this player to</p>
+            </div>
+          </div>
+          {/* Player chip */}
+          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(0,200,150,0.06)', border: '1px solid rgba(0,200,150,0.15)' }}>
+            {photoSrc && <img src={photoSrc} alt={player.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
             <div className="min-w-0">
               <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{player.name}</p>
               <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{[position, clubName].filter(Boolean).join(' · ') || 'Player'}</p>
@@ -1232,11 +1260,14 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-5">
-          <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--text-faint)' }}>
+          <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: 'var(--text-faint)' }}>
             {preSelectedDbId ? 'Choose list' : 'Choose databases'}
           </p>
           {databases.length === 0 ? (
-            <p className="text-sm" style={{ color: '#f87171' }}>You have no databases. Create one first.</p>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+              <p className="text-xs" style={{ color: '#ef4444' }}>You have no databases. Create one first.</p>
+            </div>
           ) : (
             <div className="flex flex-col gap-2">
               {databases.map(db => {
@@ -1256,22 +1287,33 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
               })}
             </div>
           )}
-          {error && <p className="text-sm mt-3" style={{ color: '#f87171' }}>{error}</p>}
+          {error && (
+            <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+              <p className="text-xs" style={{ color: '#ef4444' }}>{error}</p>
+            </div>
+          )}
         </div>
 
         {loading ? (
-          <div className="px-6 py-5 border-t flex flex-col items-center gap-3 flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+          <div className="px-6 py-5 flex flex-col items-center gap-3 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
             <ScoutLinkBallLoader size={64} />
             <p className="text-sm" style={{ color: 'var(--text-faint)' }}>Importing player…</p>
           </div>
         ) : (
-          <div className="px-6 py-4 border-t flex gap-3 flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm transition-colors" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>Cancel</button>
+          <div className="px-6 py-4 flex gap-2.5 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+            <button onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+              Cancel
+            </button>
             <button onClick={handleImport} disabled={selectedIds.size === 0 || databases.length === 0}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-50 transition-all"
-              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,200,150,0.25)' }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}>
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-default transition-all"
+              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', color: '#fff', boxShadow: '0 2px 12px rgba(0,200,150,0.25)', cursor: (selectedIds.size === 0 || databases.length === 0) ? 'default' : 'pointer' }}
+              onMouseEnter={e => { if (selectedIds.size > 0 && databases.length > 0) e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,200,150,0.45)' }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,200,150,0.25)' }}>
               {preSelectedDbId ? 'Add to List' : selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
             </button>
           </div>

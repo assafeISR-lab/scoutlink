@@ -193,19 +193,30 @@ export default function EditPlayerModal({ player, singleId, onClose, onSaved }: 
   const initials = ((form.firstName[0] ?? player.firstName[0]) + (form.lastName[0] ?? player.lastName[0])).toUpperCase()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} onClick={onClose}>
       <div
         className="w-full max-w-7xl max-h-[95vh] overflow-y-auto rounded-2xl"
-        style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', boxShadow: 'var(--card-shadow)' }}
+        style={{
+          background: 'var(--card-bg)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,200,150,0.08)',
+        }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-10" style={{ background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
-          <div>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Edit Player</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>Update the player's details below</p>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)' }}>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#00c896"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </div>
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Edit Player</h2>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>Update the player&apos;s details below</p>
+            </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--hover-bg)' }}>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
         </div>
@@ -359,14 +370,25 @@ export default function EditPlayerModal({ player, singleId, onClose, onSaved }: 
 
         {/* Footer */}
         <div className="px-6 pb-5 flex flex-col gap-3">
-          {error && <p className="text-red-400 text-xs">{error}</p>}
-          <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium" style={{ background: 'var(--hover-bg)', color: 'var(--text-muted)' }}>
+          {error && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+              <p className="text-xs" style={{ color: '#ef4444' }}>{error}</p>
+            </div>
+          )}
+          <div className="flex gap-2.5">
+            <button onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}>
               Cancel
             </button>
             <button onClick={handleSave} disabled={loading || !form.firstName.trim() || !form.lastName.trim()}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-black disabled:opacity-40 transition-all"
-              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)' }}>
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-default transition-all"
+              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', color: '#fff', boxShadow: '0 2px 12px rgba(0,200,150,0.25)', cursor: (loading || !form.firstName.trim() || !form.lastName.trim()) ? 'default' : 'pointer' }}
+              onMouseEnter={e => { if (!loading && form.firstName.trim() && form.lastName.trim()) e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,200,150,0.45)' }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,200,150,0.25)' }}>
               {loading ? 'Saving…' : 'Save Changes'}
             </button>
           </div>

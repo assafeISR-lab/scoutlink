@@ -15,9 +15,11 @@ export default async function ReportsPage() {
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Reports</h1>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your saved scouting reports</p>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="mr-auto pl-3 border-l-2" style={{ borderColor: '#ff9f43' }}>
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Reports</h1>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>Scout reports and player snapshots</p>
+        </div>
       </div>
       <ReportsList reports={reports.map(r => ({ ...r, createdAt: r.createdAt.toISOString() }))} />
     </>

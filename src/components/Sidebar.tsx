@@ -24,7 +24,7 @@ export default function Sidebar({ userName, userEmail, userInitial }: SidebarPro
     { icon: <IconDatabase />, label: 'Studio', color: '#00c896', href: '/databases' },
   ]
   const toolItems = [
-    { icon: <IconReports />,  label: 'Reports',     color: '#ff9f43', href: '/reports' },
+    { icon: <IconReports />,  label: 'Scout Reports', color: '#ff9f43', href: '/reports' },
     { icon: <IconCalendar />, label: 'Calendar',    color: '#ff6b9d', href: '/calendar' },
     { icon: <IconDashboard />, label: 'Scout Board', color: '#00c896', href: '/dashboard' },
   ]
@@ -126,13 +126,12 @@ function NavItem({ icon, label, active, color, href }: { icon: React.ReactNode; 
     <Link
       href={href}
       className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200"
-      style={active ? { background: `linear-gradient(135deg, ${color}18, ${color}06)` } : {}}
+      style={active ? { background: 'rgba(255,255,255,0.1)' } : {}}
       onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = '' }}
     >
       <span className="w-4 h-4 flex-shrink-0" style={{ color }}>{icon}</span>
       <span className="text-sm font-medium" style={{ color: active ? 'white' : 'rgba(255,255,255,0.5)' }}>{label}</span>
-      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />}
     </Link>
   )
 }
