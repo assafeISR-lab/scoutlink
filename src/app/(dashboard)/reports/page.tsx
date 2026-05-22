@@ -16,7 +16,7 @@ export default async function ReportsPage() {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-1">Reports</h1>
+        <h1 className="text-3xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Reports</h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your saved scouting reports</p>
       </div>
       <ReportsList reports={reports.map(r => ({ ...r, createdAt: r.createdAt.toISOString() }))} />
