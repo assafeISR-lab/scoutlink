@@ -20,11 +20,13 @@ export default function Sidebar({ userName, userEmail, userInitial }: SidebarPro
 
   const onDatabases = pathname.startsWith('/databases')
 
-  const mainItems: { icon: React.ReactNode; label: React.ReactNode; color: string; href: string }[] = []
+  const workspaceItems = [
+    { icon: <IconDatabase />, label: 'Studio', color: '#00c896', href: '/databases' },
+  ]
   const toolItems = [
-    { icon: <IconReports />, label: 'Reports', color: '#ff9f43', href: '/reports' },
-    { icon: <IconCalendar />, label: 'Calendar', color: '#ff6b9d', href: '/calendar' },
-    { icon: <IconDashboard />, label: 'ScoutBoardLog', color: '#00c896', href: '/dashboard' },
+    { icon: <IconReports />,  label: 'Reports',     color: '#ff9f43', href: '/reports' },
+    { icon: <IconCalendar />, label: 'Calendar',    color: '#ff6b9d', href: '/calendar' },
+    { icon: <IconDashboard />, label: 'Scout Board', color: '#00c896', href: '/dashboard' },
   ]
 
   return (
@@ -62,13 +64,10 @@ export default function Sidebar({ userName, userEmail, userInitial }: SidebarPro
 
       {/* Nav */}
       <nav className="flex-1 px-4 py-6 flex flex-col gap-1 overflow-y-auto">
-        <p className="text-[10px] text-white/20 uppercase tracking-widest px-3 mb-2">Main</p>
-
-        {mainItems.map(item => (
-          <NavItem key={item.href} icon={item.icon} label={item.label} color={item.color} href={item.href} active={pathname === item.href} />
+        <p className="text-[10px] text-white/20 uppercase tracking-widest px-3 mb-2">Workspace</p>
+        {workspaceItems.map(item => (
+          <NavItem key={item.href} icon={item.icon} label={item.label} color={item.color} href={item.href} active={item.href === '/databases' ? onDatabases : pathname === item.href} />
         ))}
-
-        <NavItem icon={<IconDatabase />} label={<span className="leading-tight"><span className="block">ScoutLink</span><span className="block text-[11px] opacity-60">Studio</span></span>} color="#00c896" href="/databases" active={onDatabases} />
 
         <p className="text-[10px] text-white/20 uppercase tracking-widest px-3 mt-4 mb-2">Tools</p>
         {toolItems.map(item => (
