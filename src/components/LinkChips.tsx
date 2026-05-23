@@ -54,36 +54,52 @@ export default function LinkChips({
           }
           return (
             <div key={label} className="flex items-center">
-              <button
-                onClick={canEdit ? () => setEditing(label) : undefined}
-                disabled={!canEdit}
-                className="text-[10px] font-medium px-2 py-0.5 transition-all"
-                style={hasUrl ? {
-                  color: '#00c896',
-                  background: 'rgba(0,200,150,0.08)',
-                  border: '1px solid rgba(0,200,150,0.25)',
-                  borderRadius: hasUrl ? '6px 0 0 6px' : '6px',
-                  cursor: canEdit ? 'pointer' : 'default',
-                } : {
-                  color: 'var(--text-faint)',
-                  background: 'transparent',
-                  border: '1px dashed var(--border)',
-                  borderRadius: '6px',
-                  cursor: canEdit ? 'pointer' : 'default',
-                }}
-              >
-                {label}
-              </button>
-              {hasUrl && (
-                <a
-                  href={value}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] px-1.5 py-0.5 transition-all hover:opacity-80"
-                  style={{ color: '#00c896', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderLeft: 'none', borderRadius: '0 6px 6px 0' }}
+              {hasUrl ? (
+                <>
+                  {/* Chip label → opens website */}
+                  <a
+                    href={value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-medium px-2 py-0.5 transition-all hover:opacity-80"
+                    style={{
+                      color: '#00c896',
+                      background: 'rgba(0,200,150,0.08)',
+                      border: '1px solid rgba(0,200,150,0.25)',
+                      borderRadius: canEdit ? '6px 0 0 6px' : '6px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {label}
+                  </a>
+                  {/* Edit icon → opens edit mode */}
+                  {canEdit && (
+                    <button
+                      onClick={() => setEditing(label)}
+                      className="flex items-center justify-center px-1.5 py-0.5 transition-all hover:opacity-80"
+                      title="Edit URL"
+                      style={{ color: '#00c896', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderLeft: 'none', borderRadius: '0 6px 6px 0' }}
+                    >
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </button>
+                  )}
+                </>
+              ) : (
+                /* No URL yet → clicking opens edit mode */
+                <button
+                  onClick={canEdit ? () => setEditing(label) : undefined}
+                  disabled={!canEdit}
+                  className="text-[10px] font-medium px-2 py-0.5 transition-all"
+                  style={{
+                    color: 'var(--text-faint)',
+                    background: 'transparent',
+                    border: '1px dashed var(--border)',
+                    borderRadius: '6px',
+                    cursor: canEdit ? 'pointer' : 'default',
+                  }}
                 >
-                  ↗
-                </a>
+                  {label}
+                </button>
               )}
             </div>
           )

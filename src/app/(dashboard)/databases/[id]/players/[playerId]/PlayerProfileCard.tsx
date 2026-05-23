@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import NotesSection from './NotesSection'
+import EvaluationSection from './EvaluationSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
+import HighlightsField from '@/components/HighlightsField'
+import AutocompleteField from '@/components/AutocompleteField'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import HeatmapDisplay from '@/components/HeatmapDisplay'
@@ -66,9 +68,21 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   const [localActiveFm,    setLocalActiveFm]    = useState(false)
   const [heatmapRefreshing,setHeatmapRefreshing]= useState(false)
   const [heatmapError,     setHeatmapError]     = useState('')
+  const [agentSuggestions,    setAgentSuggestions]    = useState<string[]>([])
+  const [referralSuggestions, setReferralSuggestions] = useState<string[]>([])
+  const [nameBanksLoading,    setNameBanksLoading]    = useState(true)
+  const agentPhoneMap = useRef<Map<string, string | null>>(new Map())
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => { setPhotoEnabled(loadActive().has('photo')) }, [])
+  useEffect(() => {
+    fetch('/api/name-banks').then(r => r.json()).then(d => {
+      const agents: { name: string; phone: string | null }[] = d.agents ?? []
+      setAgentSuggestions(agents.map(a => a.name))
+      agentPhoneMap.current = new Map(agents.map(a => [a.name, a.phone]))
+      setReferralSuggestions(d.referrals ?? [])
+    }).catch(() => {}).finally(() => setNameBanksLoading(false))
+  }, [])
 
   async function handleRefreshHeatmap() {
     setHeatmapRefreshing(true)
@@ -313,8 +327,18 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Avail.'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
-            <Row label="Referral"        display={form.sentBy || null}           manual={cfGreen('sentBy')}      isEditing={false} inputValue={form.sentBy}      onChange={v => setField('sentBy', v)} onQuickSave={canWrite ? handleSave : undefined} />
-            <Row label="Agent"           display={form.agentName || player.agentName || null}   manual={isManual('agentName')}   isEditing={false} inputValue={form.agentName}   onChange={v => setField('agentName', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Referral</span>
+              <div className="w-32">
+                <AutocompleteField value={form.sentBy || ''} onChange={v => setField('sentBy', v)} onSave={canWrite ? handleSave : undefined} suggestions={referralSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Agent</span>
+              <div className="w-32">
+                <AutocompleteField value={form.agentName || player.agentName || ''} onChange={v => setField('agentName', v)} onSave={canWrite ? handleSave : undefined} suggestions={agentSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} onPickSuggestion={name => { const phone = agentPhoneMap.current.get(name); if (phone) setField('agentPhone', phone) }} />
+              </div>
+            </div>
             <Row label="Agent Phone"     display={form.agentPhone || null}       manual={cfGreen('agentPhone')}   isEditing={false} inputValue={form.agentPhone}  onChange={v => setField('agentPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Plays National"  display={(form.playsNational as boolean) ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={false} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool neutralFalse boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
             <Row label="Recent Form"     display={form.recentForm || null}       manual={cfGreen('recentForm')}   isEditing={false} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} onQuickSave={canWrite ? handleSave : undefined} />
@@ -325,8 +349,13 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
               { label: 'Instagram',     value: form.instagram        || cf('instagram'), onChange: v => setField('instagram', v),        onBlur: canWrite ? handleSave : undefined },
               { label: 'Twitter / X',   value: form.twitter          || cf('twitter'),   onChange: v => setField('twitter', v),          onBlur: canWrite ? handleSave : undefined },
               { label: 'TikTok',        value: form.tiktok           || cf('tiktok'),    onChange: v => setField('tiktok', v),           onBlur: canWrite ? handleSave : undefined },
-              { label: 'Highlights',    value: form.highlights       || cf('highlights'),onChange: v => setField('highlights', v),       onBlur: canWrite ? handleSave : undefined },
             ]} />
+            <HighlightsField
+              value={form.highlights || cf('highlights')}
+              onChange={v => setField('highlights', v)}
+              onSave={canWrite ? handleSave : undefined}
+              canEdit={canWrite}
+            />
             <DescRow label="Description"   display={form.description || null} manual={cfGreen('description')} isEditing={false} inputValue={form.description} onChange={v => setField('description', v)} onQuickSave={canWrite ? handleSave : undefined} />
           </div>
         </div>
@@ -399,21 +428,17 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         </div>
       </div>
 
-      {/* ── Scout Notes ── */}
+      {/* ── Evaluations ── */}
       <div style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="px-4 py-2" style={{ background: 'var(--subtle-bg)', borderBottom: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Notes</p>
-        </div>
-        <div className="p-5">
-          <NotesSection
-            key={player.id}
-            databaseId={databaseId}
-            playerId={player.id}
-            canWrite={canWrite}
-            currentUserId={currentUserId}
-          />
-        </div>
+        <EvaluationSection
+          key={`eval-${player.id}`}
+          databaseId={databaseId}
+          playerId={player.id}
+          canWrite={canWrite}
+          currentUserId={currentUserId}
+        />
       </div>
+
     </div>
   )
 }

@@ -133,6 +133,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
   }
 
+  // Upsert agent/referral names into name banks (skip phone numbers; overwrite phone on agent)
+  const isLikelyName = (v: string) => v.length > 0 && !v.startsWith('+') && (v.match(/\d/g) ?? []).length <= 3
+  const agentNameToBank = body.agentName?.trim()
+  const agentPhoneToBank = customFields['agentPhone']?.trim() || null
+  const referralToBank  = customFields['sentBy']?.trim()
+  await Promise.all([
+    agentNameToBank && isLikelyName(agentNameToBank)
+      ? prisma.agentNameBank.upsert({ where: { name: agentNameToBank }, create: { name: agentNameToBank, phone: agentPhoneToBank }, update: { phone: agentPhoneToBank } })
+      : null,
+    referralToBank && isLikelyName(referralToBank)
+      ? prisma.referralNameBank.upsert({ where: { name: referralToBank }, create: { name: referralToBank }, update: {} })
+      : null,
+  ].filter(Boolean))
+
   // Log activity
   const action = body.sourceName ? 'import' : 'add_player'
   const detail = `${body.firstName} ${body.lastName}${body.sourceName ? ` from ${body.sourceName}` : ''}`

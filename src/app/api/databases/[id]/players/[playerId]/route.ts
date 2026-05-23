@@ -120,6 +120,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       : []),
   ])
 
+  // Upsert agent/referral names into name banks (fire-and-forget, skip phone numbers; overwrite phone on agent)
+  const isLikelyName = (v: string) => v.length > 0 && !v.startsWith('+') && (v.match(/\d/g) ?? []).length <= 3
+  const agentNameToBank  = ('agentName' in body) ? body.agentName?.trim() : null
+  const agentPhoneToBank = customFieldUpdates['agentPhone']?.trim() || null
+  const referralToBank   = customFieldUpdates['sentBy']?.trim()
+  Promise.all([
+    agentNameToBank && isLikelyName(agentNameToBank)
+      ? prisma.agentNameBank.upsert({ where: { name: agentNameToBank }, create: { name: agentNameToBank, phone: agentPhoneToBank }, update: { phone: agentPhoneToBank } })
+      : null,
+    referralToBank && isLikelyName(referralToBank)
+      ? prisma.referralNameBank.upsert({ where: { name: referralToBank }, create: { name: referralToBank }, update: {} })
+      : null,
+  ].filter(Boolean)).catch(() => {})
+
   return NextResponse.json(player)
 }
 

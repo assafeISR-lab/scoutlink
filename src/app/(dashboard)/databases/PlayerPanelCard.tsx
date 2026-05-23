@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import EvaluationSection from './[id]/players/[playerId]/EvaluationSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
+import HighlightsField from '@/components/HighlightsField'
+import AutocompleteField from '@/components/AutocompleteField'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
 import { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import HeatmapDisplay from '@/components/HeatmapDisplay'
@@ -262,6 +265,10 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const [fmAttributes,       setFmAttributes]       = useState(cf('fmAttributes'))
   const [seasonStats,        setSeasonStats]        = useState(cf('seasonStats') || '{"seasons":[]}')
   const [localActiveFm,      setLocalActiveFm]      = useState(false)
+  const [agentSuggestions,   setAgentSuggestions]   = useState<string[]>([])
+  const [referralSuggestions,setReferralSuggestions]= useState<string[]>([])
+  const [nameBanksLoading,   setNameBanksLoading]   = useState(true)
+  const agentPhoneMap = useRef<Map<string, string | null>>(new Map())
 
   // Refs to avoid stale closures in deferred callbacks
   const fmAttributesRef = useRef(fmAttributes)
@@ -307,6 +314,17 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const isDirtyRef      = useRef(false)
   const dirtyDbRef      = useRef<Set<string>>(new Set())
   const dirtyCustomRef  = useRef<Set<string>>(new Set())
+
+  // Fetch name banks for autocomplete dropdowns
+  useEffect(() => {
+    fetch('/api/name-banks').then(r => r.ok ? r.json() : null).then(data => {
+      if (!data) return
+      const agents: { name: string; phone: string | null }[] = data.agents ?? []
+      setAgentSuggestions(agents.map(a => a.name))
+      agentPhoneMap.current = new Map(agents.map(a => [a.name, a.phone]))
+      setReferralSuggestions(data.referrals ?? [])
+    }).catch(() => {}).finally(() => setNameBanksLoading(false))
+  }, [])
 
   // Respond to external trigger (buttons in outer panel header)
   useEffect(() => {
@@ -519,6 +537,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
           </button>
         </div>
 
+
       </div>
 
       {/* ── Create Report modal ── */}
@@ -667,8 +686,12 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
         { label: 'Instagram',     value: instagram,         onChange: setInstagram,         onBlur: () => markDirty(undefined, 'instagram') },
         { label: 'Twitter / X',   value: twitter,           onChange: setTwitter,           onBlur: () => markDirty(undefined, 'twitter') },
         { label: 'TikTok',        value: tiktok,            onChange: setTiktok,            onBlur: () => markDirty(undefined, 'tiktok') },
-        { label: 'Highlights',    value: highlights,         onChange: setHighlights,         onBlur: () => markDirty(undefined, 'highlights') },
       ]} />
+      <HighlightsField
+        value={highlights}
+        onChange={v => { setHighlights(v); markDirty(undefined, 'highlights') }}
+        canEdit={canWrite}
+      />
 
       {/* ── 3-column body ── */}
       <div className="grid grid-cols-3 rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
@@ -707,8 +730,18 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
           <BoolRow label="Availability"   value={available}     onToggle={canWrite ? toggleAvailable : undefined} highlight trueLabel="Available" falseLabel="Not Avail." />
           <Row     label="Added"          display={dateAdded}   inputValue="" onChange={() => {}} />
           <Row     label="Scout"          display={player.addedBy.fullName} inputValue="" onChange={() => {}} />
-          <Row     label="Referral"       display={sentBy || null}          manual={cfHas('sentBy')}    inputValue={sentBy}    onChange={setSentBy}    onSave={canWrite ? () => markDirty(undefined, 'sentBy')    : undefined} />
-          <Row     label="Agent"          display={agentName || null}       manual={isManual('agentName')} inputValue={agentName} onChange={setAgentName} onSave={canWrite ? () => markDirty('agentName')             : undefined} />
+          <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Referral</span>
+            <div className="w-32">
+              <AutocompleteField value={sentBy} onChange={v => { setSentBy(v); markDirty(undefined, 'sentBy') }} onSave={canWrite ? () => {} : undefined} suggestions={referralSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} />
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Agent</span>
+            <div className="w-32">
+              <AutocompleteField value={agentName} onChange={v => { setAgentName(v); markDirty('agentName') }} onSave={canWrite ? () => {} : undefined} suggestions={agentSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} onPickSuggestion={name => { const phone = agentPhoneMap.current.get(name); if (phone) { setAgentPhone(phone); markDirty(undefined, 'agentPhone') } }} />
+            </div>
+          </div>
           <Row     label="Agent Phone"    display={agentPhone || null}      manual={cfHas('agentPhone')} inputValue={agentPhone} onChange={setAgentPhone} onSave={canWrite ? () => markDirty(undefined, 'agentPhone') : undefined} />
           <BoolRow label="Plays National" value={playsNational} onToggle={canWrite ? () => { const n = !playsNational; setPlaysNational(n); markDirty('playsNational') } : undefined} neutral trueLabel="Yes" falseLabel="No" />
           <Row     label="Recent Form"    display={recentForm || null}      manual={cfHas('recentForm')} inputValue={recentForm} onChange={setRecentForm} onSave={canWrite ? () => markDirty(undefined, 'recentForm') : undefined} />
@@ -760,81 +793,17 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
         </div>
       </div>
 
-      {/* ── Scout Notes ── */}
+      {/* ── Evaluations ── */}
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-        <div className="px-4 py-2 border-b" style={{ background: 'var(--subtle-bg)', borderColor: 'var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>
-            Scout Notes {notes.length > 0 && <span style={{ color: '#00c896' }}>({notes.length})</span>}
-          </p>
-        </div>
-        <div className="p-4">
-          {notesLoading ? (
-            <div className="flex items-center gap-2 py-1 mb-3">
-              <div className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0" style={{ borderColor: '#00c896', borderTopColor: 'transparent' }} />
-              <span className="text-xs" style={{ color: 'var(--text-faint)' }}>Loading notes…</span>
-            </div>
-          ) : (
-            <>
-              {notes.length === 0 && !noteAdding && (
-                <p className="text-sm mb-3" style={{ color: 'var(--text-faint)' }}>No notes yet.</p>
-              )}
-              {notes.length > 0 && (
-                <div className="space-y-2.5 mb-3">
-                  {notes.map(note => (
-                    <NoteItem key={note.id} note={note} isOwn={note.agent.id === currentUserId} />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-          {canWrite && (
-            noteAdding ? (
-              <div className="flex flex-col gap-2">
-                <textarea
-                  autoFocus
-                  value={noteContent}
-                  onChange={e => setNoteContent(e.target.value)}
-                  placeholder="Add a scouting note…"
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
-                  style={{ color: 'var(--text-primary)', background: 'var(--input-bg)', border: '1px solid var(--border)' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = '#00c896' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
-                  onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNote() }}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={addNote}
-                    disabled={noteSaving || !noteContent.trim()}
-                    className="px-4 py-1.5 rounded-lg text-xs font-semibold text-black disabled:opacity-50 transition-all"
-                    style={{ background: '#00c896' }}
-                  >
-                    {noteSaving ? 'Saving…' : 'Add Note'}
-                  </button>
-                  <button
-                    onClick={() => { setNoteAdding(false); setNoteContent('') }}
-                    className="px-4 py-1.5 rounded-lg text-xs"
-                    style={{ color: 'var(--text-muted)', background: 'var(--hover-bg)', border: '1px solid var(--border)' }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setNoteAdding(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
-                style={{ background: 'var(--hover-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                Add Note
-              </button>
-            )
-          )}
-        </div>
+        <EvaluationSection
+          key={`eval-${player.id}`}
+          databaseId={dbId}
+          playerId={player.id}
+          canWrite={canWrite}
+          currentUserId={currentUserId}
+        />
       </div>
+
 
     </div>
   )

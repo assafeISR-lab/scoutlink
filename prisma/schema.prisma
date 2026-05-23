@@ -30,6 +30,7 @@ model Agent {
   calendarEvents    CalendarEvent[]
   addedPlayers      Player[]               @relation("AddedByAgent")
   reports           Report[]
+  evaluations       PlayerEvaluation[]
 }
 
 // ─── Player Database ─────────────────────────────────────────────────────────
@@ -92,6 +93,7 @@ model Player {
   fieldSources FieldSource[]
   customFields CustomField[]
   notes        PlayerNote[]
+  evaluations  PlayerEvaluation[]
   timeline     TimelineEvent[]
   conflicts    DataConflict[]
 
@@ -214,6 +216,60 @@ model Report {
   @@index([databaseId])
 }
 
+// ─── Player Evaluation ───────────────────────────────────────────────────────
+model PlayerEvaluation {
+  id        String   @id @default(cuid())
+  playerId  String
+  agentId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Match context — specific to the observation session
+  matchDate    DateTime?
+  venue        String?   // e.g. "Bloomfield Stadium"
+  competition  String?   // e.g. "Israeli Cup Semi-final" (may differ from player's regular league)
+  opponent     String?   // who the player's team played against
+  matchResult  String?   // e.g. "2-1 W"
+
+  // Scout ratings (1–5, all optional — scout fills what they can assess)
+  ratingTechnical    Int?
+  ratingTactical     Int?
+  ratingPhysical     Int?
+  ratingMentality    Int?
+  ratingPotential    Int?
+  commentTechnical   String?
+  commentTactical    String?
+  commentPhysical    String?
+  commentMentality   String?
+  commentPotential   String?
+
+  // Scout judgment
+  recommendation String?  // "sign" | "monitor" | "trial" | "reject"
+  confidence     String?  // "low" | "medium" | "high"
+  nextAction     String?  // "watch_again" | "contact_agent" | "invite_trial" | "review_later"
+
+  // Risk flags
+  riskRelativeAge       Boolean @default(false)
+  riskWeakCompetition   Boolean @default(false)
+  riskPhysicalAdvantage Boolean @default(false)
+  riskAttitudeDiscipline Boolean @default(false)
+  riskFamilySurroundings Boolean @default(false)
+  riskInjuryHistory      Boolean @default(false)
+
+  // Raw match-day observations (separate from the informal PlayerNote section)
+  observationNotes String?
+
+  // AI-generated report
+  reportDraft    String?  // stored after generation so it is not regenerated on every view
+  reportFinalized Boolean @default(false)
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  agent  Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([agentId])
+}
+
 // ─── Activity Log ─────────────────────────────────────────────────────────────
 model ActivityLog {
   id        String   @id @default(cuid())
@@ -225,6 +281,20 @@ model ActivityLog {
   agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@index([agentId])
+}
+
+// ─── Name Banks ──────────────────────────────────────────────────────────────
+model AgentNameBank {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  phone     String?
+  createdAt DateTime @default(now())
+}
+
+model ReferralNameBank {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
 }
 
 // ─── Calendar Event ───────────────────────────────────────────────────────────
