@@ -31,6 +31,7 @@ model Agent {
   addedPlayers      Player[]               @relation("AddedByAgent")
   reports           Report[]
   evaluations       PlayerEvaluation[]
+  uploadedFiles     PlayerFile[]
 }
 
 // ─── Player Database ─────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ model Player {
   customFields CustomField[]
   notes        PlayerNote[]
   evaluations  PlayerEvaluation[]
+  files        PlayerFile[]
   timeline     TimelineEvent[]
   conflicts    DataConflict[]
 
@@ -295,6 +297,24 @@ model ReferralNameBank {
   id        String   @id @default(cuid())
   name      String   @unique
   createdAt DateTime @default(now())
+}
+
+// ─── Player File ─────────────────────────────────────────────────────────────
+model PlayerFile {
+  id           String   @id @default(cuid())
+  playerId     String
+  uploadedById String
+  fileName     String
+  storagePath  String   // path within Supabase Storage bucket
+  fileUrl      String   // public URL
+  fileSize     Int      // bytes
+  mimeType     String
+  createdAt    DateTime @default(now())
+
+  player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  uploadedBy   Agent    @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
 }
 
 // ─── Calendar Event ───────────────────────────────────────────────────────────

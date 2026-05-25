@@ -10,6 +10,7 @@ import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid
 import LinkChips from '@/components/LinkChips'
 import HeatmapDisplay from '@/components/HeatmapDisplay'
 import { positionPillStyle } from '@/lib/positionColor'
+import DuplicateWarningModal, { type DuplicateMatch } from '@/components/DuplicateWarningModal'
 
 const COMING_SOON = new Set<string>()
 
@@ -87,6 +88,8 @@ interface PlayerEditData {
   agentPhone: string
   sentBy: string
   recentForm: string
+  injuryType: string
+  injuryReturn: string
   highlights: string
   tmUrl: string
   scUrl: string
@@ -619,6 +622,8 @@ const FIELD_PARAM_KEY: Record<string, string> = {
   'Sent by / Scout Name':   'sentBy',
   'Referral':               'sentBy',
   'Recent Form':            'recentForm',
+  'Injury':                 'injuryType',
+  'Return Date':            'injuryReturn',
   'Transfermarkt':          'transfermarktLink',
   'Sofascore':              'sofascoreLink',
   'FMInside':               'fmInsideLink',
@@ -684,6 +689,8 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
     agentPhone: '',
     sentBy: '',
     recentForm: '',
+    injuryType: '',
+    injuryReturn: '',
     highlights: '',
     tmUrl: player.transfermarktUrl ?? '',
     scUrl: player.sofascoreUrl ?? '',
@@ -805,6 +812,23 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
             {show('Passports')     && <EditableField label="Passports"    displayValue={editData.passports || null}     editValue={editData.passports}    onChange={v => updateField('passports', v)} />}
             {show('Player Phone')  && <EditableField label="Player Phone" displayValue={editData.playerPhone || null}  editValue={editData.playerPhone}  onChange={v => updateField('playerPhone', v)} />}
           </div>
+          {(show('Availability') || show('Injury') || show('Return Date')) && (
+            <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+              <p className="text-[8px] uppercase font-semibold mb-1" style={{ letterSpacing: '0.8px', color: 'var(--text-faint)' }}>Current Status</p>
+              {show('Availability') && (
+                <div className="field-row flex items-center justify-between gap-2 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Availability</span>
+                  <button type="button" onClick={() => setEditData(prev => ({ ...prev, available: !prev.available }))}
+                    className="text-[11px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase transition-all"
+                    style={{ background: editData.available ? 'rgba(0,200,150,0.12)' : 'rgba(239,68,68,0.1)', color: editData.available ? '#00c896' : '#ef4444', border: `1px solid ${editData.available ? 'rgba(0,200,150,0.3)' : 'rgba(239,68,68,0.25)'}` }}>
+                    {editData.available ? 'Available' : 'Not Avail.'}
+                  </button>
+                </div>
+              )}
+              {show('Injury')      && <EditableField label="Injury"      displayValue={editData.injuryType || null}   editValue={editData.injuryType}   onChange={v => updateField('injuryType', v)} />}
+              {show('Return Date') && <EditableField label="Return Date" displayValue={editData.injuryReturn || null} editValue={editData.injuryReturn} onChange={v => updateField('injuryReturn', v)} inputType="date" />}
+            </div>
+          )}
         </div>
 
         {/* Contract & Value */}
@@ -828,23 +852,6 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
         <div className="p-4">
           <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Scout Info</p>
           <div>
-            {show('Availability') && (
-              <div className="field-row flex items-center justify-between gap-2 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
-                <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Availability</span>
-                <button
-                  type="button"
-                  onClick={() => setEditData(prev => ({ ...prev, available: !prev.available }))}
-                  className="text-[11px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase transition-all"
-                  style={{
-                    background: editData.available ? 'rgba(0,200,150,0.12)' : 'rgba(239,68,68,0.1)',
-                    color: editData.available ? '#00c896' : '#ef4444',
-                    border: `1px solid ${editData.available ? 'rgba(0,200,150,0.3)' : 'rgba(239,68,68,0.25)'}`,
-                  }}
-                >
-                  {editData.available ? 'Available' : 'Not Avail.'}
-                </button>
-              </div>
-            )}
             <div className="field-row flex items-center justify-between gap-2 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
               <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Plays National</span>
               <button
@@ -1100,7 +1107,9 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(preSelectedDbId ? [preSelectedDbId] : []))
   const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
+  const [duplicate, setDuplicate] = useState<(DuplicateMatch & { dbId: string }) | null>(null)
 
   const position  = editData.position?.trim()  || player.position  || ''
   const clubName  = editData.clubName?.trim()   || player.team      || ''
@@ -1116,8 +1125,8 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
     })
   }
 
-  async function handleImport() {
-    if (selectedIds.size === 0) return
+  async function doImport() {
+    setDuplicate(null)
     setLoading(true)
     setError('')
 
@@ -1132,6 +1141,8 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
     if (editData.twitterUrl)        edCf.twitter            = editData.twitterUrl
     if (editData.tiktokUrl)         edCf.tiktok             = editData.tiktokUrl
     if (editData.recentForm)        edCf.recentForm         = editData.recentForm
+    if (editData.injuryType)        edCf.injuryType         = editData.injuryType
+    if (editData.injuryReturn)      edCf.injuryReturn       = editData.injuryReturn
     if (editData.highlights)        edCf.highlights         = editData.highlights
     if (editData.igUrl)             edCf.instagram          = editData.igUrl
     for (const extra of editData.customExtras) {
@@ -1216,7 +1227,46 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
     }
   }
 
+  async function handleImport() {
+    if (selectedIds.size === 0) return
+    setChecking(true)
+
+    // Duplicate check across all selected databases
+    try {
+      for (const dbId of selectedIds) {
+        const res = await fetch(`/api/databases/${dbId}/players/duplicate-check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ names: [{ first: firstName, last: lastName }] }),
+        })
+        if (res.ok) {
+          const data = await res.json() as { matches: DuplicateMatch[] }
+          if (data.matches.length > 0) {
+            setChecking(false)
+            setDuplicate({ ...data.matches[0], dbId })
+            return
+          }
+        }
+      }
+    } catch {
+      // network error — proceed anyway
+    }
+
+    setChecking(false)
+    await doImport()
+  }
+
   return (
+    <>
+    {duplicate && (
+      <DuplicateWarningModal
+        match={duplicate}
+        inputName={player.name}
+        listName={databases.find(d => d.id === duplicate.dbId)?.name}
+        onSkip={() => setDuplicate(null)}
+        onCreateAnyway={doImport}
+      />
+    )}
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
@@ -1302,23 +1352,29 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
           </div>
         ) : (
           <div className="px-6 py-4 flex gap-2.5 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
-            <button onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+            <button onClick={onClose} disabled={checking}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
               style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)' }}>
               Cancel
             </button>
-            <button onClick={handleImport} disabled={selectedIds.size === 0 || databases.length === 0}
+            <button onClick={handleImport} disabled={selectedIds.size === 0 || databases.length === 0 || checking}
               className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-default transition-all"
-              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', color: '#fff', boxShadow: '0 2px 12px rgba(0,200,150,0.25)', cursor: (selectedIds.size === 0 || databases.length === 0) ? 'default' : 'pointer' }}
-              onMouseEnter={e => { if (selectedIds.size > 0 && databases.length > 0) e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,200,150,0.45)' }}
+              style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', color: '#fff', boxShadow: '0 2px 12px rgba(0,200,150,0.25)', cursor: (selectedIds.size === 0 || databases.length === 0 || checking) ? 'default' : 'pointer' }}
+              onMouseEnter={e => { if (selectedIds.size > 0 && databases.length > 0 && !checking) e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,200,150,0.45)' }}
               onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,200,150,0.25)' }}>
-              {preSelectedDbId ? 'Add to List' : selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
+              {checking ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 inline-block animate-spin" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
+                  Checking…
+                </span>
+              ) : preSelectedDbId ? 'Add to List' : selectedIds.size > 1 ? `Import to ${selectedIds.size} Lists` : 'Import'}
             </button>
           </div>
         )}
       </div>
     </div>
+    </>
   )
 }

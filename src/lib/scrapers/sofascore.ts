@@ -243,7 +243,7 @@ export const sofascoreScraper: SiteScraper = {
 
     const top = footballPlayers.slice(0, 3)
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 12000)
+    const timer = setTimeout(() => controller.abort(), 20000)
     try {
       const enriched = await Promise.allSettled(
         top.map(entry => {

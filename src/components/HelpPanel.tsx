@@ -292,6 +292,34 @@ const TOPICS: Topic[] = [
     },
   },
   {
+    id: 'duplicate-warning',
+    keywords: ['duplicate', 'exists', 'already', 'warning', 'same', 'player', 'twice', 'כפילות', 'קיים', 'אזהרה'],
+    en: {
+      category: 'Players',
+      title: 'What happens when a player already exists in a list?',
+      steps: [
+        'When you try to add or import a player whose name matches someone already in the list, an amber warning appears.',
+        'The warning shows the existing player\'s name and club so you can confirm it\'s the same person.',
+        'The list name is shown in the warning so you know exactly which list has the duplicate.',
+        'Choose "Cancel" to go back without creating a duplicate.',
+        'Choose "Add Anyway" if you intentionally want two separate records (e.g. two players with the same name).',
+      ],
+      tip: 'The check also catches switched first/last names — for example, entering "Messi Lionel" will match an existing "Lionel Messi".',
+    },
+    he: {
+      category: 'שחקנים',
+      title: 'מה קורה כשהשחקן כבר קיים ברשימה?',
+      steps: [
+        'כשמנסים להוסיף או לייבא שחקן ששמו תואם מישהו שכבר ברשימה, מופיעה אזהרה בצבע כתום.',
+        'האזהרה מציגה את שם ומועדון השחקן הקיים כדי שתוכל לאשר שמדובר באותו אדם.',
+        'שם הרשימה מוצג באזהרה כדי שתדע בדיוק איזה רשימה מכילה את הכפילות.',
+        'בחר "Cancel" כדי לחזור מבלי ליצור כפילות.',
+        'בחר "Add Anyway" אם אתה מתכוון להוסיף שני רשומות נפרדות (לדוגמה, שני שחקנים עם אותו שם).',
+      ],
+      tip: 'הבדיקה מזהה גם שמות פרטיים ומשפחה הפוכים — לדוגמה, הקלדת "מסי ליאונל" תתאים לשחקן קיים "ליאונל מסי".',
+    },
+  },
+  {
     id: 'import-excel',
     keywords: ['import', 'excel', 'csv', 'upload', 'bulk', 'spreadsheet', 'ייבוא', 'אקסל'],
     en: {

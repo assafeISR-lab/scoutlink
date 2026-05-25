@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
   // Run all scrapers in parallel — 15 s timeout per site so one slow site can't block others
   // Each scraper runs all query variations in parallel and deduplicates by player id
   const withTimeout = (p: Promise<ScrapedPlayer[]>): Promise<ScrapedPlayer[]> =>
-    Promise.race([p, new Promise<ScrapedPlayer[]>((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))])
+    Promise.race([p, new Promise<ScrapedPlayer[]>((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))])
 
   const results = await Promise.allSettled(
     uniqueScrapers.map(async e => {
@@ -221,13 +221,23 @@ export async function POST(req: NextRequest) {
       )
       // If every variation threw (network error, Cloudflare block, etc.), surface it as an error
       if (!anySucceeded) throw new Error('scraper failed')
-      // Flatten and deduplicate by player id across all variations
-      const seenIds = new Set<string>()
-      return varResults.flat().filter(p => {
-        if (seenIds.has(p.id)) return false
-        seenIds.add(p.id)
-        return true
-      })
+      // Merge results across variations by player id — prefer entries with richer data
+      // (e.g. one variation may time out mid-enrichment and return no stats/heatmap
+      // while another variation for the same player completes with full data)
+      const byId = new Map<string, ScrapedPlayer>()
+      for (const p of varResults.flat()) {
+        const ex = byId.get(p.id)
+        if (!ex) {
+          byId.set(p.id, p)
+        } else {
+          byId.set(p.id, {
+            ...ex,
+            seasonStats: ex.seasonStats ?? p.seasonStats,
+            heatmap:     ex.heatmap     ?? p.heatmap,
+          })
+        }
+      }
+      return [...byId.values()]
     })
   )
 

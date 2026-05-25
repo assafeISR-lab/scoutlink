@@ -23,7 +23,7 @@ const TABLE_COLUMNS = new Set([
 const GROUPS: { label: string; keys: string[] }[] = [
   {
     label: 'Identity',
-    keys: ['photo', 'nationality', 'passports', 'preferredFoot', 'age', 'dateOfBirth', 'height'],
+    keys: ['photo', 'nationality', 'passports', 'preferredFoot', 'age', 'dateOfBirth', 'height', 'injuryType', 'injuryReturn'],
   },
   {
     label: 'Club / Career',

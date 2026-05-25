@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import EvaluationSection from './[id]/players/[playerId]/EvaluationSection'
+import PlayerFilesSection from '@/components/PlayerFilesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
 import HighlightsField from '@/components/HighlightsField'
@@ -249,6 +250,8 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const [agentPhone,         setAgentPhone]         = useState(cf('agentPhone'))
   const [sentBy,             setSentBy]             = useState(cf('sentBy'))
   const [recentForm,         setRecentForm]         = useState(cf('recentForm'))
+  const [injuryType,         setInjuryType]         = useState(cf('injuryType'))
+  const [injuryReturn,       setInjuryReturn]       = useState(cf('injuryReturn'))
   const [playsNational,      setPlaysNational]      = useState(player.playsNational)
   const [transfermarktUrl,   setTransfermarktUrl]   = useState(
     cf('transfermarktUrl') || player.fieldSources.find(s => s.sourceName === 'Transfermarkt' && s.isActive)?.sourceUrl || ''
@@ -367,7 +370,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
       foot, passports, playerPhone,
       league, joiningDate, contractExpiry,
       fmWages, transferFeeExpect, transferFeeReal, salaryExpect, salaryReal,
-      agentPhone, sentBy, recentForm, description,
+      agentPhone, sentBy, recentForm, injuryType, injuryReturn, description,
       transfermarktUrl, sofascoreUrl, fmInsideUrl,
       instagram, twitter, tiktok, highlights,
       fmAttributes: fmAttributesRef.current,
@@ -521,6 +524,14 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
               {clubName && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{clubName}</span>}
               {nationality && <><span style={{ color: 'var(--text-faint)', fontSize: 11 }}>·</span><span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{nationality}</span></>}
               {age && <><span style={{ color: 'var(--text-faint)', fontSize: 11 }}>·</span><span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>{age}y</span></>}
+              {injuryType && <>
+                <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>·</span>
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                  ⚠ {injuryType}
+                </span>
+                {injuryReturn && <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>· back {injuryReturn}</span>}
+              </>}
             </div>
           </div>
           <button
@@ -707,6 +718,12 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
           <Row label="Nationality"   display={nationality || null}                             manual={isManual('nationality')} inputValue={nationality} onChange={setNationality} onSave={canWrite ? () => markDirty('nationality')            : undefined} />
           <Row label="Passports"     display={passports || null}                               manual={cfHas('passports')}     inputValue={passports}   onChange={setPassports}   onSave={canWrite ? () => markDirty(undefined, 'passports')   : undefined} />
           <Row label="Player Phone"  display={playerPhone || null}                             manual={cfHas('playerPhone')}   inputValue={playerPhone} onChange={setPlayerPhone} onSave={canWrite ? () => markDirty(undefined, 'playerPhone') : undefined} />
+          <div className="mt-2.5 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-[8px] uppercase font-semibold mb-1" style={{ letterSpacing: '0.8px', color: 'var(--text-faint)' }}>Current Status</p>
+            <BoolRow label="Availability" value={available}   onToggle={canWrite ? toggleAvailable : undefined} highlight trueLabel="Available" falseLabel="Not Avail." />
+            <Row label="Injury"        display={injuryType || null}    manual={cfHas('injuryType')} inputValue={injuryType} onChange={setInjuryType} onSave={canWrite ? () => markDirty(undefined, 'injuryType') : undefined} />
+            <Row label="Return Date"   display={fmtDate(injuryReturn)} manual={cfHas('injuryReturn')} inputValue={injuryReturn} onChange={setInjuryReturn} onSave={canWrite ? () => markDirty(undefined, 'injuryReturn') : undefined} inputType="date" />
+          </div>
         </div>
 
         {/* Contract & Value */}
@@ -727,7 +744,6 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
         {/* Scout Info */}
         <div className="p-3">
           <p className="text-[9px] uppercase font-bold mb-2" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
-          <BoolRow label="Availability"   value={available}     onToggle={canWrite ? toggleAvailable : undefined} highlight trueLabel="Available" falseLabel="Not Avail." />
           <Row     label="Added"          display={dateAdded}   inputValue="" onChange={() => {}} />
           <Row     label="Scout"          display={player.addedBy.fullName} inputValue="" onChange={() => {}} />
           <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -804,6 +820,15 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
         />
       </div>
 
+      {/* ── Files ── */}
+      <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+        <PlayerFilesSection
+          key={`files-${player.id}`}
+          playerId={player.id}
+          databaseId={dbId}
+          canWrite={canWrite}
+        />
+      </div>
 
     </div>
   )

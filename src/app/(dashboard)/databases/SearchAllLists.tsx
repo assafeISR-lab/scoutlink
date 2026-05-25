@@ -73,6 +73,10 @@ function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
     const label = (player as any).available ? 'Available' : 'Not Available'
     return f.availabilities.includes(label)
   })
+  if (f.injuries.length) checks.push(() => {
+    const isInjured = !!getCF(player, 'injuryType')
+    return f.injuries.includes(isInjured ? 'Injured' : 'Not Injured')
+  })
   if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) checks.push(() => { const cy = contractYear ?? 0; return (f.contractExpiryYearMin === null || cy >= f.contractExpiryYearMin) && (f.contractExpiryYearMax === null || cy <= f.contractExpiryYearMax) })
   if (f.fmWagesMin !== null || f.fmWagesMax !== null) checks.push(() => { const w = fmWages ?? 0; return (f.fmWagesMin === null || w >= f.fmWagesMin) && (f.fmWagesMax === null || w <= f.fmWagesMax) })
 
@@ -140,6 +144,7 @@ export default function SearchAllLists({ databaseIds, bare, onCreateReport, onAc
     nationality:  uniqueNationalities,
     preferredFoot: uniqueFeet.length ? uniqueFeet : ['Right', 'Left', 'Both'],
     availability: ['Available', 'Not Available'],
+    injury: ['Injured', 'Not Injured'],
   }
 
   const rangeBounds: Record<string, RangeBound> = {

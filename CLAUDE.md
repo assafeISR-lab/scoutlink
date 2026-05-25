@@ -1,2 +1,3 @@
 @AGENTS.md
 @PARAM_GUIDE.md
+@UI_GUIDE.md

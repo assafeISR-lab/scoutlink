@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import EvaluationSection from './EvaluationSection'
+import PlayerFilesSection from '@/components/PlayerFilesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
 import HighlightsField from '@/components/HighlightsField'
@@ -140,6 +141,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     sentBy:            cf('sentBy'),
     playerPhone:       cf('playerPhone'),
     agentPhone:        cf('agentPhone'),
+    injuryType:        cf('injuryType'),
+    injuryReturn:      cf('injuryReturn'),
   })
 
   const [form, setForm] = useState(initialForm)
@@ -168,7 +171,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
     // Split changed fields into DB fields and custom fields
     const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','available'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone']
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone','injuryType','injuryReturn']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -276,6 +279,14 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             {(form.league || cf('league')) && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: '#00c896' }}>{form.league || cf('league')}</span></>}
             {(form.nationality || player.nationality) && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{form.nationality || player.nationality}</span></>}
             {age && <><span style={{ color: 'var(--text-faint)' }}>·</span><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{age} yrs</span></>}
+            {form.injuryType && <>
+              <span style={{ color: 'var(--text-faint)' }}>·</span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                ⚠ {form.injuryType}
+              </span>
+              {form.injuryReturn && <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>· back {fmtDate(form.injuryReturn)}</span>}
+            </>}
           </div>
         </div>
 
@@ -301,6 +312,12 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <Row label="Passports"     display={form.passports || null}  manual={cfGreen('passports')}  isEditing={false} inputValue={form.passports}     onChange={v => setField('passports', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Player Phone"  display={form.playerPhone || null} manual={cfGreen('playerPhone')} isEditing={false} inputValue={form.playerPhone}  onChange={v => setField('playerPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
           </div>
+          <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-[8px] uppercase font-semibold mb-1" style={{ letterSpacing: '0.8px', color: 'var(--text-faint)' }}>Current Status</p>
+            <Row label="Availability"  display={(form.available as boolean) ? 'Available' : 'Not Avail.'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
+            <Row label="Injury"        display={form.injuryType || null}    manual={cfGreen('injuryType')}   isEditing={false} inputValue={form.injuryType}  onChange={v => setField('injuryType', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Return Date"   display={fmtDate(form.injuryReturn)} manual={cfGreen('injuryReturn')} isEditing={false} inputValue={form.injuryReturn} onChange={v => setField('injuryReturn', v)} inputType="date" onQuickSave={canWrite ? handleSave : undefined} />
+          </div>
         </div>
 
         {/* Contract & Value */}
@@ -324,7 +341,6 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         <div className="p-4">
           <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
           <div>
-            <Row label="Availability"    display={(form.available as boolean) ? 'Available' : 'Not Avail.'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
             <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -438,6 +454,14 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
           currentUserId={currentUserId}
         />
       </div>
+
+      {/* ── Files ── */}
+      <PlayerFilesSection
+        key={`files-${player.id}`}
+        playerId={player.id}
+        databaseId={databaseId}
+        canWrite={canWrite}
+      />
 
     </div>
   )

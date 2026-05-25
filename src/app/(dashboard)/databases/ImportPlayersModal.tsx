@@ -37,6 +37,8 @@ const SCOUTLINK_FIELDS: FieldDef[] = [
   { key: 'cf_fmAttributes',       label: 'FM Attributes',          group: 'Scouting' },
   { key: 'cf_description',        label: 'Bio / Description',      group: 'Scouting' },
   { key: 'cf_sentBy',             label: 'Sent By',                group: 'Scouting' },
+  { key: 'cf_injuryType',         label: 'Injury Type',            group: 'Scouting' },
+  { key: 'cf_injuryReturn',       label: 'Return Date',            group: 'Scouting' },
   { key: 'cf_transfermarktUrl',   label: 'Transfermarkt URL',      group: 'Links' },
   { key: 'cf_sofascoreUrl',       label: 'Sofascore URL',          group: 'Links' },
   { key: 'cf_fmInsideUrl',        label: 'FMInside URL',           group: 'Links' },
@@ -76,6 +78,8 @@ const AUTO_MAP: Record<string, string> = {
   'fm attributes': 'cf_fmAttributes', 'attributes': 'cf_fmAttributes', 'fm attr': 'cf_fmAttributes',
   'description': 'cf_description', 'bio': 'cf_description', 'notes': 'cf_description', 'about': 'cf_description',
   'sent by': 'cf_sentBy', 'source': 'cf_sentBy', 'referred by': 'cf_sentBy',
+  'injury': 'cf_injuryType', 'injury type': 'cf_injuryType', 'injured': 'cf_injuryType',
+  'return date': 'cf_injuryReturn', 'injury return': 'cf_injuryReturn', 'return from injury': 'cf_injuryReturn',
   'transfermarkt': 'cf_transfermarktUrl', 'transfermarkt url': 'cf_transfermarktUrl', 'tm url': 'cf_transfermarktUrl',
   'sofascore': 'cf_sofascoreUrl', 'sofascore url': 'cf_sofascoreUrl', 'sc url': 'cf_sofascoreUrl',
   'fminside': 'cf_fmInsideUrl', 'fm inside': 'cf_fmInsideUrl', 'fminside url': 'cf_fmInsideUrl',
@@ -218,7 +222,9 @@ export default function ImportPlayersModal({
     }
 
     const built: EditRow[] = mapped.map((p, i) => {
-      const isConflict = existingNames.has(`${p.firstName.toLowerCase()} ${p.lastName.toLowerCase()}`)
+      const fLower = p.firstName.toLowerCase()
+      const lLower = p.lastName.toLowerCase()
+      const isConflict = existingNames.has(`${fLower} ${lLower}`) || existingNames.has(`${lLower} ${fLower}`)
       const values: Record<string, string> = {
         firstName:    p.firstName ?? '',
         lastName:     p.lastName ?? '',

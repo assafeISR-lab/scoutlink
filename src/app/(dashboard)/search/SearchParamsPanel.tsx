@@ -11,6 +11,8 @@ export const PARAM_KEYS = [
   'age',
   'dateOfBirth',
   'height',
+  'injuryType',
+  'injuryReturn',
   // Club / Career
   'team',
   'league',
@@ -58,6 +60,8 @@ export const PARAM_LABELS: Record<ParamKey, string> = {
   age:                  'Age',
   dateOfBirth:          'Date of Birth',
   height:               'Height',
+  injuryType:           'Injury Type',
+  injuryReturn:         'Return Date',
   // Club / Career
   team:                 'Team / Club',
   league:               'League',
@@ -103,6 +107,8 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   age:                  'Transfermarkt',
   dateOfBirth:          'Transfermarkt',
   height:               'Transfermarkt',
+  injuryType:           '',
+  injuryReturn:         '',
   // Club / Career
   team:                 'Transfermarkt',
   league:               'Sofascore',

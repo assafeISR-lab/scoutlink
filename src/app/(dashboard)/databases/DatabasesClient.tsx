@@ -640,6 +640,9 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
                           {!(availOverride[p.id] ?? p.available) && !show('availability') && (
                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase whitespace-nowrap" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>Not Avail.</span>
                           )}
+                          {!!p.customFields.find(cf => cf.fieldName === 'injuryType')?.value && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase whitespace-nowrap" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>⚠ Injured</span>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -658,6 +661,9 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
                           })()}
                           {!(availOverride[p.id] ?? p.available) && !show('availability') && (
                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase whitespace-nowrap" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>Not Avail.</span>
+                          )}
+                          {!!p.customFields.find(cf => cf.fieldName === 'injuryType')?.value && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded tracking-wider uppercase whitespace-nowrap" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>⚠ Injured</span>
                           )}
                         </div>
                       </Link>

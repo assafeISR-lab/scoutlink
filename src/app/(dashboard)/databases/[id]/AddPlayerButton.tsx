@@ -5,6 +5,7 @@ import FMAttributesEditor from '@/components/FMAttributesEditor'
 import LinkChips from '@/components/LinkChips'
 import { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import { positionPillStyle } from '@/lib/positionColor'
+import DuplicateWarningModal, { type DuplicateMatch } from '@/components/DuplicateWarningModal'
 
 interface Form {
   // DB model fields
@@ -32,6 +33,8 @@ interface Form {
   salaryExpect: string
   salaryReal: string
   recentForm: string
+  injuryType: string
+  injuryReturn: string
   transfermarktUrl: string
   sofascoreUrl: string
   fmInsideUrl: string
@@ -54,6 +57,7 @@ const EMPTY: Form = {
   foot: '', passports: '', league: '', joiningDate: '', contractExpiry: '',
   fmWages: '', transferFeeExpect: '', transferFeeReal: '',
   salaryExpect: '', salaryReal: '', recentForm: '',
+  injuryType: '', injuryReturn: '',
   transfermarktUrl: '', sofascoreUrl: '', fmInsideUrl: '',
   instagram: '', twitter: '', tiktok: '', highlights: '',
   playerPhone: '', agentPhone: '', sentBy: '', description: '', fmAttributes: '',
@@ -63,7 +67,7 @@ const EMPTY: Form = {
 const CUSTOM_FIELD_KEYS: (keyof Form)[] = [
   'foot', 'passports', 'league', 'joiningDate', 'contractExpiry',
   'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
-  'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
+  'recentForm', 'injuryType', 'injuryReturn', 'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
   'instagram', 'twitter', 'tiktok', 'highlights',
   'playerPhone', 'agentPhone', 'sentBy', 'description', 'fmAttributes', 'seasonStats',
 ]
@@ -73,15 +77,16 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
   const [form, setForm]       = useState<Form>(EMPTY)
+  const [duplicate, setDuplicate] = useState<DuplicateMatch | null>(null)
 
   function set(field: keyof Form, value: string | boolean) {
     setForm(f => ({ ...f, [field]: value }))
   }
 
-  function handleClose() { setOpen(false); setForm(EMPTY); setError('') }
+  function handleClose() { setOpen(false); setForm(EMPTY); setError(''); setDuplicate(null) }
 
-  async function handleSubmit() {
-    if (!form.firstName.trim() || !form.lastName.trim()) { setError('First and last name are required'); return }
+  async function doSubmit() {
+    setDuplicate(null)
     setLoading(true); setError('')
 
     const customFields: Record<string, string> = {}
@@ -112,6 +117,30 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
     if (res.ok) { const d = await res.json(); handleClose(); window.dispatchEvent(new CustomEvent('scoutlink:player-added', { detail: { playerId: d.id } })) }
     else { const d = await res.json(); setError(d.error || 'Something went wrong') }
     setLoading(false)
+  }
+
+  async function handleSubmit() {
+    if (!form.firstName.trim() || !form.lastName.trim()) { setError('First and last name are required'); return }
+
+    // Duplicate check before creating
+    try {
+      const res = await fetch(`/api/databases/${databaseId}/players/duplicate-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: [{ first: form.firstName.trim(), last: form.lastName.trim() }] }),
+      })
+      if (res.ok) {
+        const data = await res.json() as { matches: DuplicateMatch[] }
+        if (data.matches.length > 0) {
+          setDuplicate(data.matches[0])
+          return
+        }
+      }
+    } catch {
+      // network error — proceed anyway
+    }
+
+    await doSubmit()
   }
 
   const initials = (form.firstName[0] ?? '?').toUpperCase() + (form.lastName[0] ?? '?').toUpperCase()
@@ -329,6 +358,12 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="Recent Form">
                       <CardInput value={form.recentForm} onChange={v => set('recentForm', v)} placeholder="e.g. WWDLW" />
                     </CardRow>
+                    <CardRow label="Injury">
+                      <CardInput value={form.injuryType} onChange={v => set('injuryType', v)} placeholder="e.g. Hamstring" />
+                    </CardRow>
+                    <CardRow label="Return Date">
+                      <CardInput value={form.injuryReturn} onChange={v => set('injuryReturn', v)} placeholder="YYYY-MM-DD" type="date" />
+                    </CardRow>
                     <LinkChips canEdit links={[
                       { label: 'Transfermarkt', value: form.transfermarktUrl, onChange: v => set('transfermarktUrl', v) },
                       { label: 'Sofascore',     value: form.sofascoreUrl,     onChange: v => set('sofascoreUrl', v) },
@@ -411,6 +446,15 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
 
           </div>
         </div>
+      )}
+
+      {duplicate && (
+        <DuplicateWarningModal
+          match={duplicate}
+          inputName={`${form.firstName} ${form.lastName}`}
+          onSkip={() => setDuplicate(null)}
+          onCreateAnyway={doSubmit}
+        />
       )}
     </>
   )
