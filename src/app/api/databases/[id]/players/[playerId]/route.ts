@@ -73,8 +73,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('dateOfBirth'  in body) dbData.dateOfBirth  = body.dateOfBirth ? new Date(body.dateOfBirth) : null
   if ('heightCm'     in body) dbData.heightCm     = body.heightCm != null && body.heightCm !== '' ? parseFloat(body.heightCm) : null
   if ('marketValue'  in body) dbData.marketValue  = body.marketValue != null && body.marketValue !== '' ? parseFloat(body.marketValue) * 1_000_000 : null
-  if ('playsNational' in body) dbData.playsNational = body.playsNational ?? undefined
-  if ('available'    in body) dbData.available    = body.available ?? undefined
+  if ('playsNational'  in body) dbData.playsNational  = body.playsNational  ?? undefined
+  if ('available'      in body) dbData.available      = body.available      ?? undefined
+  if ('isRepresented'  in body) dbData.isRepresented  = body.isRepresented  ?? undefined
 
   const changedFields: string[] = Array.isArray(body.changedFields) ? body.changedFields : []
   const customFieldUpdates: Record<string, string> = body.customFields ?? {}

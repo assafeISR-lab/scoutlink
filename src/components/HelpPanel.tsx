@@ -644,7 +644,37 @@ const TOPICS: Topic[] = [
     },
   },
 
-  // ── Scout Info ───────────────────────────────────────────────────
+  // ── Scout Info & Agent Info ──────────────────────────────────────
+  {
+    id: 'represent-player',
+    keywords: ['represent', 'agent', 'mandate', 'client', 'מנדט', 'מייצג', 'סוכן'],
+    en: {
+      category: 'Player Profile',
+      title: 'How to mark a player you represent',
+      steps: [
+        'Open a player\'s profile and find the "Agent Info" section (below Scout Info in the third column).',
+        'Toggle "I Represent the Player" to Yes.',
+        'Optionally set a "Mandate Since" date — the date you started representing them.',
+        'Click "Save Profile" — a green ★ badge appears in the player\'s header.',
+        'Use the "I Represent the Player" filter in the filter bar to see all your represented players at once.',
+        'Enable the "I Represent the Player" column in the Columns picker to see representation status in the player table.',
+      ],
+      tip: 'The Agent Info section also holds the agent name, agent phone, and your mandate date — keeping all representation details separate from scouting observations.',
+    },
+    he: {
+      category: 'פרופיל שחקן',
+      title: 'איך לסמן שחקן שאתה מייצג',
+      steps: [
+        'פתח את פרופיל השחקן ומצא את קטע "Agent Info" (מתחת ל-Scout Info בעמודה השלישית).',
+        'הפעל את הכפתור "I Represent the Player" לכן.',
+        'בחר באופן אופציונלי תאריך "Mandate Since" — התאריך שבו התחלת לייצג אותם.',
+        'לחץ "Save Profile" — תג ירוק ★ יופיע בכותרת השחקן.',
+        'השתמש בפילטר "I Represent the Player" בסרגל הפילטרים לראות את כל השחקנים שאתה מייצג.',
+        'הפעל את עמודת "I Represent the Player" בבורר העמודות לראות סטטוס ייצוג בטבלת השחקנים.',
+      ],
+      tip: 'קטע Agent Info מכיל גם את שם הסוכן, טלפון הסוכן ותאריך המנדט — שומר את כל פרטי הייצוג נפרדים מהתצפיות הסקאוטינג.',
+    },
+  },
   {
     id: 'agent-referral-autocomplete',
     keywords: ['agent', 'referral', 'phone', 'autocomplete', 'dropdown', 'scout info', 'סוכן', 'הפניה', 'טלפון'],

@@ -33,6 +33,7 @@ type FullPlayer = {
   agentName: string | null
   playsNational: boolean
   available: boolean
+  isRepresented: boolean
   createdAt: string
   fieldSources: FieldSource[]
   customFields: CustomField[]
@@ -76,7 +77,7 @@ function buildInitialPlayer(p: InitialPlayerData): FullPlayer {
     lastName: p.lastName, position: p.position, nationality: p.nationality,
     dateOfBirth: p.dateOfBirth, heightCm: p.heightCm, clubName: p.clubName,
     marketValue: p.marketValue, agentName: p.agentName ?? null,
-    playsNational: p.playsNational ?? false, available: p.available,
+    playsNational: p.playsNational ?? false, available: p.available, isRepresented: false,
     createdAt: new Date().toISOString(), fieldSources: [],
     customFields: p.customFields as CustomField[], notes: [], addedBy: { fullName: '' },
   }
@@ -84,7 +85,7 @@ function buildInitialPlayer(p: InitialPlayerData): FullPlayer {
 
 // ── Outer loader ──────────────────────────────────────────────────────────────
 
-export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initialCanWrite = false, onDeleted, triggerAction, onTriggerHandled, onLoaded, onSaveComplete, flushRef, onDirtyChange }: {
+export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initialCanWrite = false, onDeleted, triggerAction, onTriggerHandled, onLoaded, onSaveComplete, flushRef, onDirtyChange, onClose }: {
   playerId: string
   dbId: string
   initialPlayer?: InitialPlayerData
@@ -96,6 +97,7 @@ export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initial
   onSaveComplete?: () => void
   flushRef?: { current: (() => Promise<void>) | undefined }
   onDirtyChange?: (dirty: boolean) => void
+  onClose?: () => void
 }) {
   const cacheKey = `${dbId}:${playerId}`
   const cached = playerCache.get(cacheKey)
@@ -169,6 +171,7 @@ export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initial
       onSaveComplete={onSaveComplete}
       flushRef={flushRef}
       onDirtyChange={onDirtyChange}
+      onClose={onClose}
     />
   )
 }
@@ -213,13 +216,14 @@ function timeAgo(date: string) {
 
 // ── Main card ─────────────────────────────────────────────────────────────────
 
-function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoading, onDeleted, triggerAction, onTriggerHandled, onSaveComplete, flushRef, onDirtyChange }: {
+function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoading, onDeleted, triggerAction, onTriggerHandled, onSaveComplete, flushRef, onDirtyChange, onClose }: {
   player: FullPlayer; dbId: string; canWrite: boolean; currentUserId: string; notesLoading?: boolean; onDeleted?: () => void
   triggerAction?: 'report' | 'delete' | null
   onTriggerHandled?: () => void
   onSaveComplete?: () => void
   flushRef?: { current: (() => Promise<void>) | undefined }
   onDirtyChange?: (dirty: boolean) => void
+  onClose?: () => void
 }) {
   const cf = (name: string) => player.customFields.find(f => f.fieldName === name)?.value ?? ''
   const isManual = (fieldName: string) =>
@@ -253,6 +257,8 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const [recentForm,         setRecentForm]         = useState(cf('recentForm'))
   const [injuryType,         setInjuryType]         = useState(cf('injuryType'))
   const [injuryReturn,       setInjuryReturn]       = useState(cf('injuryReturn'))
+  const [isRepresented,      setIsRepresented]      = useState(player.isRepresented)
+  const [mandateDate,        setMandateDate]        = useState(cf('mandateDate'))
   const [playsNational,      setPlaysNational]      = useState(player.playsNational)
   const [transfermarktUrl,   setTransfermarktUrl]   = useState(
     cf('transfermarktUrl') || player.fieldSources.find(s => s.sourceName === 'Transfermarkt' && s.isActive)?.sourceUrl || ''
@@ -309,6 +315,8 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const [reportLoading, setReportLoading] = useState(false)
   const [reportError,   setReportError]   = useState('')
 
+  const [saving, setSaving] = useState(false)
+
   // Delete modal
   const [deleteOpen,    setDeleteOpen]    = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -354,6 +362,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
 
   async function flush() {
     if (!canWrite || !isDirtyRef.current) return
+    setSaving(true)
 
     // Build DB field patch (only dirty DB fields)
     const dbPatch: Record<string, unknown> = {}
@@ -364,15 +373,16 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
     if (dirtyDbRef.current.has('dateOfBirth'))  dbPatch.dateOfBirth = dateOfBirth || null
     if (dirtyDbRef.current.has('heightCm'))     dbPatch.heightCm    = heightCm || null
     if (dirtyDbRef.current.has('marketValue'))  dbPatch.marketValue = marketValue || null
-    if (dirtyDbRef.current.has('playsNational')) dbPatch.playsNational = playsNational
-    if (dirtyDbRef.current.has('available'))    dbPatch.available   = available
+    if (dirtyDbRef.current.has('playsNational'))  dbPatch.playsNational  = playsNational
+    if (dirtyDbRef.current.has('available'))      dbPatch.available      = available
+    if (dirtyDbRef.current.has('isRepresented'))  dbPatch.isRepresented  = isRepresented
 
     // Build custom field patch (only dirty custom fields)
     const allCustomValues: Record<string, string> = {
       foot, passports, playerPhone,
       league, joiningDate, contractExpiry,
       fmWages, transferFeeExpect, transferFeeReal, salaryExpect, salaryReal,
-      agentPhone, sentBy, recentForm, injuryType, injuryReturn, description,
+      agentPhone, sentBy, recentForm, injuryType, injuryReturn, mandateDate, description,
       transfermarktUrl, sofascoreUrl, fmInsideUrl,
       instagram, twitter, tiktok, highlights,
       fmAttributes: fmAttributesRef.current,
@@ -399,6 +409,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
     setIsDirty(false)
     onDirtyChange?.(false)
     playerCache.delete(`${dbId}:${player.id}`)
+    setSaving(false)
     onSaveComplete?.()
     notifyList()
   }
@@ -534,20 +545,58 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
                 </span>
                 {injuryReturn && <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>· back {injuryReturn}</span>}
               </>}
+              {isRepresented && <>
+                <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>·</span>
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }}>
+                  ★ I Represent the Player
+                </span>
+              </>}
             </div>
           </div>
-          <button
-            onClick={canWrite ? toggleAvailable : undefined}
-            disabled={!canWrite}
-            className="text-[11px] px-2 py-0.5 rounded font-medium tracking-wider uppercase flex-shrink-0"
-            style={available
-              ? { background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)', cursor: canWrite ? 'pointer' : 'default' }
-              : { background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)', cursor: canWrite ? 'pointer' : 'default' }}
-            onMouseEnter={e => { if (canWrite) e.currentTarget.style.opacity = '0.7' }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
-          >
-            {available ? 'Available' : 'Not Avail.'}
-          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Save Profile */}
+            {canWrite && (
+              <button
+                onClick={() => { (document.activeElement as HTMLElement)?.blur(); flush() }}
+                disabled={saving || !isDirty}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-all"
+                style={saving || isDirty
+                  ? { background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)', cursor: saving ? 'default' : 'pointer' }
+                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'default' }}
+                onMouseEnter={e => { if (!saving && isDirty) { e.currentTarget.style.background = 'rgba(0,200,150,0.18)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,200,150,0.1)' } }}
+                onMouseLeave={e => { e.currentTarget.style.background = saving || isDirty ? 'rgba(0,200,150,0.1)' : 'transparent'; e.currentTarget.style.boxShadow = '' }}
+              >
+                {saving
+                  ? <><div className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin flex-shrink-0" />Saving…</>
+                  : <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zm-5 16a3 3 0 110-6 3 3 0 010 6zm3-10H5V5h10v4z"/></svg>Save Profile</>
+                }
+              </button>
+            )}
+            {/* Delete Profile */}
+            {canWrite && (
+              <button
+                onClick={() => { setDeleteOpen(true); setDeleteError('') }}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-all"
+                style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                Delete Profile
+              </button>
+            )}
+            {/* Close panel */}
+            <button
+              onClick={onClose}
+              className="w-6 h-6 flex items-center justify-center rounded-md transition-colors flex-shrink-0"
+              style={{ color: 'var(--text-faint)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+          </div>
         </div>
 
 
@@ -734,7 +783,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
 
         {/* Physical */}
         <div className="p-3" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold mb-2" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Physical</p>
+          <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Physical</p>
           <Row label="Position"      display={displayPos(position || player.position || '')} manual={isManual('position')}   inputValue={position}    onChange={setPosition}    onSave={canWrite ? () => markDirty('position')    : undefined} />
           <Row label="Height"        display={heightCm ? `${heightCm} cm` : null}             manual={isManual('heightCm')}   inputValue={heightCm}    onChange={setHeightCm}    onSave={canWrite ? () => markDirty('heightCm')    : undefined} inputType="number" />
           <Row label="Age"           display={age ? `${age} yrs` : null}                      inputValue={dateOfBirth} onChange={setDateOfBirth} onSave={canWrite ? () => markDirty('dateOfBirth') : undefined} inputType="date" />
@@ -744,7 +793,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
           <Row label="Passports"     display={passports || null}                               manual={cfHas('passports')}     inputValue={passports}   onChange={setPassports}   onSave={canWrite ? () => markDirty(undefined, 'passports')   : undefined} />
           <Row label="Player Phone"  display={playerPhone || null}                             manual={cfHas('playerPhone')}   inputValue={playerPhone} onChange={setPlayerPhone} onSave={canWrite ? () => markDirty(undefined, 'playerPhone') : undefined} />
           <div className="mt-2.5 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
-            <p className="text-[8px] uppercase font-semibold mb-1" style={{ letterSpacing: '0.8px', color: 'var(--text-faint)' }}>Current Status</p>
+            <p className="text-[10px] uppercase font-bold mb-1 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Current Status</p>
             <BoolRow label="Availability" value={available}   onToggle={canWrite ? toggleAvailable : undefined} highlight trueLabel="Available" falseLabel="Not Avail." />
             <Row label="Injury"        display={injuryType || null}    manual={cfHas('injuryType')} inputValue={injuryType} onChange={setInjuryType} onSave={canWrite ? () => markDirty(undefined, 'injuryType') : undefined} />
             <Row label="Return Date"   display={fmtDate(injuryReturn)} manual={cfHas('injuryReturn')} inputValue={injuryReturn} onChange={setInjuryReturn} onSave={canWrite ? () => markDirty(undefined, 'injuryReturn') : undefined} inputType="date" />
@@ -753,7 +802,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
 
         {/* Contract & Value */}
         <div className="p-3" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold mb-2" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Contract & Value</p>
+          <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Contract & Value</p>
           <Row label="Club"              display={clubName || null}          manual={isManual('clubName')}          inputValue={clubName}          onChange={setClubName}          onSave={canWrite ? () => markDirty('clubName')    : undefined} />
           <Row label="League"            display={league || null}            manual={cfHas('league')}               inputValue={league}            onChange={setLeague}            onSave={canWrite ? () => markDirty(undefined, 'league')              : undefined} />
           <Row label="Joining Date"      display={fmtDate(joiningDate)}      manual={cfHas('joiningDate')}          inputValue={joiningDate}        onChange={setJoiningDate}       onSave={canWrite ? () => markDirty(undefined, 'joiningDate')         : undefined} inputType="date" />
@@ -766,26 +815,36 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
           <Row label="Salary (Real)"     display={salaryReal || null}        manual={cfHas('salaryReal')}           inputValue={salaryReal}         onChange={setSalaryReal}        onSave={canWrite ? () => markDirty(undefined, 'salaryReal')          : undefined} />
         </div>
 
-        {/* Scout Info */}
+        {/* Scout Info + Agent Info */}
         <div className="p-3">
-          <p className="text-[9px] uppercase font-bold mb-2" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
+          {/* Scout Info */}
+          <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Scout Info</p>
           <Row     label="Added"          display={dateAdded}   inputValue="" onChange={() => {}} />
           <Row     label="Scout"          display={player.addedBy.fullName} inputValue="" onChange={() => {}} />
           <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
-            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Referral</span>
+            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Referral</span>
             <div className="w-32">
               <AutocompleteField value={sentBy} onChange={v => { setSentBy(v); markDirty(undefined, 'sentBy') }} onSave={canWrite ? () => {} : undefined} suggestions={referralSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} />
             </div>
           </div>
-          <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
-            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Agent</span>
-            <div className="w-32">
-              <AutocompleteField value={agentName} onChange={v => { setAgentName(v); markDirty('agentName') }} onSave={canWrite ? () => {} : undefined} suggestions={agentSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} onPickSuggestion={name => { const phone = agentPhoneMap.current.get(name); if (phone) { setAgentPhone(phone); markDirty(undefined, 'agentPhone') } }} />
-            </div>
-          </div>
-          <Row     label="Agent Phone"    display={agentPhone || null}      manual={cfHas('agentPhone')} inputValue={agentPhone} onChange={setAgentPhone} onSave={canWrite ? () => markDirty(undefined, 'agentPhone') : undefined} />
           <BoolRow label="Plays National" value={playsNational} onToggle={canWrite ? () => { const n = !playsNational; setPlaysNational(n); markDirty('playsNational') } : undefined} neutral trueLabel="Yes" falseLabel="No" />
           <Row     label="Recent Form"    display={recentForm || null}      manual={cfHas('recentForm')} inputValue={recentForm} onChange={setRecentForm} onSave={canWrite ? () => markDirty(undefined, 'recentForm') : undefined} />
+
+          {/* Agent Info */}
+          <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Agent Info</p>
+            <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+              <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Agent</span>
+              <div className="w-32">
+                <AutocompleteField value={agentName} onChange={v => { setAgentName(v); markDirty('agentName') }} onSave={canWrite ? () => {} : undefined} suggestions={agentSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} onPickSuggestion={name => { const phone = agentPhoneMap.current.get(name); if (phone) { setAgentPhone(phone); markDirty(undefined, 'agentPhone') } }} />
+              </div>
+            </div>
+            <Row     label="Agent Phone"    display={agentPhone || null}      manual={cfHas('agentPhone')} inputValue={agentPhone} onChange={setAgentPhone} onSave={canWrite ? () => markDirty(undefined, 'agentPhone') : undefined} />
+            <BoolRow label="I Represent the Player" value={isRepresented} onToggle={canWrite ? () => { const n = !isRepresented; setIsRepresented(n); markDirty('isRepresented') } : undefined} highlight trueLabel="Yes" falseLabel="No" />
+            {isRepresented && (
+              <Row label="Mandate Since" display={mandateDate || null} manual={cfHas('mandateDate')} inputValue={mandateDate} onChange={setMandateDate} onSave={canWrite ? () => markDirty(undefined, 'mandateDate') : undefined} inputType="date" />
+            )}
+          </div>
         </div>
       </div>
 
@@ -797,13 +856,13 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
 
         {/* Heat Map */}
         <div className="p-3 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
+          <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Heat Map</p>
           <HeatmapDisplay json={cf('heatmap') || null} />
         </div>
 
         {/* Season Stats */}
         <div className="p-3 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Season Stats</p>
+          <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Season Stats</p>
           <SeasonStatsEditor
             json={seasonStats}
             onChange={v => { setSeasonStats(v); seasonStatsRef.current = v }}
@@ -813,7 +872,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
 
         {/* FM Attributes */}
         <div className="p-3 flex flex-col gap-2">
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)' }}>FM Attributes</p>
+          <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: localActiveFm ? '#00c896' : 'var(--text-primary)', borderColor: '#00c896' }}>FM Attributes</p>
           {localActiveFm ? (
             <FMAttributesEditor
               value={fmAttributes}

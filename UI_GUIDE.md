@@ -75,7 +75,7 @@ Defined in `globals.css`. **Always use CSS variables for colors — never hardco
 | Page title | `text-xl font-semibold` + `color: var(--text-primary)` |
 | Card/section heading | `text-sm font-semibold` + `color: var(--text-primary)` |
 | Section sub-label (caps) | `text-[10px] uppercase tracking-widest font-medium` + `color: var(--text-muted)` |
-| Profile section header | `text-[9px] uppercase font-bold` + `letterSpacing: '0.9px', color: var(--text-muted)` |
+| Profile section header | `text-[10px] uppercase font-bold pl-2 border-l-2` + `letterSpacing: '0.9px', color: var(--text-primary), borderColor: '#00c896'` |
 | Player full name | `fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px'` + `color: var(--text-primary)` |
 | Table header cell | `text-[10px] uppercase tracking-widest font-medium` + `color: var(--text-muted)` |
 | Table row primary | `text-sm font-semibold` + `color: var(--text-primary)` |
@@ -659,8 +659,8 @@ Risk flags always use amber (`#f59e0b`) — not green or red.
 
 ### Evaluation Form section header
 ```tsx
-<p className="text-[9px] uppercase font-bold mb-3"
-  style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Match Context</p>
+<p className="text-[10px] uppercase font-bold mb-3 pl-2 border-l-2"
+  style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Match Context</p>
 ```
 Used for every sub-section inside an evaluation form (Match Context, Scout Ratings, Recommendation, Risk Flags, Observation Notes).
 
@@ -1553,7 +1553,7 @@ The overall structure of the profile card. Four vertical zones stacked:
 ```tsx
 <div className="grid grid-cols-3">
   <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-    <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Physical</p>
+    <p className="text-[10px] uppercase font-bold mb-3 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Physical</p>
     {/* Row components */}
   </div>
   {/* repeat for other 2 cols — last col has no borderRight */}
@@ -1917,3 +1917,74 @@ An `<a>` tag with the `download` attribute that triggers a file save dialog. Use
 - `download` attribute (no value) uses the filename from the `Content-Disposition` response header
 - Style identically to ghost secondary buttons (section 6) so it blends into button rows
 - The API route must return `Content-Disposition: attachment; filename="..."` and correct `Content-Type`
+
+---
+
+## 48. Scout Info / Agent Info Split
+
+The third column of the player card is divided into two sub-sections separated by a divider:
+
+**Scout Info** — observation/tracking data: Added, Sent by, Referral, Plays National, Recent Form, Links, Highlights, Description
+
+**Agent Info** — representation/business data: Agent, Agent Phone, I Represent the Player, Mandate Since
+
+```tsx
+{/* Scout Info */}
+<p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2"
+  style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Scout Info</p>
+{/* ... scout rows ... */}
+
+{/* Agent Info */}
+<div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+  <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2"
+    style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Agent Info</p>
+  {/* ... agent rows ... */}
+</div>
+```
+
+Applied consistently in: `PlayerPanelCard.tsx`, `PlayerProfileCard.tsx`, `SearchClient.tsx`.
+
+---
+
+## 49. Player Card Header Action Buttons (Panel)
+
+Save Profile, Delete Profile, and ✕ live inside the player card header right-side button group — not in an outer panel header bar.
+
+```tsx
+{/* Save Profile — three states */}
+<button
+  onClick={() => { (document.activeElement as HTMLElement)?.blur(); flush() }}
+  disabled={saving || !isDirty}
+  className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-all"
+  style={saving || isDirty
+    ? { background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)', cursor: saving ? 'default' : 'pointer' }
+    : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'default' }}
+  onMouseEnter={e => { if (!saving && isDirty) { e.currentTarget.style.background = 'rgba(0,200,150,0.18)' } }}
+  onMouseLeave={e => { e.currentTarget.style.background = saving || isDirty ? 'rgba(0,200,150,0.1)' : 'transparent' }}>
+  {saving
+    ? <><div className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />Saving…</>
+    : <><svg .../>Save Profile</>
+  }
+</button>
+
+{/* Delete Profile */}
+<button style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+  onMouseEnter → rgba(239,68,68,0.06) bg + #ef4444 text + red border
+  onMouseLeave → reset>
+  Delete Profile
+</button>
+
+{/* Close ✕ */}
+<button className="w-6 h-6 flex items-center justify-center rounded-md"
+  style={{ color: 'var(--text-faint)', border: '1px solid var(--border)' }}
+  onMouseEnter → text-secondary + border-strong
+  onMouseLeave → reset>
+  ✕ svg
+</button>
+```
+
+**Save button states:**
+- Inactive (no changes): ghost style, `cursor: 'default'`, full opacity — always visible
+- Dirty (unsaved changes): `rgba(0,200,150,0.1)` bg + green border + pointer cursor
+- Saving: spinner + "Saving…", `cursor: 'default'`
+- Never use `disabled:opacity` — the button stays fully visible in all states

@@ -100,13 +100,14 @@ interface PlayerEditData {
   customExtras: { key: string; value: string }[]
 }
 
-export default function SearchClient({ databases, userName, panelMode, targetDatabaseId, targetListName, onPlayerAdded }: {
+export default function SearchClient({ databases, userName, panelMode, targetDatabaseId, targetListName, onPlayerAdded, onClose }: {
   databases: Database[]
   userName: string
   panelMode?: boolean
   targetDatabaseId?: string
   targetListName?: string
   onPlayerAdded?: (playerName: string) => void
+  onClose?: () => void
 }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PlayerResult[]>([])
@@ -255,8 +256,8 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
             </button>
           </form>
 
-          {/* ── Row 1, Col 3: Coverage dropdown ── */}
-          <div className="flex items-center py-3" ref={coverageRef}>
+          {/* ── Row 1, Col 3: Coverage + Close ── */}
+          <div className="flex items-center gap-2 py-3 flex-shrink-0" ref={coverageRef}>
             {searched && (
               <div className="relative flex-shrink-0">
                 <button
@@ -293,6 +294,17 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
                   </div>
                 )}
               </div>
+            )}
+            {panelMode && onClose && (
+              <button
+                onClick={onClose}
+                className="w-7 h-7 flex items-center justify-center rounded-md transition-colors flex-shrink-0"
+                style={{ color: 'var(--text-faint)', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
             )}
           </div>
 
@@ -796,12 +808,25 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
         </div>
       </div>
 
+      {/* ── Source chips + Highlights — above the 3-column body, matching player profile card layout ── */}
+      <div style={{ padding: '0 16px' }}>
+        <LinkChips links={[
+          show('Transfermarkt') && { label: 'Transfermarkt', value: editData.tmUrl,      onChange: (v: string) => updateField('tmUrl', v) },
+          show('Sofascore')     && { label: 'Sofascore',   value: editData.scUrl,      onChange: (v: string) => updateField('scUrl', v) },
+          show('FMInside')      && { label: 'FMInside',    value: editData.fmUrl,      onChange: (v: string) => updateField('fmUrl', v) },
+          show('Instagram')     && { label: 'Instagram',   value: editData.igUrl,      onChange: (v: string) => updateField('igUrl', v) },
+          show('Twitter / X')   && { label: 'Twitter / X', value: editData.twitterUrl, onChange: (v: string) => updateField('twitterUrl', v) },
+          show('TikTok')        && { label: 'TikTok',      value: editData.tiktokUrl,  onChange: (v: string) => updateField('tiktokUrl', v) },
+          show('Highlights')    && { label: 'Highlights',  value: editData.highlights, onChange: (v: string) => updateField('highlights', v) },
+        ].filter(Boolean) as { label: string; value: string; onChange: (v: string) => void }[]} />
+      </div>
+
       {/* ── Body — 3 columns ── */}
       <div className="grid grid-cols-3">
 
         {/* Physical */}
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Physical</p>
+          <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Physical</p>
           <div>
             {show('Position')      && <EditableField label="Position"     displayValue={normalizePos(editData.position) || null} editValue={editData.position}     onChange={v => updateField('position', v)} />}
             {show('Height')        && <EditableField label="Height"       displayValue={editData.heightCm ? `${editData.heightCm} cm` : null} editValue={editData.heightCm} onChange={v => updateField('heightCm', v)} inputType="number" />}
@@ -814,7 +839,7 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
           </div>
           {(show('Availability') || show('Injury') || show('Return Date')) && (
             <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
-              <p className="text-[8px] uppercase font-semibold mb-1" style={{ letterSpacing: '0.8px', color: 'var(--text-faint)' }}>Current Status</p>
+              <p className="text-[10px] uppercase font-bold mb-1 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Current Status</p>
               {show('Availability') && (
                 <div className="field-row flex items-center justify-between gap-2 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
                   <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Availability</span>
@@ -833,7 +858,7 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
 
         {/* Contract & Value */}
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Contract & Value</p>
+          <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Contract & Value</p>
           <div>
             {show('Club')               && <EditableField label="Club"               displayValue={editData.clubName || null}         editValue={editData.clubName}          onChange={v => updateField('clubName', v)} />}
             {show('League')             && <EditableField label="League"             displayValue={editData.league || null}           editValue={editData.league}            onChange={v => updateField('league', v)} />}
@@ -850,8 +875,11 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
 
         {/* Scout Info */}
         <div className="p-4">
-          <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Scout Info</p>
+          <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Scout Info</p>
           <div>
+            <CardField label="Added" value={dateAdded} />
+            {show('Sent by / Scout Name') && <CardField label="Sent by / Scout Name" value={userName} />}
+            {show('Referral')     && <EditableField label="Referral"     displayValue={editData.sentBy || null}     editValue={editData.sentBy}     onChange={v => updateField('sentBy', v)} />}
             <div className="field-row flex items-center justify-between gap-2 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
               <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Plays National</span>
               <button
@@ -867,24 +895,18 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
                 {editData.playsNational ? 'Yes' : 'No'}
               </button>
             </div>
-            <CardField label="Added" value={dateAdded} />
-            {show('Sent by / Scout Name') && <CardField label="Sent by / Scout Name" value={userName} />}
-            {show('Referral')     && <EditableField label="Referral"     displayValue={editData.sentBy || null}     editValue={editData.sentBy}     onChange={v => updateField('sentBy', v)} />}
-            {show('Agent')        && <EditableField label="Agent"        displayValue={editData.agentName || null}  editValue={editData.agentName}  onChange={v => updateField('agentName', v)} />}
-            {show('Agent Phone')  && <EditableField label="Agent Phone"  displayValue={editData.agentPhone || null} editValue={editData.agentPhone} onChange={v => updateField('agentPhone', v)} />}
             {show('Recent Form')  && <EditableField label="Recent Form"  displayValue={editData.recentForm || null} editValue={editData.recentForm} onChange={v => updateField('recentForm', v)} />}
-            <LinkChips links={[
-              show('Transfermarkt') && { label: 'TM',          value: editData.tmUrl,      onChange: (v: string) => updateField('tmUrl', v) },
-              show('Sofascore')     && { label: 'Sofascore',   value: editData.scUrl,      onChange: (v: string) => updateField('scUrl', v) },
-              show('FMInside')      && { label: 'FMInside',    value: editData.fmUrl,      onChange: (v: string) => updateField('fmUrl', v) },
-              show('Instagram')     && { label: 'Instagram',   value: editData.igUrl,      onChange: (v: string) => updateField('igUrl', v) },
-              show('Twitter / X')   && { label: 'Twitter / X', value: editData.twitterUrl, onChange: (v: string) => updateField('twitterUrl', v) },
-              show('TikTok')        && { label: 'TikTok',      value: editData.tiktokUrl,  onChange: (v: string) => updateField('tiktokUrl', v) },
-              show('Highlights')    && { label: 'Highlights',  value: editData.highlights, onChange: (v: string) => updateField('highlights', v) },
-            ].filter(Boolean) as { label: string; value: string; onChange: (v: string) => void }[]} />
             {show('Description')  && <EditableField label="Description"  displayValue={editData.description || null} editValue={editData.description} onChange={v => updateField('description', v)} multiline />}
           </div>
 
+          {/* Agent Info */}
+          {(show('Agent') || show('Agent Phone')) && (
+            <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+              <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Agent Info</p>
+              {show('Agent')       && <EditableField label="Agent"       displayValue={editData.agentName || null}  editValue={editData.agentName}  onChange={v => updateField('agentName', v)} />}
+              {show('Agent Phone') && <EditableField label="Agent Phone" displayValue={editData.agentPhone || null} editValue={editData.agentPhone} onChange={v => updateField('agentPhone', v)} />}
+            </div>
+          )}
         </div>
       </div>
 
@@ -896,7 +918,7 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
           <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
             {show('Heat Map') && editData.heatmap && (
               <>
-                <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Heat Map</p>
+                <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Heat Map</p>
                 <HeatmapDisplay json={editData.heatmap} />
               </>
             )}
@@ -906,7 +928,7 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
           <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
             {show('Season Stats') && (
               <>
-                <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: 'var(--text-muted)', letterSpacing: '0.9px' }}>Season Stats</p>
+                <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Season Stats</p>
                 <SeasonStatsEditor
                   json={editData.seasonStats || '{"seasons":[]}'}
                   onChange={v => updateField('seasonStats', v)}
@@ -918,7 +940,7 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
           {/* FM Attributes */}
           {show('FM Attributes') && (
             <div className="p-4 flex flex-col gap-2">
-              <p className="text-[9px] uppercase font-bold mb-2.5" style={{ color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)', letterSpacing: '0.9px' }}>FM Attributes</p>
+              <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: localActiveFm ? '#00c896' : 'var(--text-primary)', borderColor: '#00c896' }}>FM Attributes</p>
               {localActiveFm ? (
                 <FMAttributesEditor
                   value={editData.fmAttributes}

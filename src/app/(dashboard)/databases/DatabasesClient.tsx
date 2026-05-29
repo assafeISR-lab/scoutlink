@@ -40,6 +40,7 @@ type PlayerRow = {
   marketValue: number | null
   available: boolean
   playsNational?: boolean
+  isRepresented?: boolean
   createdAt?: string
   customFields: { id?: string; fieldName: string; value: string }[]
   // Full data included in the list response — used to pre-warm the panel cache
@@ -169,7 +170,7 @@ const TABLE_COLS = new Set([
   'availability',
 ])
 
-type SortKey = 'name' | 'availability' | 'position' | 'team' | 'nationality' | 'age' | 'height' | 'marketValue' | 'contractExpiry' | 'preferredFoot' | 'fmWages'
+type SortKey = 'name' | 'availability' | 'position' | 'team' | 'nationality' | 'age' | 'height' | 'marketValue' | 'contractExpiry' | 'preferredFoot' | 'fmWages' | 'isRepresented'
 
 function SortTh({ label, sortKey, current, dir, onSort }: {
   label: string
@@ -392,7 +393,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
                 lastName: p.lastName, position: p.position, nationality: p.nationality,
                 dateOfBirth: p.dateOfBirth, heightCm: p.heightCm, clubName: p.clubName,
                 marketValue: p.marketValue, agentName: p.agentName ?? null,
-                playsNational: p.playsNational ?? false, available: p.available,
+                playsNational: p.playsNational ?? false, available: p.available, isRepresented: p.isRepresented ?? false,
                 createdAt: p.createdAt ?? new Date().toISOString(),
                 fieldSources: p.fieldSources,
                 customFields: p.customFields as { id: string; fieldName: string; value: string }[],
@@ -472,7 +473,8 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
       let av: string | number = 0, bv: string | number = 0
       switch (sortKey) {
         case 'name':          av = `${a.firstName} ${a.lastName}`;  bv = `${b.firstName} ${b.lastName}`;  break
-        case 'availability':  av = (availOverride[a.id] ?? a.available) ? 1 : 0; bv = (availOverride[b.id] ?? b.available) ? 1 : 0; break
+        case 'availability':    av = (availOverride[a.id] ?? a.available) ? 1 : 0; bv = (availOverride[b.id] ?? b.available) ? 1 : 0; break
+        case 'isRepresented':   av = a.isRepresented ? 1 : 0;               bv = b.isRepresented ? 1 : 0;               break
         case 'position':      av = a.position ?? '';                 bv = b.position ?? '';                break
         case 'team':          av = a.clubName ?? '';                 bv = b.clubName ?? '';                break
         case 'nationality':   av = a.nationality ?? '';              bv = b.nationality ?? '';             break
@@ -557,7 +559,8 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
               <th className="pl-4 pr-2 py-2.5 text-right text-[10px] uppercase tracking-widest font-medium w-8 flex-shrink-0" style={{ color: 'var(--text-faint)' }}>#</th>
               {isMulti && <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-widest font-medium whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>List</th>}
               <SortTh label="Player"       sortKey="name"          {...thProps} />
-              {show('availability') && <SortTh label="Status"      sortKey="availability" {...thProps} />}
+              {show('availability') && <SortTh label="Status"      sortKey="availability"   {...thProps} />}
+              {show('isRepresented') && <SortTh label="Represented" sortKey="isRepresented" {...thProps} />}
               {show('position')    && <SortTh label="Position"     sortKey="position"     {...thProps} />}
               {(show('team') || show('league')) && <SortTh label="Club / League" sortKey="team" {...thProps} />}
               {show('nationality') && <SortTh label="Nat."         sortKey="nationality"  {...thProps} />}
@@ -689,6 +692,14 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
                       </td>
                     )
                   })()}
+                  {show('isRepresented') && (
+                    <td className="px-4 py-2.5">
+                      {p.isRepresented
+                        ? <span className="text-[11px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }}>★ Yes</span>
+                        : <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+                      }
+                    </td>
+                  )}
 
                   {show('position') && (
                     <td className="px-4 py-2.5">
@@ -1201,72 +1212,6 @@ export default function DatabasesClient({
         overflow: 'hidden',
       }}>
         <div className="rounded-2xl border" style={{ overflow: 'clip', background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)', ...(splitPanelActive ? { display: 'flex', flexDirection: 'column', height: '100%' } : {}) }}>
-          {/* Panel header — changes based on mode */}
-          <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
-            {scoutOpen ? (
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#00c896', boxShadow: '0 0 6px rgba(0,200,150,0.7)', animation: 'pulse 1.5s infinite' }} />
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Web Scout</span>
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>→ adding to <strong style={{ color: 'var(--text-secondary)' }}>{selectedDbName}</strong></span>
-              </div>
-            ) : selectedPlayer ? (
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.1)', border: '1px solid rgba(0,200,150,0.25)' }}>
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="#00c896"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                </div>
-                <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{selectedPlayer.firstName} {selectedPlayer.lastName}</span>
-              </div>
-            ) : null}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {playerPanelOpen && selectedPlayer && (
-                <>
-                  <button
-                    onClick={handleSavePlayer}
-                    disabled={playerSaving || (!playerDirty && !playerSaved)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
-                    style={playerSaving
-                      ? { background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.4)', cursor: 'default' }
-                      : playerSaved && !playerDirty
-                        ? { background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.45)', cursor: 'default' }
-                        : playerDirty
-                          ? { background: 'rgba(0,200,150,0.08)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)' }
-                          : { background: 'transparent', color: 'var(--text-faint)', border: '1px solid var(--border)', cursor: 'default' }}
-                  >
-                    {playerSaving ? (
-                      <><div className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin flex-shrink-0" />Saving…</>
-                    ) : playerSaved && !playerDirty ? (
-                      <><div className="w-3 h-3 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,200,150,0.2)', border: '1px solid rgba(0,200,150,0.5)' }}><svg className="w-2 h-2" viewBox="0 0 24 24" fill="#00c896"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>Saved</>
-                    ) : (
-                      <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zm-5 16a3 3 0 110-6 3 3 0 010 6zm3-10H5V5h10v4z"/></svg>Save Profile</>
-                    )}
-                  </button>
-                  {playerCanWrite && (
-                    <button
-                      onClick={() => setPlayerAction('delete')}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
-                      style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-                    >
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                      Delete Profile
-                    </button>
-                  )}
-                </>
-              )}
-              <button
-                onClick={closeRightPanel}
-                className="w-6 h-6 flex items-center justify-center rounded-md transition-colors"
-                style={{ color: 'var(--text-faint)', border: '1px solid var(--border)' }}
-                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-              >
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                </svg>
-              </button>
-            </div>
-          </div>
           {/* Panel body — SearchClient always mounted (state survives), PlayerQuickPanel keyed by id */}
           <div style={splitPanelActive ? { overflowY: 'auto', flex: 1, minHeight: 0 } : {}}>
             <div style={{ display: scoutOpen ? 'block' : 'none' }}>
@@ -1277,6 +1222,7 @@ export default function DatabasesClient({
                 onPlayerAdded={(name) => showToast(`${name} added to ${selectedDbName}`)}
                 databases={allDbs.map(d => ({ id: d.id, name: d.name }))}
                 userName={userName}
+                onClose={closeRightPanel}
               />
             </div>
             {playerPanelOpen && selectedPlayer && (
@@ -1298,6 +1244,7 @@ export default function DatabasesClient({
                 }}
                 flushRef={playerFlushRef}
                 onDirtyChange={setPlayerDirty}
+                onClose={closeRightPanel}
               />
             )}
           </div>

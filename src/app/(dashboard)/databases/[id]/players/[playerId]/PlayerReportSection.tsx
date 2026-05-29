@@ -181,7 +181,7 @@ export default function PlayerReportSection({ databaseId, playerId, canWrite, fo
       <>
         {/* Section selector — always visible so scout can change sections and re-generate */}
         <div className={forceExpanded ? 'mb-5' : 'pt-4 pb-3'}>
-          <p className="text-[9px] uppercase font-bold mb-2.5" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>
+          <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>
             Include in Report
           </p>
           <div className="flex flex-wrap gap-1.5">

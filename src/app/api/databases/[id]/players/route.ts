@@ -29,6 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         heightCm: true,
         marketValue: true,
         available: true,
+        isRepresented: true,
         playsNational: true,
         createdAt: true,
         customFields: { select: { id: true, fieldName: true, value: true } },

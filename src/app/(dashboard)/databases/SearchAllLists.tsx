@@ -25,6 +25,8 @@ export interface Player {
   dateOfBirth: string | null
   heightCm: number | null
   marketValue: number | null
+  available: boolean
+  isRepresented: boolean
   customFields: CustomFieldEntry[]
 }
 
@@ -70,12 +72,15 @@ function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
   if (f.league)           checks.push(() => getCF(player, 'league').toLowerCase().includes(f.league.toLowerCase()))
   if (f.preferredFeet.length) checks.push(() => f.preferredFeet.some(foot => getCF(player, 'foot').toLowerCase() === foot.toLowerCase()))
   if (f.availabilities.length) checks.push(() => {
-    const label = (player as any).available ? 'Available' : 'Not Available'
+    const label = player.available ? 'Available' : 'Not Available'
     return f.availabilities.includes(label)
   })
   if (f.injuries.length) checks.push(() => {
     const isInjured = !!getCF(player, 'injuryType')
     return f.injuries.includes(isInjured ? 'Injured' : 'Not Injured')
+  })
+  if (f.representations.length) checks.push(() => {
+    return f.representations.includes(player.isRepresented ? 'I Represent the Player' : 'Not Represented')
   })
   if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) checks.push(() => { const cy = contractYear ?? 0; return (f.contractExpiryYearMin === null || cy >= f.contractExpiryYearMin) && (f.contractExpiryYearMax === null || cy <= f.contractExpiryYearMax) })
   if (f.fmWagesMin !== null || f.fmWagesMax !== null) checks.push(() => { const w = fmWages ?? 0; return (f.fmWagesMin === null || w >= f.fmWagesMin) && (f.fmWagesMax === null || w <= f.fmWagesMax) })
@@ -145,6 +150,7 @@ export default function SearchAllLists({ databaseIds, bare, onCreateReport, onAc
     preferredFoot: uniqueFeet.length ? uniqueFeet : ['Right', 'Left', 'Both'],
     availability: ['Available', 'Not Available'],
     injury: ['Injured', 'Not Injured'],
+    representation: ['I Represent the Player', 'Not Represented'],
   }
 
   const rangeBounds: Record<string, RangeBound> = {

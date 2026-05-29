@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
       heightCm: p.heightCm,
       marketValue: p.marketValue,
       available: p.available,
+      isRepresented: p.isRepresented,
       playsNational: p.playsNational,
       customFields: p.customFields,
     })),

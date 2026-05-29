@@ -86,9 +86,10 @@ model Player {
   position     String?
   agentName    String?
   nationality  String?
-  playsNational Boolean @default(false)
-  available    Boolean @default(true)
-  marketValue  Float?
+  playsNational  Boolean @default(false)
+  available      Boolean @default(true)
+  isRepresented  Boolean @default(false)
+  marketValue    Float?
 
   // Relations
   database     PlayerDatabase  @relation(fields: [databaseId], references: [id], onDelete: Cascade)

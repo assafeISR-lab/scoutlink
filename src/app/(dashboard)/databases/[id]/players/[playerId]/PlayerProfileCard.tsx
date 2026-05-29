@@ -42,6 +42,7 @@ interface PlayerData {
   agentName: string | null
   playsNational: boolean
   available: boolean
+  isRepresented: boolean
   createdAt: Date
   fieldSources: FieldSource[]
   customFields: CustomFieldEntry[]
@@ -117,8 +118,9 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     clubName:      player.clubName       ?? '',
     marketValue:   player.marketValue != null ? (player.marketValue / 1_000_000).toString() : '',
     agentName:     player.agentName      ?? '',
-    playsNational: player.playsNational,
-    available:     player.available,
+    playsNational:  player.playsNational,
+    available:      player.available,
+    isRepresented:  player.isRepresented,
     // Custom fields
     foot:              cf('foot'),
     passports:         cf('passports'),
@@ -147,6 +149,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     agentPhone:        cf('agentPhone'),
     injuryType:        cf('injuryType'),
     injuryReturn:      cf('injuryReturn'),
+    mandateDate:       cf('mandateDate'),
   })
 
   const [form, setForm] = useState(initialForm)
@@ -174,8 +177,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     setSaveError('')
 
     // Split changed fields into DB fields and custom fields
-    const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','available'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone','injuryType','injuryReturn']
+    const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','available','isRepresented'])
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone','injuryType','injuryReturn','mandateDate']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -291,6 +294,13 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
               </span>
               {form.injuryReturn && <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>· back {fmtDate(form.injuryReturn)}</span>}
             </>}
+            {(form.isRepresented as boolean) && <>
+              <span style={{ color: 'var(--text-faint)' }}>·</span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }}>
+                ★ I Represent the Player
+              </span>
+            </>}
           </div>
         </div>
 
@@ -328,7 +338,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Physical */}
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Physical</p>
+          <p className="text-[10px] uppercase font-bold mb-3 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Physical</p>
           <div>
             <Row label="Position"      display={displayPosition(form.position || player.position || '')}  manual={isManual('position')}    isEditing={false} inputValue={form.position}    onChange={v => setField('position', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Height"        display={form.heightCm ? `${form.heightCm} cm` : player.heightCm ? `${player.heightCm} cm` : null}   manual={isManual('heightCm')}    isEditing={false} inputValue={form.heightCm}    onChange={v => setField('heightCm', v)}  inputType="number" onQuickSave={canWrite ? handleSave : undefined} />
@@ -340,7 +350,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <Row label="Player Phone"  display={form.playerPhone || null} manual={cfGreen('playerPhone')} isEditing={false} inputValue={form.playerPhone}  onChange={v => setField('playerPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
           </div>
           <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
-            <p className="text-[8px] uppercase font-semibold mb-1" style={{ letterSpacing: '0.8px', color: 'var(--text-faint)' }}>Current Status</p>
+            <p className="text-[10px] uppercase font-bold mb-1 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Current Status</p>
             <Row label="Availability"  display={(form.available as boolean) ? 'Available' : 'Not Avail.'} isEditing={false} inputValue="" onChange={() => {}} isBool boolValue={form.available as boolean} onBoolChange={canWrite ? saveAvailability : undefined} highlight={form.available as boolean} />
             <Row label="Injury"        display={form.injuryType || null}    manual={cfGreen('injuryType')}   isEditing={false} inputValue={form.injuryType}  onChange={v => setField('injuryType', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Return Date"   display={fmtDate(form.injuryReturn)} manual={cfGreen('injuryReturn')} isEditing={false} inputValue={form.injuryReturn} onChange={v => setField('injuryReturn', v)} inputType="date" onQuickSave={canWrite ? handleSave : undefined} />
@@ -349,7 +359,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Contract & Value */}
         <div className="p-4" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Contract & Value</p>
+          <p className="text-[10px] uppercase font-bold mb-3 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Contract & Value</p>
           <div>
             <Row label="Club"            display={form.clubName || player.clubName || null}         manual={isManual('clubName')}    isEditing={false} inputValue={form.clubName}       onChange={v => setField('clubName', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="League"          display={form.league || null}    manual={cfGreen('league')}       isEditing={false} inputValue={form.league}         onChange={v => setField('league', v)} onQuickSave={canWrite ? handleSave : undefined} />
@@ -364,25 +374,19 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
           </div>
         </div>
 
-        {/* Scout Info */}
+        {/* Scout Info + Agent Info */}
         <div className="p-4">
-          <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
+          {/* Scout Info */}
+          <p className="text-[10px] uppercase font-bold mb-3 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Scout Info</p>
           <div>
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
             <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
-              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Referral</span>
+              <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Referral</span>
               <div className="w-32">
                 <AutocompleteField value={form.sentBy || ''} onChange={v => setField('sentBy', v)} onSave={canWrite ? handleSave : undefined} suggestions={referralSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} />
               </div>
             </div>
-            <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
-              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>Agent</span>
-              <div className="w-32">
-                <AutocompleteField value={form.agentName || player.agentName || ''} onChange={v => setField('agentName', v)} onSave={canWrite ? handleSave : undefined} suggestions={agentSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} onPickSuggestion={name => { const phone = agentPhoneMap.current.get(name); if (phone) setField('agentPhone', phone) }} />
-              </div>
-            </div>
-            <Row label="Agent Phone"     display={form.agentPhone || null}       manual={cfGreen('agentPhone')}   isEditing={false} inputValue={form.agentPhone}  onChange={v => setField('agentPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Plays National"  display={(form.playsNational as boolean) ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={false} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool neutralFalse boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
             <Row label="Recent Form"     display={form.recentForm || null}       manual={cfGreen('recentForm')}   isEditing={false} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <LinkChips canEdit={canWrite} links={[
@@ -399,7 +403,23 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
               onSave={canWrite ? handleSave : undefined}
               canEdit={canWrite}
             />
-            <DescRow label="Description"   display={form.description || null} manual={cfGreen('description')} isEditing={false} inputValue={form.description} onChange={v => setField('description', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <DescRow label="Description" display={form.description || null} manual={cfGreen('description')} isEditing={false} inputValue={form.description} onChange={v => setField('description', v)} onQuickSave={canWrite ? handleSave : undefined} />
+          </div>
+
+          {/* Agent Info */}
+          <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-[10px] uppercase font-bold mb-3 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Agent Info</p>
+            <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+              <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Agent</span>
+              <div className="w-32">
+                <AutocompleteField value={form.agentName || player.agentName || ''} onChange={v => setField('agentName', v)} onSave={canWrite ? handleSave : undefined} suggestions={agentSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} onPickSuggestion={name => { const phone = agentPhoneMap.current.get(name); if (phone) setField('agentPhone', phone) }} />
+              </div>
+            </div>
+            <Row label="Agent Phone"     display={form.agentPhone || null}       manual={cfGreen('agentPhone')}   isEditing={false} inputValue={form.agentPhone}  onChange={v => setField('agentPhone', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="I Represent the Player" display={(form.isRepresented as boolean) ? 'Yes' : 'No'} manual={false} isEditing={false} inputValue={(form.isRepresented as boolean) ? 'Yes' : 'No'} onChange={() => {}} isBool neutralFalse={false} boolValue={form.isRepresented as boolean} onBoolChange={canWrite ? v => setField('isRepresented', v) : undefined} highlight={(form.isRepresented as boolean)} />
+            {(form.isRepresented as boolean) && (
+              <Row label="Mandate Since" display={form.mandateDate ? fmtDate(form.mandateDate) : null} manual={cfGreen('mandateDate')} isEditing={false} inputValue={form.mandateDate} onChange={v => setField('mandateDate', v)} onQuickSave={canWrite ? handleSave : undefined} inputType="date" />
+            )}
           </div>
         </div>
       </div>
@@ -410,7 +430,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         {/* Col 1: Heat Map */}
         <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
           <div className="flex items-center gap-1.5">
-            <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Heat Map</p>
+            <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Heat Map</p>
             {canWrite && scUrl && (
               <button
                 onClick={handleRefreshHeatmap}
@@ -433,7 +453,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Col 2: Season Stats */}
         <div className="p-4 flex flex-col gap-2" style={{ borderRight: '1px solid var(--border)' }}>
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Season Stats</p>
+          <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Season Stats</p>
           {canWrite ? (
             <SeasonStatsEditor
               json={form.seasonStats || '{"seasons":[]}'}
@@ -447,7 +467,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
         {/* Col 3: FM Attributes */}
         <div className="p-4 flex flex-col gap-2">
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: localActiveFm ? 'rgba(0,200,150,0.8)' : 'var(--text-muted)' }}>FM Attributes</p>
+          <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: localActiveFm ? '#00c896' : 'var(--text-primary)', borderColor: '#00c896' }}>FM Attributes</p>
           {localActiveFm ? (
             <FMAttributesEditor
               value={form.fmAttributes ?? ''}
@@ -717,7 +737,7 @@ function DescRow({ label, display, manual = false, isEditing, inputValue, onChan
     >
       <div className="flex items-center gap-1 mb-1.5">
         {manual && hasValue && <span title="Manually edited" style={{ color: '#00c896', fontSize: 9 }}>✎</span>}
-        <p className="text-[9px] uppercase font-semibold" style={{ color: 'var(--text-faint)', letterSpacing: '0.7px' }}>{label}</p>
+        <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>{label}</p>
         {canInline && (
           <svg className="w-2.5 h-2.5 opacity-0 group-hover:opacity-30 transition-opacity" viewBox="0 0 24 24" fill="#00c896">
             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>

@@ -665,7 +665,7 @@ export default function EvaluationSection({ databaseId, playerId, canWrite, curr
       {/* Header */}
       <div className="px-4 py-2 flex items-center justify-between" style={{ background: 'var(--subtle-bg)', borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-2">
-          <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Evaluations</p>
+          <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Evaluations</p>
           {loading ? (
             <div className="w-3 h-3 rounded-full border-2 animate-spin flex-shrink-0" style={{ borderColor: '#00c896', borderTopColor: 'transparent' }} />
           ) : evaluations.length > 0 && (

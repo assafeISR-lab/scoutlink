@@ -54,7 +54,7 @@ export default function HighlightsField({
 
   return (
     <div className="mt-2.5 pt-2.5 border-t" style={{ borderColor: 'var(--border)' }}>
-      <p className="text-[9px] uppercase tracking-[.7px] font-semibold mb-1.5" style={{ color: 'var(--text-faint)' }}>Highlights</p>
+      <p className="text-[10px] uppercase font-bold mb-1.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Highlights</p>
 
       {urls.length > 0 && (
         <div className="flex flex-col gap-1 mb-1.5">

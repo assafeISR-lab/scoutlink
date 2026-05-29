@@ -28,7 +28,7 @@ export default function LinkChips({
 
   return (
     <div>
-      <p className="text-[9px] uppercase tracking-[.7px] font-semibold mt-2.5 mb-1.5 pt-2.5 border-t" style={{ color: 'var(--text-faint)', borderColor: 'var(--border)' }}>Links</p>
+      <p className="text-[10px] uppercase font-bold mt-2.5 mb-1.5 pt-2.5 pl-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderTop: '1px solid var(--border)', borderLeft: '2px solid #00c896' }}>Links</p>
       <div className="flex flex-wrap gap-1.5">
         {visible.map(({ label, value, onChange, onBlur }) => {
           const hasUrl = value.startsWith('http')
