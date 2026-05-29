@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface Evaluation {
+export interface Evaluation {
   id: string
   matchDate: string | null
   venue: string | null
@@ -620,18 +620,20 @@ function EvaluationCard({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function EvaluationSection({ databaseId, playerId, canWrite, currentUserId }: {
+export default function EvaluationSection({ databaseId, playerId, canWrite, currentUserId, initialEvaluations }: {
   databaseId: string
   playerId: string
   canWrite: boolean
   currentUserId: string
+  initialEvaluations?: Evaluation[]
 }) {
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([])
-  const [loading, setLoading]         = useState(true)
+  const [evaluations, setEvaluations] = useState<Evaluation[]>(initialEvaluations ?? [])
+  const [loading, setLoading]         = useState(!initialEvaluations)
   const [adding,  setAdding]          = useState(false)
   const [saveError, setSaveError]     = useState<string | null>(null)
 
   useEffect(() => {
+    if (initialEvaluations) return
     let cancelled = false
     setLoading(true)
     fetch(`/api/databases/${databaseId}/players/${playerId}/evaluations`)

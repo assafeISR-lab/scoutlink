@@ -12,9 +12,22 @@ interface Report {
   createdAt: string
 }
 
-export default function ReportsList({ reports: initial }: { reports: Report[] }) {
+interface ScoutReport {
+  id: string
+  updatedAt: string
+  player: {
+    id: string
+    name: string
+    position: string | null
+    clubName: string | null
+    databaseId: string
+  }
+}
+
+export default function ReportsList({ reports: initial, scoutReports: initialScout }: { reports: Report[]; scoutReports: ScoutReport[] }) {
   const router = useRouter()
   const [reports, setReports] = useState(initial)
+  const [scoutReports] = useState(initialScout)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
@@ -23,10 +36,24 @@ export default function ReportsList({ reports: initial }: { reports: Report[] })
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  // Scouting reports search + date state (placeholder only)
+  // Scouting reports search + date state
   const [scoutSearch, setScoutSearch] = useState('')
   const [scoutDateFrom, setScoutDateFrom] = useState('')
   const [scoutDateTo, setScoutDateTo] = useState('')
+
+  const filteredScout = useMemo(() => {
+    const q = scoutSearch.trim().toLowerCase()
+    return scoutReports.filter(r => {
+      if (q && !r.player.name.toLowerCase().includes(q) && !(r.player.clubName ?? '').toLowerCase().includes(q)) return false
+      if (scoutDateFrom && new Date(r.updatedAt) < new Date(scoutDateFrom)) return false
+      if (scoutDateTo) {
+        const to = new Date(scoutDateTo)
+        to.setHours(23, 59, 59, 999)
+        if (new Date(r.updatedAt) > to) return false
+      }
+      return true
+    })
+  }, [scoutReports, scoutSearch, scoutDateFrom, scoutDateTo])
 
   async function handleDelete(id: string) {
     setDeleting(id)
@@ -134,21 +161,72 @@ export default function ReportsList({ reports: initial }: { reports: Report[] })
           </div>
         </div>
 
-        {/* Coming soon placeholder */}
-        <div
-          className="rounded-2xl flex flex-col items-center justify-center text-center px-8 py-16"
-          style={{ background: 'var(--subtle-bg)', border: '1px dashed rgba(255,159,67,0.3)', minHeight: '280px' }}
-        >
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(255,159,67,0.08)', border: '1px solid rgba(255,159,67,0.2)' }}>
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#ff9f43">
-              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-            </svg>
+        {/* Scout reports list */}
+        {scoutReports.length === 0 ? (
+          <div className="rounded-2xl flex flex-col items-center justify-center text-center px-8 py-16"
+            style={{ background: 'var(--subtle-bg)', border: '1px dashed rgba(255,159,67,0.3)', minHeight: '280px' }}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(255,159,67,0.08)', border: '1px solid rgba(255,159,67,0.2)' }}>
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#ff9f43">
+                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+              </svg>
+            </div>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>No Reports Yet</p>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-faint)' }}>
+              Open a player profile and use the<br />&ldquo;AI Report&rdquo; section to generate and finalize a report.
+            </p>
           </div>
-          <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Coming Soon</p>
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-faint)' }}>
-            Full per-player scouting reports with<br />analysis, ratings, and recommendations.
-          </p>
-        </div>
+        ) : filteredScout.length === 0 ? (
+          <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--subtle-bg)', border: '1px dashed var(--border-strong)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No reports match your filters</p>
+            <button onClick={() => { setScoutSearch(''); setScoutDateFrom(''); setScoutDateTo('') }} className="mt-2 text-xs font-medium" style={{ color: '#ff9f43' }}>
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card-solid)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--border-strong)' }}>
+            {filteredScout.map((report, i) => {
+              const updatedDate = new Date(report.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+              return (
+                <div key={report.id}
+                  className="flex items-center justify-between px-4 py-3.5 group transition-colors"
+                  style={{ borderBottom: i < filteredScout.length - 1 ? '1px solid var(--border)' : undefined }}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.15)' }}>
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#00c896">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13A2.5 2.5 0 0 0 5 15.5 2.5 2.5 0 0 0 7.5 18 2.5 2.5 0 0 0 10 15.5 2.5 2.5 0 0 0 7.5 13m9 0a2.5 2.5 0 0 0-2.5 2.5 2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5z"/>
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                          <Highlight text={report.player.name} query={scoutSearch} />
+                        </p>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0"
+                          style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }}>
+                          ✓ AI Report
+                        </span>
+                      </div>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                        {report.player.clubName && <><Highlight text={report.player.clubName} query={scoutSearch} /></>}
+                        {report.player.position && <><span className="mx-1" style={{ color: 'var(--text-faint)' }}>·</span>{report.player.position}</>}
+                        <span className="mx-1" style={{ color: 'var(--text-faint)' }}>·</span>{updatedDate}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    <Link
+                      href={`/databases/${report.player.databaseId}/players/${report.player.id}`}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      style={{ background: 'rgba(0,200,150,0.08)', color: '#00c896', border: '1px solid rgba(0,200,150,0.2)' }}
+                    >
+                      View
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Right: Snapshots ── */}

@@ -11,7 +11,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const user = await getUser()
   if (!user) redirect('/login')
 
-  const [player, db] = await Promise.all([
+  const [player, db, rawEvaluations, rawReport] = await Promise.all([
     prisma.player.findUnique({
       where: { id: playerId },
       include: {
@@ -25,11 +25,31 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
       where: { id: databaseId },
       include: { access: { where: { agentId: user.id } } },
     }),
+    prisma.playerEvaluation.findMany({
+      where: { playerId },
+      include: { agent: { select: { id: true, fullName: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.playerReport.findUnique({ where: { playerId } }),
   ])
 
   if (!player || !db || player.databaseId !== databaseId) notFound()
   const isOwner = db.ownerId === user.id
   if (!isOwner && db.access.length === 0) redirect('/databases')
+
+  const initialEvaluations = rawEvaluations.map(e => ({
+    ...e,
+    matchDate: e.matchDate?.toISOString() ?? null,
+    createdAt: e.createdAt.toISOString(),
+    updatedAt: e.updatedAt.toISOString(),
+  }))
+
+  const initialReport = rawReport ? {
+    ...rawReport,
+    includedSections: rawReport.includedSections as Record<string, boolean> | null,
+    createdAt: rawReport.createdAt.toISOString(),
+    updatedAt: rawReport.updatedAt.toISOString(),
+  } : null
 
   const canWrite = isOwner || db.access[0]?.permission === 'contributor'
 
@@ -62,6 +82,8 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
         currentUserId={user.id}
         databaseId={databaseId}
         canWrite={canWrite}
+        initialEvaluations={initialEvaluations}
+        initialReport={initialReport}
         actionButtons={
           <>
             <CreatePlayerReportButton

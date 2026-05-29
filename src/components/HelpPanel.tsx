@@ -359,6 +359,7 @@ const TOPICS: Topic[] = [
         'Open any list and find the player in the table.',
         'Click the player\'s name (it\'s a blue link).',
         'This opens the full profile card with all their info, stats, and heat map.',
+        'Use the three tabs at the top — "Profile" for all player data, "Evaluations" for match observations, and "AI Report" to generate a professional scouting report.',
       ],
     },
     he: {
@@ -368,6 +369,7 @@ const TOPICS: Topic[] = [
         'פתח רשימה כלשהי ומצא את השחקן בטבלה.',
         'לחץ על שם השחקן (קישור כחול).',
         'זה יפתח את כרטיס הפרופיל המלא עם כל המידע, הסטטיסטיקות ומפת החום.',
+        'השתמש בשלוש הלשוניות בחלק העליון — "Profile" לכל נתוני השחקן, "Evaluations" לצפיות במשחקים, ו-"AI Report" ליצירת דוח סקאוטינג מקצועי.',
       ],
     },
   },
@@ -723,6 +725,38 @@ const TOPICS: Topic[] = [
         'לחץ על צ\'יפ כדי לפתוח את הסרטון בלשונית חדשה.',
         'לחץ × על צ\'יפ להסרת אותו וידאו.',
       ],
+    },
+  },
+
+  // ── AI Report ────────────────────────────────────────────────────
+  {
+    id: 'ai-report',
+    keywords: ['ai', 'report', 'generate', 'draft', 'finalize', 'scouting report', 'claude', 'בינה', 'דוח', 'ליצור', 'טיוטה'],
+    en: {
+      category: 'Player Profile',
+      title: 'How to generate an AI scouting report',
+      steps: [
+        'Open a player\'s profile by clicking their name in the list.',
+        'Click the "AI Report" tab at the top of the profile card.',
+        'Choose which sections to include — Physical, Contract & Value, Season Stats, FM Attributes, Evaluations, and more.',
+        'Click "Generate Report" — Claude AI writes a professional scouting report draft based on all the player\'s saved data.',
+        'Review and edit the draft text directly in the text area.',
+        'Click "Save Draft" to keep your edits, or "Finalize Report" when the report is ready to send.',
+      ],
+      tip: 'The more data the player has — especially evaluations with ratings and match context — the richer the AI report will be.',
+    },
+    he: {
+      category: 'פרופיל שחקן',
+      title: 'איך ליצור דוח סקאוטינג עם AI',
+      steps: [
+        'פתח את פרופיל השחקן על ידי לחיצה על שמו ברשימה.',
+        'לחץ על לשונית "AI Report" בחלק העליון של כרטיס הפרופיל.',
+        'בחר אילו סעיפים לכלול — פיזי, חוזה, סטטיסטיקות עונה, מאפייני FM, הערכות ועוד.',
+        'לחץ "Generate Report" — Claude AI כותב טיוטת דוח סקאוטינג מקצועית על בסיס כל הנתונים השמורים של השחקן.',
+        'סקור וערוך את טיוטת הטקסט ישירות בתיבת הטקסט.',
+        'לחץ "Save Draft" לשמירת עריכותיך, או "Finalize Report" כשהדוח מוכן לשליחה.',
+      ],
+      tip: 'ככל שיש לשחקן יותר נתונים — במיוחד הערכות עם דירוגים והקשר משחק — כך דוח ה-AI יהיה עשיר ומפורט יותר.',
     },
   },
 

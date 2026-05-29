@@ -32,6 +32,7 @@ model Agent {
   reports           Report[]
   evaluations       PlayerEvaluation[]
   uploadedFiles     PlayerFile[]
+  playerReports     PlayerReport[]
 }
 
 // ─── Player Database ─────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ model Player {
   files        PlayerFile[]
   timeline     TimelineEvent[]
   conflicts    DataConflict[]
+  playerReport PlayerReport?
 
   @@index([databaseId])
   @@index([addedById])
@@ -269,6 +271,23 @@ model PlayerEvaluation {
   agent  Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@index([playerId])
+  @@index([agentId])
+}
+
+// ─── Player AI Report ─────────────────────────────────────────────────────────
+model PlayerReport {
+  id             String   @id @default(cuid())
+  playerId       String   @unique
+  agentId        String
+  reportDraft    String?
+  reportFinalized Boolean @default(false)
+  includedSections Json?  // stores which sections were included
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  agent  Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
   @@index([agentId])
 }
 

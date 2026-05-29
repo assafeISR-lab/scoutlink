@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import EvaluationSection from './[id]/players/[playerId]/EvaluationSection'
+import PlayerReportSection from './[id]/players/[playerId]/PlayerReportSection'
 import PlayerFilesSection from '@/components/PlayerFilesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
@@ -268,6 +269,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const [fmAttributes,       setFmAttributes]       = useState(cf('fmAttributes'))
   const [seasonStats,        setSeasonStats]        = useState(cf('seasonStats') || '{"seasons":[]}')
   const [localActiveFm,      setLocalActiveFm]      = useState(false)
+  const [activeTab,          setActiveTab]           = useState<'profile' | 'evaluations' | 'report'>('profile')
   const [agentSuggestions,   setAgentSuggestions]   = useState<string[]>([])
   const [referralSuggestions,setReferralSuggestions]= useState<string[]>([])
   const [nameBanksLoading,   setNameBanksLoading]   = useState(true)
@@ -689,6 +691,29 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
         </div>
       )}
 
+      {/* ── Tab Bar ── */}
+      <div className="flex items-center" style={{ borderBottom: '1px solid var(--border)', background: 'var(--subtle-bg)' }}>
+        {([
+          { id: 'profile' as const, label: 'Profile' },
+          { id: 'evaluations' as const, label: 'Evaluations' },
+          { id: 'report' as const, label: 'AI Report' },
+        ]).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className="px-4 py-2.5 text-[11px] font-semibold transition-all"
+            style={{
+              color: activeTab === tab.id ? '#00c896' : 'var(--text-muted)',
+              borderBottom: activeTab === tab.id ? '2px solid #00c896' : '2px solid transparent',
+              marginBottom: -1,
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'profile' && <>
       {/* ── Source chips ── */}
       <LinkChips canEdit={canWrite} links={[
         { label: 'Transfermarkt', value: transfermarktUrl, onChange: setTransfermarktUrl, onBlur: () => markDirty(undefined, 'transfermarktUrl') },
@@ -809,18 +834,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
         </div>
       </div>
 
-      {/* ── Evaluations ── */}
-      <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-        <EvaluationSection
-          key={`eval-${player.id}`}
-          databaseId={dbId}
-          playerId={player.id}
-          canWrite={canWrite}
-          currentUserId={currentUserId}
-        />
-      </div>
-
-      {/* ── Files ── */}
+      {/* ── Files (profile tab) ── */}
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
         <PlayerFilesSection
           key={`files-${player.id}`}
@@ -829,6 +843,31 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
           canWrite={canWrite}
         />
       </div>
+      </>}
+
+      {activeTab === 'evaluations' && (
+        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+          <EvaluationSection
+            key={`eval-${player.id}`}
+            databaseId={dbId}
+            playerId={player.id}
+            canWrite={canWrite}
+            currentUserId={currentUserId}
+          />
+        </div>
+      )}
+
+      {activeTab === 'report' && (
+        <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)', padding: '24px' }}>
+          <PlayerReportSection
+            forceExpanded
+            key={`report-${player.id}`}
+            databaseId={dbId}
+            playerId={player.id}
+            canWrite={canWrite}
+          />
+        </div>
+      )}
 
     </div>
   )

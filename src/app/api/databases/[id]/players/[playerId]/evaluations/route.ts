@@ -7,19 +7,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = await prisma.playerDatabase.findUnique({
-    where: { id: databaseId },
-    include: { access: { where: { agentId: user.id } } },
-  })
+  const [db, evaluations] = await Promise.all([
+    prisma.playerDatabase.findUnique({
+      where: { id: databaseId },
+      include: { access: { where: { agentId: user.id } } },
+    }),
+    prisma.playerEvaluation.findMany({
+      where: { playerId },
+      include: { agent: { select: { id: true, fullName: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ])
   if (!db) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const isOwner = db.ownerId === user.id
   if (!isOwner && db.access.length === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
-  const evaluations = await prisma.playerEvaluation.findMany({
-    where: { playerId },
-    include: { agent: { select: { id: true, fullName: true } } },
-    orderBy: { createdAt: 'desc' },
-  })
 
   return NextResponse.json(evaluations.map(e => ({
     ...e,

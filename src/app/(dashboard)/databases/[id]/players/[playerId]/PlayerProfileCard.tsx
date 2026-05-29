@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import EvaluationSection from './EvaluationSection'
+import EvaluationSection, { type Evaluation } from './EvaluationSection'
+import PlayerReportSection, { type PlayerReport } from './PlayerReportSection'
 import PlayerFilesSection from '@/components/PlayerFilesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
@@ -53,11 +54,13 @@ interface Props {
   databaseId: string
   canWrite: boolean
   actionButtons: React.ReactNode
+  initialEvaluations?: Evaluation[]
+  initialReport?: PlayerReport | null
 }
 
 const toDateStr = (d: Date | null) => d ? new Date(d).toISOString().split('T')[0] : ''
 
-export default function PlayerProfileCard({ player, addedByName, currentUserId, databaseId, canWrite, actionButtons }: Props) {
+export default function PlayerProfileCard({ player, addedByName, currentUserId, databaseId, canWrite, actionButtons, initialEvaluations, initialReport }: Props) {
   // Helper to get custom field value
   const cf = (name: string) => player.customFields.find(f => f.fieldName === name)?.value ?? ''
 
@@ -73,6 +76,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   const [referralSuggestions, setReferralSuggestions] = useState<string[]>([])
   const [nameBanksLoading,    setNameBanksLoading]    = useState(true)
   const agentPhoneMap = useRef<Map<string, string | null>>(new Map())
+  const [activeTab, setActiveTab] = useState<'profile' | 'evaluations' | 'report'>('profile')
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => { setPhotoEnabled(loadActive().has('photo')) }, [])
@@ -296,6 +300,29 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         </div>
       </div>
 
+      {/* ── Tab Bar ── */}
+      <div className="flex items-center" style={{ borderBottom: '1px solid var(--border)', background: 'var(--subtle-bg)' }}>
+        {([
+          { id: 'profile' as const, label: 'Profile' },
+          { id: 'evaluations' as const, label: 'Evaluations' },
+          { id: 'report' as const, label: 'AI Report' },
+        ]).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className="px-5 py-2.5 text-[11px] font-semibold transition-all"
+            style={{
+              color: activeTab === tab.id ? '#00c896' : 'var(--text-muted)',
+              borderBottom: activeTab === tab.id ? '2px solid #00c896' : '2px solid transparent',
+              marginBottom: -1,
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'profile' && <>
       {/* ── 3-column body ── */}
       <div className="grid grid-cols-3">
 
@@ -444,24 +471,40 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         </div>
       </div>
 
-      {/* ── Evaluations ── */}
+      {/* ── Files ── */}
       <div style={{ borderTop: '1px solid var(--border)' }}>
+        <PlayerFilesSection
+          key={`files-${player.id}`}
+          playerId={player.id}
+          databaseId={databaseId}
+          canWrite={canWrite}
+        />
+      </div>
+      </>}
+
+      {activeTab === 'evaluations' && (
         <EvaluationSection
           key={`eval-${player.id}`}
           databaseId={databaseId}
           playerId={player.id}
           canWrite={canWrite}
           currentUserId={currentUserId}
+          initialEvaluations={initialEvaluations}
         />
-      </div>
+      )}
 
-      {/* ── Files ── */}
-      <PlayerFilesSection
-        key={`files-${player.id}`}
-        playerId={player.id}
-        databaseId={databaseId}
-        canWrite={canWrite}
-      />
+      {activeTab === 'report' && (
+        <div style={{ padding: '24px' }}>
+          <PlayerReportSection
+            forceExpanded
+            key={`report-${player.id}`}
+            databaseId={databaseId}
+            playerId={player.id}
+            canWrite={canWrite}
+            initialReport={initialReport}
+          />
+        </div>
+      )}
 
     </div>
   )
