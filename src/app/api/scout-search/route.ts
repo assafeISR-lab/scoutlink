@@ -7,13 +7,17 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 interface ExtractedFilters {
   position?: string | null
+  positionExclude?: string | null
   ageMin?: number | null
   ageMax?: number | null
   nationality?: string | null
   preferredFoot?: string | null
   marketValueMin?: number | null
   marketValueMax?: number | null
+  salaryMin?: number | null
+  salaryMax?: number | null
   contractExpiryYearMax?: number | null
+  freeAgentOnly?: boolean | null
   league?: string | null
   club?: string | null
 }
@@ -28,17 +32,27 @@ const EXTRACT_SYSTEM = `You are a football scouting assistant. Extract structure
 Return ONLY a valid JSON object with these fields (use null for anything not mentioned or unclear):
 {
   "position": string | null,
+  "positionExclude": string | null,
   "ageMin": number | null,
   "ageMax": number | null,
   "nationality": string | null,
   "preferredFoot": "Right" | "Left" | "Both" | null,
   "marketValueMin": number | null,
   "marketValueMax": number | null,
+  "salaryMin": number | null,
+  "salaryMax": number | null,
   "contractExpiryYearMax": number | null,
+  "freeAgentOnly": boolean | null,
   "league": string | null,
   "club": string | null
 }
-marketValue values are in euros. contractExpiryYearMax is the latest year the contract can expire (e.g. "expiring soon" → current year + 1).
+Rules:
+- position: a specific position or comma-separated list to INCLUDE (e.g. "Striker,Centre-Back"). Set to null if scout says "all positions" or does not restrict by position.
+- positionExclude: comma-separated positions to EXCLUDE (e.g. "LB,RB"). Use when scout says "except", "not", "excluding" certain positions.
+- marketValue values are in euros.
+- salaryMin/salaryMax: annual salary in euros (convert if given per week or per month). Use when scout mentions budget, salary, wages.
+- contractExpiryYearMax: latest year the contract can expire (e.g. "expiring soon" → current year + 1).
+- freeAgentOnly: true if scout says "free", "free agent", "out of contract", "no transfer fee needed", "available for free".
 Return no text outside the JSON object.`
 
 const RANK_SYSTEM = `You are an expert football scout analyst. Given a scout's player description and a list of candidate players, score and rank the best matches.
@@ -115,10 +129,16 @@ export async function POST(req: NextRequest) {
   const ageToDate = (age: number) => new Date(now.getFullYear() - age, now.getMonth(), now.getDate())
 
   // Build where clause for standard fields
+  // Guard: only apply position filter if it looks like a real position value (short, no "all"/"except")
+  const positionFilter = filters.position &&
+    filters.position.length < 40 &&
+    !/\b(all|every|any|except|excluding|not)\b/i.test(filters.position)
+      ? filters.position : null
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {
     databaseId: { in: allDbs.map(d => d.id) },
-    ...(filters.position && { position: { contains: filters.position, mode: 'insensitive' } }),
+    ...(positionFilter && { position: { contains: positionFilter, mode: 'insensitive' } }),
     ...(filters.nationality && { nationality: { contains: filters.nationality, mode: 'insensitive' } }),
     ...(filters.club && { clubName: { contains: filters.club, mode: 'insensitive' } }),
   }
@@ -143,8 +163,19 @@ export async function POST(req: NextRequest) {
     take: 200,
   })
 
-  // In-memory filter for custom fields
+  // Pre-compute excluded positions (lowercased) for fast lookup
+  const excludedPositions = filters.positionExclude
+    ? filters.positionExclude.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    : []
+
+  // In-memory filter for custom fields and position exclusion
   const candidates = rawPlayers.filter(p => {
+    // Position exclusion — e.g. "all positions except LB, RB"
+    if (excludedPositions.length > 0 && p.position) {
+      const pos = p.position.toLowerCase()
+      if (excludedPositions.some(ex => pos.includes(ex))) return false
+    }
+
     if (filters.preferredFoot) {
       const foot = getCF(p.customFields, 'foot')
       if (foot && foot.toLowerCase() !== filters.preferredFoot.toLowerCase()) return false
@@ -158,6 +189,31 @@ export async function POST(req: NextRequest) {
       if (expiry) {
         const d = new Date(expiry)
         if (!isNaN(d.getTime()) && d.getFullYear() > filters.contractExpiryYearMax) return false
+      }
+    }
+    // Free agent: contractExpiry must be empty, or already expired / expiring this year
+    if (filters.freeAgentOnly) {
+      const expiry = getCF(p.customFields, 'contractExpiry')
+      if (expiry) {
+        const d = new Date(expiry)
+        if (!isNaN(d.getTime()) && d.getFullYear() > now.getFullYear()) return false
+      }
+    }
+    // Salary filter against salaryExpect / salaryReal / fmWages (all stored as strings)
+    if (filters.salaryMin != null || filters.salaryMax != null) {
+      const rawSalary = getCF(p.customFields, 'salaryExpect') ||
+                        getCF(p.customFields, 'salaryReal') ||
+                        getCF(p.customFields, 'fmWages')
+      if (rawSalary) {
+        // Extract first number from the string (handles "€70,000", "£3,000 p/w", "70000", etc.)
+        const numStr = rawSalary.replace(/[^0-9.]/g, '')
+        const num = parseFloat(numStr)
+        if (!isNaN(num)) {
+          // Rough heuristic: if value looks weekly (< 10000), multiply by 52
+          const annual = num < 10000 ? num * 52 : num
+          if (filters.salaryMin != null && annual < filters.salaryMin) return false
+          if (filters.salaryMax != null && annual > filters.salaryMax) return false
+        }
       }
     }
     return true
