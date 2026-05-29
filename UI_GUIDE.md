@@ -1822,4 +1822,98 @@ function fmtSize(bytes: number) {
 
 **Storage:** Supabase bucket `player-files`. Path per file: `{playerId}/{uuid}`. Original name stored in `PlayerFile.fileName` DB field.
 
+---
+
+## 46. Image Upload Button with Preview
+
+Used in Settings → My Branding for logo upload. Hidden `<input type="file">` triggered by a visible button. On file select, converts to base64 data URL via `FileReader` and stores in state — no storage bucket needed for small images.
+
+```tsx
+const fileInputRef = useRef<HTMLInputElement>(null)
+const [uploading, setUploading] = useState(false)
+const [imageUrl, setImageUrl] = useState('')  // base64 data URL
+
+async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) { /* error */ return }
+  if (file.size > 5 * 1024 * 1024) { /* error */ return }
+  setUploading(true)
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+  setImageUrl(dataUrl)
+  setUploading(false)
+  if (fileInputRef.current) fileInputRef.current.value = ''
+}
+
+// Hidden input
+<input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+
+// Preview box (64×64)
+<div className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden"
+  style={{ background: 'var(--subtle-bg)', border: '1px solid var(--border)' }}>
+  {imageUrl
+    ? <img src={imageUrl} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4 }} />
+    : <svg className="w-6 h-6" style={{ color: 'var(--text-faint)' }} ... />
+  }
+</div>
+
+// Upload trigger button (ghost style)
+<button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+  style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+  onMouseEnter={e => { if (!uploading) { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' } }}
+  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+  {uploading
+    ? <><div className="w-3.5 h-3.5 rounded-full border-2 animate-spin" style={{ borderColor: '#00c896', borderTopColor: 'transparent' }} />Uploading…</>
+    : <><svg className="w-3.5 h-3.5" ...>upload icon</svg>{imageUrl ? 'Replace' : 'Upload'}</>
+  }
+</button>
+
+// Remove link (shown when image set)
+{imageUrl && (
+  <button onClick={() => setImageUrl('')} className="text-xs px-2 py-1 rounded-lg"
+    style={{ color: 'var(--text-faint)' }}
+    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-faint)'}>
+    Remove
+  </button>
+)}
 ```
+
+**Notes:**
+- File input is always `className="hidden"` — never shown directly
+- Preview wrapper is fixed 64×64 with `objectFit: 'contain'` and 4px inner padding
+- Spinner uses brand green: `borderColor: '#00c896', borderTopColor: 'transparent'`
+- Base64 data URLs can be stored directly in a DB `String` field — suitable for small images (logos, avatars). Don't use for large files.
+
+---
+
+## 47. Download Link Styled as Button
+
+An `<a>` tag with the `download` attribute that triggers a file save dialog. Use instead of `<button>` when the action is a file download from an API endpoint.
+
+```tsx
+<a
+  href="/api/databases/[id]/players/[playerId]/player-report/pdf"
+  download
+  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+  style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', textDecoration: 'none' }}
+  onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v6h5.66V9h3.84L12 2z"/>
+  </svg>
+  Save PDF
+</a>
+```
+
+**Key rules:**
+- Always `textDecoration: 'none'` — otherwise the browser underlines it as a link
+- `download` attribute (no value) uses the filename from the `Content-Disposition` response header
+- Style identically to ghost secondary buttons (section 6) so it blends into button rows
+- The API route must return `Content-Disposition: attachment; filename="..."` and correct `Content-Type`

@@ -179,29 +179,27 @@ export default function PlayerReportSection({ databaseId, playerId, canWrite, fo
   function renderContent() {
     return (
       <>
-        {/* Section selector */}
-        {!isFinalized && (
-          <div className={forceExpanded ? 'mb-5' : 'pt-4 pb-3'}>
-            <p className="text-[9px] uppercase font-bold mb-2.5" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>
-              Include in Report
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {ALL_SECTIONS.map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => toggleSection(key)}
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
-                  style={sections[key]
-                    ? { background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)' }
-                    : { background: 'var(--subtle-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+        {/* Section selector — always visible so scout can change sections and re-generate */}
+        <div className={forceExpanded ? 'mb-5' : 'pt-4 pb-3'}>
+          <p className="text-[9px] uppercase font-bold mb-2.5" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>
+            Include in Report
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {ALL_SECTIONS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => toggleSection(key)}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                style={sections[key]
+                  ? { background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)' }
+                  : { background: 'var(--subtle-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
+                }
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Error */}
         {error && (
@@ -245,8 +243,8 @@ export default function PlayerReportSection({ databaseId, playerId, canWrite, fo
                 >
                   {draft || report?.reportDraft}
                 </pre>
-                {canWrite && (
-                  <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  {canWrite && (
                     <button
                       onClick={handleReopen}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
@@ -255,8 +253,27 @@ export default function PlayerReportSection({ databaseId, playerId, canWrite, fo
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
                       Re-open Draft
                     </button>
-                  </div>
-                )}
+                  )}
+                  <a
+                    href={`/api/databases/${databaseId}/players/${playerId}/player-report/pdf`}
+                    download
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', textDecoration: 'none' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zm7-18L5.33 9h3.84v6h5.66V9h3.84L12 2z"/></svg>
+                    Save PDF
+                  </a>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 ml-auto"
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                    onMouseEnter={e => { if (!generating) { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' } }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                    ↺ Re-generate
+                  </button>
+                </div>
               </div>
             )}
 

@@ -77,7 +77,20 @@ function buildPrompt(
 ): string {
   const cfs = player.customFields
   const name = [player.firstName, player.middleName, player.lastName].filter(Boolean).join(' ')
-  const blocks: string[] = [`PLAYER: ${name}`]
+  const selectedLabels: Record<SectionKey, string> = {
+    physical: 'Physical Profile', contract: 'Contract & Value', scoutInfo: 'Scout Info',
+    description: 'Description', heatMap: 'Heat Map', seasonStats: 'Season Statistics',
+    fmAttributes: 'FM Attributes', evaluations: 'Evaluations', files: 'Files', highlights: 'Highlight Videos',
+  }
+  const selectedNames = (Object.keys(sections) as SectionKey[])
+    .filter(k => sections[k])
+    .map(k => selectedLabels[k])
+    .join(', ')
+
+  const blocks: string[] = [
+    `PLAYER: ${name}`,
+    `SELECTED SECTIONS: ${selectedNames || 'None'}\nIMPORTANT: Only write report content for the sections listed above. Do not reference, infer, or invent data for any section not listed. Base every statement strictly on the data provided below — do not use external knowledge about this player.`,
+  ]
 
   if (sections.physical) {
     const lines = [
@@ -206,49 +219,29 @@ function buildPrompt(
   return blocks.join('\n\n')
 }
 
-const REPORT_SYSTEM = `You are a professional football scouting analyst writing a comprehensive player report for a club, director of football, or sporting director.
+const REPORT_SYSTEM = `You are a professional football scouting analyst writing a player report for a club, director of football, or sporting director.
 
-Your task: synthesise all provided player data into a polished, professional scouting report. Write in authoritative scouting language. Use section labels in uppercase followed by a colon. Plain text only — no markdown symbols.
+CRITICAL RULES:
+- The input will specify SELECTED SECTIONS. Only write content for those sections. Do not write about anything else.
+- Base every sentence strictly on the data provided in the input. Do not use external knowledge about the player — even if you recognise their name.
+- If a selected section's data is empty or missing, write one sentence: "[Section]: No data recorded."
+- Do not invent, infer, or estimate any fact not explicitly present in the input.
+- Write in third person ("The player demonstrates…"), professional scouting language, uppercase section labels followed by a colon, plain text — no markdown.
 
-Structure:
+Section guidelines (only apply to selected sections):
+- PLAYER SUMMARY: Who the player is based only on the provided facts. One paragraph.
+- TECHNICAL PROFILE: Based only on FM attributes and/or evaluation technical ratings and comments provided.
+- PHYSICAL PROFILE: Based only on height, foot, and physical evaluation ratings and comments provided.
+- TACTICAL PROFILE: Based only on tactical evaluation ratings and comments provided.
+- MENTALITY & POTENTIAL: Based only on mentality and potential evaluation ratings and comments provided.
+- STATISTICAL OVERVIEW: Based only on season stats provided.
+- EVALUATION HISTORY: Synthesise only the evaluations provided. Note trends if multiple exist. If conflicting recommendations, note it.
+- RISK ASSESSMENT: Based only on risk flags from the evaluations provided.
+- CONTRACT & MARKET SITUATION: Based only on contract and value data provided.
+- SCOUT VERDICT: Overall recommendation and confidence based only on the evaluations and data provided. If no evaluations exist, state that a verdict cannot be given without formal observations.
 
-PLAYER SUMMARY:
-Who the player is — name, age, position, club, nationality. One strong opening paragraph covering the key profile facts.
-
-TECHNICAL PROFILE:
-Assess technical ability. Reference FM attributes if provided. Ground in evaluation ratings and scout comments if available. 2-4 sentences.
-
-PHYSICAL PROFILE:
-Assess physical qualities — height, athleticism, fitness. Reference evaluation physical ratings and comments if available. 2-4 sentences.
-
-TACTICAL PROFILE:
-How the player reads the game, positioning, decision-making. Reference tactical evaluation ratings and comments if available. 2-4 sentences.
-
-MENTALITY & POTENTIAL:
-Character, attitude, composure under pressure. Development ceiling. Reference mentality and potential ratings if available. 2-4 sentences.
-
-STATISTICAL OVERVIEW:
-If season stats are provided, summarise performance numbers in context. If not available, state "No statistical data available."
-
-EVALUATION HISTORY:
-If evaluations are provided, synthesise observations across all matches. Note trends (improvement, consistency, specific moments). If multiple evaluations exist with conflicting recommendations, note it. If no evaluations, state "No formal evaluations on record."
-
-RISK ASSESSMENT:
-Summarise any risk flags across all evaluations. If no risks flagged, state "No significant risk flags identified."
-
-CONTRACT & MARKET SITUATION:
-If contract/value data is provided, summarise — market value, contract expiry, fees, wages. If not included, omit this section.
-
-SCOUT VERDICT:
-The overall recommendation (Top Talent / Monitor / Reject) and confidence level. Clear justification in 3-4 sentences. If multiple evaluations have different recommendations, synthesise them into one overall verdict.
-
-Guidelines:
-- Ratings are 1-5: 1-2 below standard, 3 adequate, 4 good, 5 exceptional
-- Write in third person: "The player demonstrates…"
-- Be specific — use actual data from the input
-- Do not invent facts not present in the input
-- If a section has no data, write one sentence noting that
-- This report will be printed and shared with clubs — keep it professional`
+Ratings scale: 1-2 below standard, 3 adequate, 4 good, 5 exceptional.
+This report will be printed and shared with clubs — keep it professional.`
 
 // ── GET — fetch existing report ───────────────────────────────────────────────
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string; playerId: string }> }) {

@@ -33,6 +33,7 @@ model Agent {
   evaluations       PlayerEvaluation[]
   uploadedFiles     PlayerFile[]
   playerReports     PlayerReport[]
+  branding          AgentBranding?
 }
 
 // ─── Player Database ─────────────────────────────────────────────────────────
@@ -276,19 +277,37 @@ model PlayerEvaluation {
 
 // ─── Player AI Report ─────────────────────────────────────────────────────────
 model PlayerReport {
-  id             String   @id @default(cuid())
-  playerId       String   @unique
-  agentId        String
-  reportDraft    String?
-  reportFinalized Boolean @default(false)
-  includedSections Json?  // stores which sections were included
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String    @id @default(cuid())
+  playerId         String    @unique
+  agentId          String
+  reportDraft      String?
+  reportFinalized  Boolean   @default(false)
+  includedSections Json?
+  shareToken       String?   @unique
+  shareTokenCreatedAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
   agent  Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@index([agentId])
+}
+
+// ─── Agent Branding ───────────────────────────────────────────────────────────
+model AgentBranding {
+  id            String   @id @default(cuid())
+  agentId       String   @unique
+  agencyName    String?
+  logoUrl       String?
+  phone         String?
+  email         String?
+  website       String?
+  signatureLine String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }
 
 // ─── Activity Log ─────────────────────────────────────────────────────────────

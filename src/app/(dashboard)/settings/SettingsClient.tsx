@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import WebsitesManager from './WebsitesManager'
 import SearchParametersTab from './SearchParametersTab'
+import BrandingTab from './BrandingTab'
 
 interface Website {
   id: string
@@ -18,7 +19,7 @@ interface Website {
   category: string | null
 }
 
-type Tab = 'websites' | 'parameters'
+type Tab = 'websites' | 'parameters' | 'branding'
 
 export default function SettingsClient({ websites }: { websites: Website[] }) {
   const [tab, setTab] = useState<Tab>('websites')
@@ -30,6 +31,7 @@ export default function SettingsClient({ websites }: { websites: Website[] }) {
         {([
           { key: 'websites',   label: 'Scouting Websites', icon: <IconGlobe /> },
           { key: 'parameters', label: 'Search Parameters',  icon: <IconList /> },
+          { key: 'branding',   label: 'My Branding',        icon: <IconBranding /> },
         ] as { key: Tab; label: string; icon: React.ReactNode }[]).map(t => (
           <button
             key={t.key}
@@ -48,6 +50,7 @@ export default function SettingsClient({ websites }: { websites: Website[] }) {
 
       {tab === 'websites'   && <WebsitesManager />}
       {tab === 'parameters' && <SearchParametersTab websites={websites} />}
+      {tab === 'branding'   && <BrandingTab />}
     </div>
   )
 }
@@ -58,4 +61,8 @@ function IconGlobe() {
 
 function IconList() {
   return <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></svg>
+}
+
+function IconBranding() {
+  return <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
 }

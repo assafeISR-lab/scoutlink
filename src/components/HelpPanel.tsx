@@ -742,6 +742,7 @@ const TOPICS: Topic[] = [
         'Click "Generate Report" — Claude AI writes a professional scouting report draft based on all the player\'s saved data.',
         'Review and edit the draft text directly in the text area.',
         'Click "Save Draft" to keep your edits, or "Finalize Report" when the report is ready to send.',
+        'Once finalized, click "Save PDF" to download a formatted PDF report to your device.',
       ],
       tip: 'The more data the player has — especially evaluations with ratings and match context — the richer the AI report will be.',
     },
@@ -755,8 +756,41 @@ const TOPICS: Topic[] = [
         'לחץ "Generate Report" — Claude AI כותב טיוטת דוח סקאוטינג מקצועית על בסיס כל הנתונים השמורים של השחקן.',
         'סקור וערוך את טיוטת הטקסט ישירות בתיבת הטקסט.',
         'לחץ "Save Draft" לשמירת עריכותיך, או "Finalize Report" כשהדוח מוכן לשליחה.',
+        'לאחר הסיום, לחץ "Save PDF" להורדת דוח PDF מעוצב למכשיר שלך.',
       ],
       tip: 'ככל שיש לשחקן יותר נתונים — במיוחד הערכות עם דירוגים והקשר משחק — כך דוח ה-AI יהיה עשיר ומפורט יותר.',
+    },
+  },
+
+  // ── Settings ─────────────────────────────────────────────────────
+  {
+    id: 'my-branding',
+    keywords: ['branding', 'logo', 'agency', 'signature', 'pdf', 'settings', 'מיתוג', 'לוגו', 'סוכנות'],
+    en: {
+      category: 'Settings',
+      title: 'How to set up My Branding',
+      steps: [
+        'Go to Settings in the left sidebar.',
+        'Click the "My Branding" tab.',
+        'Enter your agency or club name, and optionally a signature line (e.g. "Head Scout, Agency Name").',
+        'Click "Upload Logo" and choose an image file — a preview appears immediately.',
+        'Add your phone, email, and website if you want them on reports.',
+        'Click "Save Branding" — your details are saved once and used on every exported PDF report automatically.',
+      ],
+      tip: 'You only need to do this once. Every AI report you export as PDF will include your logo and contact details automatically.',
+    },
+    he: {
+      category: 'הגדרות',
+      title: 'איך להגדיר את המיתוג שלי',
+      steps: [
+        'עבור ל-Settings בסרגל הצד.',
+        'לחץ על לשונית "My Branding".',
+        'הזן את שם הסוכנות או המועדון שלך, ובאופן אופציונלי שורת חתימה (למשל "ראש סקאוטינג, שם הסוכנות").',
+        'לחץ "Upload Logo" ובחר קובץ תמונה — תצוגה מקדימה מופיעה מיד.',
+        'הוסף טלפון, אימייל ואתר אם ברצונך שיופיעו בדוחות.',
+        'לחץ "Save Branding" — הפרטים שלך נשמרים פעם אחת ומשמשים בכל דוח PDF שתייצא אוטומטית.',
+      ],
+      tip: 'צריך לעשות זאת פעם אחת בלבד. כל דוח AI שתייצא כ-PDF יכלול אוטומטית את הלוגו ופרטי הקשר שלך.',
     },
   },
 
