@@ -1988,3 +1988,101 @@ Save Profile, Delete Profile, and ✕ live inside the player card header right-s
 - Dirty (unsaved changes): `rgba(0,200,150,0.1)` bg + green border + pointer cursor
 - Saving: spinner + "Saving…", `cursor: 'default'`
 - Never use `disabled:opacity` — the button stays fully visible in all states
+
+---
+
+## 50. Clubs Page — Team Pills Row
+
+The right panel of the Clubs page has a team-level tab row above the requests section. Uses blue (`#6c8fff`) as the accent color throughout.
+
+```tsx
+{/* Pills row */}
+<div className="flex items-center gap-2 flex-wrap px-4 py-3 border-b"
+  style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
+
+  {/* All pill */}
+  <button onClick={() => setSelectedLevel(null)}
+    className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+    style={!selectedLevel
+      ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
+      : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+    All
+  </button>
+
+  {/* Team level pills — clean, no inline ✕ */}
+  {teamLevels.map(level => (
+    <button key={level} onClick={() => setSelectedLevel(level)}
+      className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+      style={active
+        ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
+        : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+      {level}
+      {count > 0 && <span className="ml-1.5 text-[10px] opacity-70">{count}</span>}
+    </button>
+  ))}
+
+  {/* Manage Teams settings button — right-aligned */}
+  <button onClick={() => setManageTeamsOpen(true)}
+    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ml-auto"
+    style={{ background: 'transparent', color: 'var(--text-faint)', border: '1px solid var(--border)' }}
+    onMouseEnter={e => { e.currentTarget.style.color = '#6c8fff'; e.currentTarget.style.borderColor = 'rgba(108,143,255,0.4)'; e.currentTarget.style.background = 'rgba(108,143,255,0.06)' }}
+    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'transparent' }}>
+    {/* gear svg */}
+    Manage Teams
+  </button>
+</div>
+```
+
+**Team contact card** (shown below pills when a specific team is selected):
+```tsx
+<div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+  <div className="flex items-center justify-between gap-3">
+    {/* Avatar icon + contact details or "No contact yet" */}
+    <button onClick={() => openContactEdit(selectedLevel)}>
+      {currentContact ? 'Edit' : '+ Add Contact'}
+    </button>
+  </div>
+</div>
+```
+
+**Key rules:**
+- Team pills never have inline ✕ buttons — removal is through the "Manage Teams" modal only
+- "Manage Teams" button always sits at the far right of the pills row (`ml-auto`)
+- Blue (`#6c8fff`) is the clubs accent — used the same way green (`#00c896`) is used in Studio
+
+---
+
+## 51. Manage Teams Modal
+
+Modal for adding/removing team levels for a club. Has three sections: active teams (removable), suggested teams to add back, and a custom name input.
+
+**Active teams** — blue chips with ✕:
+```tsx
+{draft.map(level => (
+  <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium"
+    style={{ background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.3)' }}>
+    {level}
+    <button onClick={() => setDraft(prev => prev.filter(l => l !== level))}
+      className="opacity-50 hover:opacity-100 transition-opacity ml-0.5 text-[10px]">✕</button>
+  </span>
+))}
+```
+
+**Add Back section** — dashed pills for removed standard levels:
+```tsx
+<button onClick={() => setDraft(prev => sortLevels([...prev, level]))}
+  className="text-[11px] px-2 py-0.5 rounded-full font-medium transition-all"
+  style={{ background: 'var(--subtle-bg)', color: 'var(--text-muted)', border: '1px dashed var(--border)' }}
+  onMouseEnter → rgba(108,143,255,0.08) bg + #6c8fff color + rgba(108,143,255,0.3) border>
+  + {level}
+</button>
+```
+
+**Default levels** (exported from `TeamPicker.tsx`):
+```ts
+export const DEFAULT_LEVELS = [
+  'First Team', 'U23', 'U21', 'U20', 'U19', 'U18', 'U17', 'U16', 'U15', 'U14',
+]
+```
+
+**Key rule:** Changes are draft-only until "Save" is clicked — no live updates on individual remove/add actions.

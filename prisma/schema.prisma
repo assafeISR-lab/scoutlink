@@ -34,6 +34,9 @@ model Agent {
   uploadedFiles     PlayerFile[]
   playerReports     PlayerReport[]
   branding          AgentBranding?
+  clubs             Club[]
+  clubRequests      ClubRequest[]
+  proposals         PlayerProposal[]
 }
 
 // ─── Player Database ─────────────────────────────────────────────────────────
@@ -102,6 +105,7 @@ model Player {
   timeline     TimelineEvent[]
   conflicts    DataConflict[]
   playerReport PlayerReport?
+  proposals    PlayerProposal[]
 
   @@index([databaseId])
   @@index([addedById])
@@ -369,5 +373,90 @@ model CalendarEvent {
 
   agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
+  @@index([agentId])
+}
+
+// ─── Club ─────────────────────────────────────────────────────────────────────
+model Club {
+  id           String   @id @default(cuid())
+  agentId      String
+  name         String
+  country      String?
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
+  notes        String?
+  logoUrl      String?
+  teamLevels   Json?    // string[] — ordered list of team names defined for this club
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  agent        Agent             @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  requests     ClubRequest[]
+  teamContacts ClubTeamContact[]
+
+  @@index([agentId])
+}
+
+// ─── Club Request ─────────────────────────────────────────────────────────────
+model ClubRequest {
+  id           String   @id @default(cuid())
+  clubId       String
+  agentId      String
+  teamLevel    String?  // which team this request belongs to (matches an entry in Club.teamLevels)
+  position     String?
+  ageMin       Int?
+  ageMax       Int?
+  budget       Float?
+  transferType String?
+  nationality  String?
+  notes        String?
+  status       String   @default("open")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  club      Club             @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  agent     Agent            @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  proposals PlayerProposal[]
+
+  @@index([clubId])
+  @@index([agentId])
+}
+
+// ─── Club Team Contact ────────────────────────────────────────────────────────
+model ClubTeamContact {
+  id           String   @id @default(cuid())
+  clubId       String
+  teamLevel    String
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, teamLevel])
+  @@index([clubId])
+}
+
+// ─── Player Proposal ─────────────────────────────────────────────────────────
+model PlayerProposal {
+  id        String   @id @default(cuid())
+  requestId String
+  playerId  String
+  agentId   String
+  note      String?
+  status    String   @default("proposed")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  request ClubRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  player  Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  agent   Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, playerId])
+  @@index([requestId])
+  @@index([playerId])
   @@index([agentId])
 }

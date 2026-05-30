@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import SearchAllLists, { type Player as SearchListPlayer } from './SearchAllLists'
 import SearchClient from '@/app/(dashboard)/search/SearchClient'
-import PlayerPanelCard, { prefetchPlayer, setCacheEntry, type CachedPlayer } from './PlayerPanelCard'
+import PlayerPanelCard, { prefetchPlayer } from './PlayerPanelCard'
 import CreateDatabaseButton from './CreateDatabaseButton'
 import ImportDatabasesButton from './ImportDatabasesButton'
 import ColumnPicker from './[id]/ColumnPicker'
@@ -316,7 +316,7 @@ function AIResultsPanel({ results, query, onCreateReport, onClose, onPlayerSelec
 
 // ─── Inline Players Table ─────────────────────────────────────────────────────
 
-function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, onPlayerSelect, selectedPlayerId, showOnlyIds, onListLoaded }: { databaseIds: string[]; allDbs: DbItem[]; onCreateReport?: (players: PlayerSnapshot[]) => void; fillHeight?: boolean; onPlayerSelect?: (player: PlayerRow) => void; selectedPlayerId?: string; showOnlyIds?: Set<string>; onListLoaded?: (players: PlayerRow[]) => void }) {
+function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, onPlayerSelect, selectedPlayerId, showOnlyIds, onListLoaded, pendingSelectId }: { databaseIds: string[]; allDbs: DbItem[]; onCreateReport?: (players: PlayerSnapshot[]) => void; fillHeight?: boolean; onPlayerSelect?: (player: PlayerRow) => void; selectedPlayerId?: string; showOnlyIds?: Set<string>; onListLoaded?: (players: PlayerRow[]) => void; pendingSelectId?: string }) {
   const isMulti = databaseIds.length > 1
   const singleId = !isMulti ? databaseIds[0] : undefined
 
@@ -337,17 +337,21 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
 
   const prevIdsRef = useRef(databaseIds.join(','))
   const pendingSelectRef = useRef<string | null>(null)
+  const pendingSelectFromUrlRef = useRef<string | null>(pendingSelectId ?? null)
   const tableScrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!selectedPlayerId) return
-    // Defer until after the browser has recalculated layout (especially important
-    // when the panel was just opened and the flex container height was just set)
-    const rafId = requestAnimationFrame(() => {
-      const row = tableScrollRef.current?.querySelector(`[data-player-id="${selectedPlayerId}"]`)
-      row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    // Double-RAF: first frame lets React commit the DOM, second ensures layout is recalculated
+    // before we scroll. 'center' keeps the selected row clearly visible mid-panel.
+    let id1: number, id2: number
+    id1 = requestAnimationFrame(() => {
+      id2 = requestAnimationFrame(() => {
+        const row = tableScrollRef.current?.querySelector(`[data-player-id="${selectedPlayerId}"]`)
+        row?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      })
     })
-    return () => cancelAnimationFrame(rafId)
+    return () => { cancelAnimationFrame(id1); cancelAnimationFrame(id2) }
   }, [selectedPlayerId])
 
   useEffect(() => {
@@ -372,45 +376,16 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
       setAvailOverride({})
     }
 
-    const url = isMulti
-      ? `/api/players?databaseIds=${databaseIds.join(',')}`
-      : `/api/databases/${databaseIds[0]}/players`
+    const url = `/api/players?databaseIds=${databaseIds.join(',')}`
     fetch(url)
       .then(r => r.json())
       .then(d => {
         const newPlayers: PlayerRow[] = d.players ?? []
 
-        // Pre-warm the player panel cache from the list response so clicking any player
-        // (including the auto-selected first one) skips the second API round-trip.
-        if (!isMulti && singleId && d.canWrite !== undefined) {
-          const canWrite: boolean = d.canWrite
-          const currentUserId: string = d.currentUserId ?? ''
-          for (const p of newPlayers) {
-            if (!p.notes || !p.fieldSources || !p.addedBy) continue
-            const entry: CachedPlayer = {
-              player: {
-                id: p.id, firstName: p.firstName, middleName: p.middleName ?? null,
-                lastName: p.lastName, position: p.position, nationality: p.nationality,
-                dateOfBirth: p.dateOfBirth, heightCm: p.heightCm, clubName: p.clubName,
-                marketValue: p.marketValue, agentName: p.agentName ?? null,
-                playsNational: p.playsNational ?? false, available: p.available, isRepresented: p.isRepresented ?? false,
-                createdAt: p.createdAt ?? new Date().toISOString(),
-                fieldSources: p.fieldSources,
-                customFields: p.customFields as { id: string; fieldName: string; value: string }[],
-                notes: p.notes,
-                addedBy: p.addedBy,
-              },
-              canWrite,
-              currentUserId,
-            }
-            setCacheEntry(`${singleId}:${p.id}`, entry)
-          }
-        }
-
         setPlayers(newPlayers)
         if (!isMulti) {
           const saved: string[] | null = d.columnConfig ?? null
-          if (saved !== null) {
+          if (saved !== null && Array.isArray(saved)) {
             // Auto-migrate: add any TABLE_COLS keys added after this config was saved
             const merged = [...new Set([...saved, ...Array.from(TABLE_COLS)])]
             setColumnConfig(merged)
@@ -421,6 +396,10 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
         if (pendingSelectRef.current) {
           const target = newPlayers.find(p => p.id === pendingSelectRef.current)
           pendingSelectRef.current = null
+          if (target) onPlayerSelect?.(target)
+        } else if (pendingSelectFromUrlRef.current) {
+          const target = newPlayers.find(p => p.id === pendingSelectFromUrlRef.current)
+          pendingSelectFromUrlRef.current = null
           if (target) onPlayerSelect?.(target)
         }
         onListLoaded?.(newPlayers)
@@ -790,9 +769,20 @@ export default function DatabasesClient({
   userName: string
   userId: string
 }) {
+  const searchParams = useSearchParams()
+  const urlList   = searchParams.get('list')
+  const urlPlayer = searchParams.get('player')
+  const urlTab    = searchParams.get('tab') as 'profile' | 'evaluations' | 'report' | 'proposals' | null
+
   const [allDbs, setAllDbs] = useState<DbItem[]>([...ownedDbs, ...sharedDbs])
   const firstId = ownedDbs[0]?.id ?? sharedDbs[0]?.id
-  const [selectedIds, setSelectedIds] = useState<string[]>(firstId ? [firstId] : [])
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+    if (urlList) return [urlList]
+    return firstId ? [firstId] : []
+  })
+  const pendingUrlPlayerRef = useRef<string | null>(urlPlayer)
+  const pendingUrlTabRef    = useRef<typeof urlTab>(urlTab)
+  const [playerInitialTab, setPlayerInitialTab] = useState<'profile' | 'evaluations' | 'report' | 'proposals' | undefined>(undefined)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [aiResults, setAiResults] = useState<AIResult[] | null>(null)
@@ -823,6 +813,14 @@ export default function DatabasesClient({
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  // If no list is selected but lists exist (can happen when state persists across navigation),
+  // fall back to the first list rather than showing "All Lists" mode.
+  useEffect(() => {
+    if (selectedIds.length === 0 && allDbs.length > 0) {
+      setSelectedIds([allDbs[0].id])
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setAiResults(null)
@@ -890,6 +888,15 @@ export default function DatabasesClient({
     setPlayerAction(null)
     setPlayerDirty(false)
     resetSaveState()
+    if (pendingUrlTabRef.current) {
+      setPlayerInitialTab(pendingUrlTabRef.current)
+      pendingUrlTabRef.current = null
+      pendingUrlPlayerRef.current = null
+      pendingAutoSelectRef.current = false  // prevent onListLoaded from overriding the URL-driven selection
+      router.replace('/databases', { scroll: false })
+    } else {
+      setPlayerInitialTab(undefined)
+    }
   }
 
   function closeRightPanel() {
@@ -949,17 +956,12 @@ export default function DatabasesClient({
         <ImportDatabasesButton databases={importableDatabases} />
         <CreateDatabaseButton onCreated={handleDbCreated} />
         <button
-          onClick={() => { if (selectedPlayer) playerFlushRef.current?.(); setScoutOpen(o => !o); setSelectedPlayer(null); setPlayerDirty(false); resetSaveState() }}
+          onClick={() => { setScoutOpen(true); setSelectedPlayer(null) }}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
-          style={scoutOpen
-            ? { background: 'rgba(0,200,150,0.1)', color: '#00c896', border: '1px solid rgba(0,200,150,0.35)', boxShadow: '0 0 0 3px rgba(0,200,150,0.08)' }
-            : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-          onMouseEnter={e => { if (!scoutOpen) { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' } }}
-          onMouseLeave={e => { if (!scoutOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' } }}
+          style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
         >
-          {scoutOpen && (
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#00c896', boxShadow: '0 0 6px rgba(0,200,150,0.7)', animation: 'pulse 1.5s infinite' }} />
-          )}
           <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
           </svg>
@@ -1154,6 +1156,7 @@ export default function DatabasesClient({
               fillHeight={splitPanelActive}
               onPlayerSelect={handlePlayerSelect}
               selectedPlayerId={selectedPlayer?.id}
+              pendingSelectId={pendingUrlPlayerRef.current ?? undefined}
               showOnlyIds={filteredPlayerIds !== null ? new Set(filteredPlayerIds) : undefined}
               onListLoaded={players => {
                 // Keep playerCount in list tags in sync with actual loaded data
@@ -1232,6 +1235,7 @@ export default function DatabasesClient({
                 dbId={selectedPlayer.databaseId ?? selectedDbId}
                 initialPlayer={selectedPlayer}
                 initialCanWrite={(() => { const db = allDbs.find(d => d.id === (selectedPlayer.databaseId ?? selectedDbId)); return !!db && (db.permission === 'owner' || db.permission === 'contributor') })()}
+                initialTab={playerInitialTab}
                 onDeleted={() => { setSelectedPlayer(null); setPlayerCanWrite(false); setPlayerDirty(false); resetSaveState() }}
                 triggerAction={playerAction}
                 onTriggerHandled={() => setPlayerAction(null)}

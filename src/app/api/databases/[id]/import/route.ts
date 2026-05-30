@@ -90,8 +90,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }))
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const created = await (prisma.player as any).createManyAndReturn({
+      const created = await prisma.player.createManyAndReturn({
         data: createData,
         select: { id: true, firstName: true, lastName: true },
       }) as { id: string; firstName: string; lastName: string }[]

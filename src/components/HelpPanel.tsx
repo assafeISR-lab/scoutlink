@@ -882,6 +882,96 @@ const TOPICS: Topic[] = [
     },
   },
 
+  // ── Clubs ────────────────────────────────────────────────────────
+  {
+    id: 'clubs-overview',
+    keywords: ['clubs', 'club', 'request', 'proposal', 'age group', 'team', 'מועדון', 'בקשה', 'הצעה'],
+    en: {
+      category: 'Clubs',
+      title: 'How Clubs works',
+      steps: [
+        'Click "Clubs" in the left sidebar to open the Clubs workspace.',
+        'Add clubs you work with using the "Add Club" button. You can set up age groups (First Team, U23, U19…) when adding.',
+        'Each club has a right panel with team tabs — select a team to see its requests and contact person.',
+        'For each request, click "Find Matching Players" to run an AI search across your lists, or "Add Manually" to search by name.',
+        'Propose a player to a request — then track the status (Proposed → In Discussion → Offer → Signed / Rejected).',
+        'To see all proposals for a specific player, open their profile and click the "Proposals" tab.',
+      ],
+      tip: 'Use the age group filter pills in the left panel to see only clubs that have open requests for a specific team level.',
+    },
+    he: {
+      category: 'מועדונים',
+      title: 'איך עובד מסך המועדונים',
+      steps: [
+        'לחץ על "Clubs" בסרגל הצד לפתיחת סביבת המועדונים.',
+        'הוסף מועדונים איתם אתה עובד בעזרת כפתור "Add Club". ניתן להגדיר קבוצות גיל (קבוצה ראשונה, U23, U19...) בעת ההוספה.',
+        'לכל מועדון יש פנל ימני עם לשוניות קבוצות — בחר קבוצה לראות את הבקשות ואיש הקשר שלה.',
+        'לכל בקשה, לחץ "Find Matching Players" להרצת חיפוש AI ברשימות שלך, או "Add Manually" לחיפוש לפי שם.',
+        'הצע שחקן לבקשה — ואז עקוב אחר הסטטוס (Proposed → In Discussion → Offer → Signed / Rejected).',
+        'לראות את כל ההצעות לשחקן מסוים, פתח את הפרופיל שלו ולחץ על לשונית "Proposals".',
+      ],
+      tip: 'השתמש בפילטר קבוצות הגיל בפנל השמאלי לראות רק מועדונים עם בקשות פתוחות לרמת קבוצה מסוימת.',
+    },
+  },
+  {
+    id: 'clubs-teams',
+    keywords: ['team', 'age group', 'u18', 'u19', 'first team', 'manage teams', 'contact', 'קבוצה', 'גיל', 'ניהול'],
+    en: {
+      category: 'Clubs',
+      title: 'How to manage team age groups',
+      steps: [
+        'Every club starts with default age groups: First Team, U23, U21, U20, U19, U18, U17, U16, U15, U14.',
+        'Click "Manage Teams" (gear icon) in the team pills row to open the team settings.',
+        'In the modal: remove any teams the club doesn\'t have, add back removed ones, or type a custom name (e.g. "B Team", "Reserves").',
+        'Click Save — changes apply immediately.',
+        'For each team, you can add a separate contact person. Select the team pill, then click "+ Add Contact".',
+      ],
+      tip: 'Each team can have its own contact — useful when the U19 coach and First Team director are different people.',
+    },
+    he: {
+      category: 'מועדונים',
+      title: 'איך לנהל קבוצות גיל',
+      steps: [
+        'כל מועדון מתחיל עם קבוצות גיל ברירת מחדל: קבוצה ראשונה, U23, U21, U20, U19, U18, U17, U16, U15, U14.',
+        'לחץ "Manage Teams" (אייקון גלגל שיניים) בשורת לשוניות הקבוצה לפתיחת הגדרות הקבוצה.',
+        'במודל: הסר קבוצות שאין למועדון, הוסף בחזרה שהוסרו, או הקלד שם מותאם אישית (למשל "B Team", "Reserves").',
+        'לחץ Save — השינויים מיושמים מיד.',
+        'לכל קבוצה ניתן להוסיף איש קשר נפרד. בחר את לשונית הקבוצה, ולחץ "+ Add Contact".',
+      ],
+      tip: 'לכל קבוצה יכול להיות איש קשר משלה — שימושי כאשר מאמן ה-U19 ומנהל הקבוצה הראשונה הם אנשים שונים.',
+    },
+  },
+  {
+    id: 'clubs-proposals',
+    keywords: ['proposal', 'propose', 'status', 'signed', 'offer', 'rejected', 'manually', 'הצעה', 'הצע', 'סטטוס', 'חתם'],
+    en: {
+      category: 'Clubs',
+      title: 'How to propose and track players',
+      steps: [
+        'Open a club request and click "Find Matching Players" — ScoutLink AI searches your lists and scores each match.',
+        'Click "+ Propose" on any result to add the player to this request.',
+        'Or click "Add Manually" to search your lists by name and propose a specific player directly.',
+        'Each proposed player has a status dropdown: Proposed → In Discussion → Offer → Signed / Rejected.',
+        'Click "Go to Player Profile" on any proposed player to jump to their card in Studio with the Proposals tab open.',
+        'From the player\'s profile, the Proposals tab shows every club they\'ve been pitched to and the current status.',
+      ],
+      tip: 'Changing the status here and from the player\'s Proposals tab both update the same record — they stay in sync.',
+    },
+    he: {
+      category: 'מועדונים',
+      title: 'איך להציע ולעקוב אחר שחקנים',
+      steps: [
+        'פתח בקשת מועדון ולחץ "Find Matching Players" — AI של ScoutLink מחפש ברשימות שלך ומדרג כל התאמה.',
+        'לחץ "+ Propose" על כל תוצאה להוסיף את השחקן לבקשה זו.',
+        'או לחץ "Add Manually" לחיפוש ברשימות שלך לפי שם ולהצעת שחקן ספציפי ישירות.',
+        'לכל שחקן מוצע יש תפריט סטטוס: Proposed → In Discussion → Offer → Signed / Rejected.',
+        'לחץ "Go to Player Profile" על כל שחקן מוצע לקפוץ לכרטיס שלו ב-Studio עם לשונית Proposals פתוחה.',
+        'מפרופיל השחקן, לשונית Proposals מציגה כל מועדון שהוצג לו ואת הסטטוס הנוכחי.',
+      ],
+      tip: 'שינוי הסטטוס כאן ומלשונית Proposals של השחקן שניהם מעדכנים את אותו רשומה — הם נשארים מסונכרנים.',
+    },
+  },
+
 ]
 
 interface HelpPanelProps {

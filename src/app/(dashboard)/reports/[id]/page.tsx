@@ -29,7 +29,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         databaseName: report.databaseName,
         playerCount: report.playerCount,
         createdAt: report.createdAt.toISOString(),
-        players: report.players as any[],
+        players: report.players as unknown as { id: string; name: string; [key: string]: unknown }[],
       }} />
     </>
   )

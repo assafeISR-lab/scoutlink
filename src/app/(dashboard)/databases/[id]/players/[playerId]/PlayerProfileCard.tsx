@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import EvaluationSection, { type Evaluation } from './EvaluationSection'
 import PlayerReportSection, { type PlayerReport } from './PlayerReportSection'
+import ProposalsSection from './ProposalsSection'
 import PlayerFilesSection from '@/components/PlayerFilesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
@@ -77,7 +78,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   const [referralSuggestions, setReferralSuggestions] = useState<string[]>([])
   const [nameBanksLoading,    setNameBanksLoading]    = useState(true)
   const agentPhoneMap = useRef<Map<string, string | null>>(new Map())
-  const [activeTab, setActiveTab] = useState<'profile' | 'evaluations' | 'report'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'evaluations' | 'report' | 'pitches'>('profile')
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => { setPhotoEnabled(loadActive().has('photo')) }, [])
@@ -316,6 +317,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
           { id: 'profile' as const, label: 'Profile' },
           { id: 'evaluations' as const, label: 'Evaluations' },
           { id: 'report' as const, label: 'AI Report' },
+          { id: 'pitches' as const, label: 'Proposals' },
         ]).map(tab => (
           <button
             key={tab.id}
@@ -524,6 +526,10 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             initialReport={initialReport}
           />
         </div>
+      )}
+
+      {activeTab === 'pitches' && (
+        <ProposalsSection key={`proposals-${player.id}`} playerId={player.id} dbId={databaseId} />
       )}
 
     </div>

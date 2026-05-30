@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import EvaluationSection from './[id]/players/[playerId]/EvaluationSection'
 import PlayerReportSection from './[id]/players/[playerId]/PlayerReportSection'
+import ProposalsSection from './[id]/players/[playerId]/ProposalsSection'
 import PlayerFilesSection from '@/components/PlayerFilesSection'
 import FMRadarChart from '@/components/FMRadarChart'
 import LinkChips from '@/components/LinkChips'
@@ -85,11 +86,12 @@ function buildInitialPlayer(p: InitialPlayerData): FullPlayer {
 
 // ── Outer loader ──────────────────────────────────────────────────────────────
 
-export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initialCanWrite = false, onDeleted, triggerAction, onTriggerHandled, onLoaded, onSaveComplete, flushRef, onDirtyChange, onClose }: {
+export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initialCanWrite = false, initialTab, onDeleted, triggerAction, onTriggerHandled, onLoaded, onSaveComplete, flushRef, onDirtyChange, onClose }: {
   playerId: string
   dbId: string
   initialPlayer?: InitialPlayerData
   initialCanWrite?: boolean
+  initialTab?: 'profile' | 'evaluations' | 'report' | 'proposals'
   onDeleted?: () => void
   triggerAction?: 'report' | 'delete' | null
   onTriggerHandled?: () => void
@@ -165,6 +167,7 @@ export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initial
       canWrite={data.canWrite}
       currentUserId={data.currentUserId}
       notesLoading={notesLoading}
+      initialTab={initialTab}
       onDeleted={onDeleted}
       triggerAction={triggerAction}
       onTriggerHandled={onTriggerHandled}
@@ -216,8 +219,10 @@ function timeAgo(date: string) {
 
 // ── Main card ─────────────────────────────────────────────────────────────────
 
-function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoading, onDeleted, triggerAction, onTriggerHandled, onSaveComplete, flushRef, onDirtyChange, onClose }: {
-  player: FullPlayer; dbId: string; canWrite: boolean; currentUserId: string; notesLoading?: boolean; onDeleted?: () => void
+function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoading, initialTab, onDeleted, triggerAction, onTriggerHandled, onSaveComplete, flushRef, onDirtyChange, onClose }: {
+  player: FullPlayer; dbId: string; canWrite: boolean; currentUserId: string; notesLoading?: boolean
+  initialTab?: 'profile' | 'evaluations' | 'report' | 'proposals'
+  onDeleted?: () => void
   triggerAction?: 'report' | 'delete' | null
   onTriggerHandled?: () => void
   onSaveComplete?: () => void
@@ -275,7 +280,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const [fmAttributes,       setFmAttributes]       = useState(cf('fmAttributes'))
   const [seasonStats,        setSeasonStats]        = useState(cf('seasonStats') || '{"seasons":[]}')
   const [localActiveFm,      setLocalActiveFm]      = useState(false)
-  const [activeTab,          setActiveTab]           = useState<'profile' | 'evaluations' | 'report'>('profile')
+  const [activeTab,          setActiveTab]           = useState<'profile' | 'evaluations' | 'report' | 'proposals'>(initialTab ?? 'profile')
   const [agentSuggestions,   setAgentSuggestions]   = useState<string[]>([])
   const [referralSuggestions,setReferralSuggestions]= useState<string[]>([])
   const [nameBanksLoading,   setNameBanksLoading]   = useState(true)
@@ -746,6 +751,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
           { id: 'profile' as const, label: 'Profile' },
           { id: 'evaluations' as const, label: 'Evaluations' },
           { id: 'report' as const, label: 'AI Report' },
+          { id: 'proposals' as const, label: 'Proposals' },
         ]).map(tab => (
           <button
             key={tab.id}
@@ -926,6 +932,10 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
             canWrite={canWrite}
           />
         </div>
+      )}
+
+      {activeTab === 'proposals' && (
+        <ProposalsSection key={`proposals-${player.id}`} playerId={player.id} dbId={dbId} />
       )}
 
     </div>
