@@ -55,7 +55,7 @@ const TOPICS: Topic[] = [
         '"Scout Board" is your personal tracking board — like a whiteboard for players.',
         '"Search All Lists" lets you filter players across every list you have.',
         '"Reports" lets you create printable player reports.',
-        '"Settings" is where you connect scouting websites and manage your account.',
+        '"Settings" is where you manage your branding and account details.',
       ],
     },
     he: {
@@ -67,7 +67,7 @@ const TOPICS: Topic[] = [
         '"Scout Board" הוא לוח המעקב האישי שלך — כמו לוח לבן לשחקנים.',
         '"Search All Lists" מאפשר לסנן שחקנים מכל הרשימות שלך.',
         '"Reports" מאפשר ליצור דוחות שחקנים להדפסה.',
-        '"Settings" הוא המקום לחבר אתרי סקאוטינג ולנהל את החשבון.',
+        '"Settings" הוא המקום לנהל את המיתוג ופרטי החשבון שלך.',
       ],
     },
   },
@@ -801,7 +801,6 @@ const TOPICS: Topic[] = [
       title: 'How to set up My Branding',
       steps: [
         'Go to Settings in the left sidebar.',
-        'Click the "My Branding" tab.',
         'Enter your agency or club name, and optionally a signature line (e.g. "Head Scout, Agency Name").',
         'Click "Upload Logo" and choose an image file — a preview appears immediately.',
         'Add your phone, email, and website if you want them on reports.',
@@ -814,7 +813,6 @@ const TOPICS: Topic[] = [
       title: 'איך להגדיר את המיתוג שלי',
       steps: [
         'עבור ל-Settings בסרגל הצד.',
-        'לחץ על לשונית "My Branding".',
         'הזן את שם הסוכנות או המועדון שלך, ובאופן אופציונלי שורת חתימה (למשל "ראש סקאוטינג, שם הסוכנות").',
         'לחץ "Upload Logo" ובחר קובץ תמונה — תצוגה מקדימה מופיעה מיד.',
         'הוסף טלפון, אימייל ואתר אם ברצונך שיופיעו בדוחות.',

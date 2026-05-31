@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { decrypt } from '@/lib/encryption'
 import { getUser } from '@/lib/auth'
 import SettingsClient from './SettingsClient'
 
@@ -14,30 +13,15 @@ export default async function SettingsPage() {
   const user = await getUser()
   if (!user) redirect('/login')
 
-  // Seed defaults only when missing — one read, write only on first visit
-  const rawWebsites = await prisma.agentWebsite.findMany({
-    where: { agentId: user.id },
-    orderBy: { createdAt: 'asc' },
-  })
-
-  const existingUrls = new Set(rawWebsites.map(w => w.url))
-  const missing = DEFAULT_WEBSITES.filter(w => !existingUrls.has(w.url))
-  if (missing.length > 0) {
+  // Seed default websites if missing — ensures search works even for users
+  // created before agent/create started seeding these automatically
+  const existingCount = await prisma.agentWebsite.count({ where: { agentId: user.id } })
+  if (existingCount === 0) {
     await prisma.agentWebsite.createMany({
-      data: missing.map(w => ({ ...w, agentId: user.id })),
+      data: DEFAULT_WEBSITES.map(w => ({ ...w, agentId: user.id })),
       skipDuplicates: true,
     })
-    rawWebsites.push(
-      ...await prisma.agentWebsite.findMany({
-        where: { agentId: user.id, url: { in: missing.map(w => w.url) } },
-        orderBy: { createdAt: 'asc' },
-      })
-    )
   }
-  const websites = rawWebsites.map(w => ({
-    ...w,
-    password: w.password ? decrypt(w.password) : null,
-  }))
 
   return (
     <>
@@ -45,7 +29,7 @@ export default async function SettingsPage() {
         <h1 className="text-3xl font-bold text-white mb-1">Settings</h1>
         <p style={{ color: 'var(--text-muted)' }} className="text-sm">Manage your scouting preferences</p>
       </div>
-      <SettingsClient websites={websites} />
+      <SettingsClient />
     </>
   )
 }
