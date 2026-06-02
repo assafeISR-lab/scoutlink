@@ -2086,3 +2086,148 @@ export const DEFAULT_LEVELS = [
 ```
 
 **Key rule:** Changes are draft-only until "Save" is clicked — no live updates on individual remove/add actions.
+
+---
+
+## 52. Two-Row Labeled Filter Bar (Clubs)
+
+Used in ClubPanel and AllRequestsView. Two visually distinct rows inside a single rounded card — one for **request-level filters**, one for **proposal filters**. Each row has a colored section label on the left, followed by filter controls, then an optional Reset button on the right.
+
+```tsx
+<div className="flex flex-col gap-0 rounded-xl overflow-hidden"
+  style={{ background: 'var(--subtle-bg)', border: '1px solid var(--border)' }}>
+
+  {/* ── REQUESTS row ── */}
+  <div className="flex items-center gap-3 flex-wrap px-3 py-2.5"
+    style={{ borderBottom: '1px solid var(--border)' }}>
+
+    {/* Section label — blue */}
+    <span className="text-[10px] uppercase font-bold flex-shrink-0"
+      style={{ color: '#6c8fff', letterSpacing: '0.7px' }}>Requests</span>
+
+    {/* Pill group with sub-label */}
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Status</span>
+      {(['', 'open', 'closed'] as const).map(val => (
+        <button key={val}
+          className="px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all"
+          style={active ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
+                        : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+          {val || 'All'}
+        </button>
+      ))}
+    </div>
+
+    <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+    {/* Text input filter */}
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Position</span>
+      <input type="text" placeholder="any…"
+        className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+        style={{
+          background: 'var(--input-bg)',
+          border: value ? '1px solid #6c8fff' : '1px solid var(--input-border)',
+          color: 'var(--text-primary)',
+          width: 80,
+        }} />
+    </div>
+
+    <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+    {/* Age range */}
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Age</span>
+      <input type="number" placeholder="min" style={{ width: 50, /* same input style */ }} />
+      <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>–</span>
+      <input type="number" placeholder="max" style={{ width: 50 }} />
+    </div>
+
+    {/* Reset — only when any filter is active */}
+    {hasActiveFilters && (
+      <button onClick={reset}
+        className="ml-auto text-[11px] px-2 py-0.5 rounded-lg transition-all"
+        style={{ color: 'var(--text-faint)', background: 'transparent', border: '1px solid var(--border)' }}
+        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
+        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.background = 'transparent' }}>
+        Reset
+      </button>
+    )}
+  </div>
+
+  {/* ── PROPOSALS row ── */}
+  <div className="flex items-center gap-2 flex-wrap px-3 py-2.5">
+    {/* Section label — green */}
+    <span className="text-[10px] uppercase font-bold flex-shrink-0"
+      style={{ color: '#00c896', letterSpacing: '0.7px' }}>Proposals</span>
+
+    <button /* All pill */ />
+    {PROPOSAL_STATUSES.map(({ value, label, color, bg, border }) => (
+      <button key={value}
+        className="px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all"
+        style={active
+          ? { background: bg, color, border: `1px solid ${border}` }
+          : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+        {label}{count > 0 && <span className="ml-1 text-[10px] opacity-60">{count}</span>}
+      </button>
+    ))}
+  </div>
+</div>
+```
+
+**Rules:**
+- Outer container: `rounded-xl overflow-hidden` — **not** `rounded-2xl` (filter bars are compact)
+- REQUESTS label: `color: '#6c8fff'` (blue) — matches the Clubs accent color
+- PROPOSALS label: `color: '#00c896'` (green) — matches proposal/player accent
+- Divider between filter groups: `width: 1, height: 14` — shorter than the standard 16px
+- Text inputs turn `border: '1px solid #6c8fff'` when they have a value (active state feedback)
+- Reset button uses `ml-auto` to push to far right — only rendered when at least one filter is non-default
+- Proposal status pills use their own per-status colors when active (see PROPOSAL_STATUSES constant in ClubPanel.tsx and AllRequestsView.tsx)
+- All filters are **client-side** — applied to already-fetched data, no re-fetch on change
+
+**PROPOSAL_STATUSES constant** (defined in both ClubPanel.tsx and AllRequestsView.tsx):
+```ts
+const PROPOSAL_STATUSES = [
+  { value: 'proposed',      label: 'Proposed',      color: '#6c8fff', bg: 'rgba(108,143,255,0.1)',  border: 'rgba(108,143,255,0.3)'  },
+  { value: 'in_discussion', label: 'In Discussion', color: '#ff9f43', bg: 'rgba(255,159,67,0.1)',   border: 'rgba(255,159,67,0.3)'   },
+  { value: 'offer',         label: 'Offer',         color: '#00c896', bg: 'rgba(0,200,150,0.1)',    border: 'rgba(0,200,150,0.3)'    },
+  { value: 'signed',        label: '✓ Signed',      color: '#00c896', bg: 'rgba(0,200,150,0.15)',   border: 'rgba(0,200,150,0.5)'    },
+  { value: 'rejected',      label: 'Rejected',      color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)'    },
+]
+```
+
+---
+
+## 53. Underline Tab Navigation (Panel-Level)
+
+Used at the top of the Clubs right panel. Two or more tab labels side by side, left-anchored, with a 2px bottom border underline on the active tab and a 1px separator line spanning the full width underneath.
+
+```tsx
+<div className="flex items-center gap-4 mb-3 flex-shrink-0"
+  style={{ borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+
+  <button onClick={() => setViewMode('clubs')}
+    className="px-1 pb-2 text-sm font-semibold transition-all"
+    style={viewMode === 'clubs'
+      ? { color: '#6c8fff', borderBottom: '2px solid #6c8fff', marginBottom: -9 }
+      : { color: 'var(--text-muted)', borderBottom: '2px solid transparent', marginBottom: -9 }}>
+    Club Requests
+  </button>
+
+  <button onClick={() => setViewMode('requests')}
+    className="px-1 pb-2 text-sm font-semibold transition-all"
+    style={viewMode === 'requests'
+      ? { color: '#6c8fff', borderBottom: '2px solid #6c8fff', marginBottom: -9 }
+      : { color: 'var(--text-muted)', borderBottom: '2px solid transparent', marginBottom: -9 }}>
+    All Clubs Requests
+  </button>
+</div>
+```
+
+**Rules:**
+- `marginBottom: -9` on each button makes the 2px active underline sit exactly on the separator line (overlap trick)
+- `paddingBottom: 8` on the container + `pb-2` on the button align the text baseline
+- Inactive tabs: `color: 'var(--text-muted)'`, `borderBottom: '2px solid transparent'` (keeps layout stable)
+- Active tabs use the section accent color — `#6c8fff` for Clubs, `#00c896` for player-focused panels
+- Tabs are left-anchored (`flex items-center gap-4`) — **not** `justify-between` or centered
+- The content area below must be `flex: 1, overflowY: 'auto'` in a flex-column parent so the tab bar never scrolls away
