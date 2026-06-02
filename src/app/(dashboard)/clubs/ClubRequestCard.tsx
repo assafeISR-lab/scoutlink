@@ -76,12 +76,14 @@ export default function ClubRequestCard({
   request,
   clubId,
   clubName,
+  teamLevels = [],
   onUpdated,
   onDeleted,
 }: {
   request: Request
   clubId: string
   clubName: string
+  teamLevels?: string[]
   onUpdated: (r: Request) => void
   onDeleted: (id: string) => void
 }) {
@@ -91,6 +93,12 @@ export default function ClubRequestCard({
   const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null)
   const [proposing, setProposing] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [proposalDeleteConfirm, setProposalDeleteConfirm] = useState<string | null>(null)
+
+  // Edit request
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState({ teamLevel: '', position: '', ageMin: '', ageMax: '', budget: '', transferType: '', nationality: '', notes: '' })
+  const [editSaving, setEditSaving] = useState(false)
 
   // Manual search
   const [manualOpen, setManualOpen] = useState(false)
@@ -208,6 +216,37 @@ export default function ClubRequestCard({
     onDeleted(request.id)
   }
 
+  function openEdit() {
+    setEditForm({
+      teamLevel: request.teamLevel ?? '',
+      position: request.position ?? '',
+      ageMin: request.ageMin?.toString() ?? '',
+      ageMax: request.ageMax?.toString() ?? '',
+      budget: request.budget?.toString() ?? '',
+      transferType: request.transferType ?? '',
+      nationality: request.nationality ?? '',
+      notes: request.notes ?? '',
+    })
+    setEditOpen(true)
+  }
+
+  async function handleEditRequest() {
+    setEditSaving(true)
+    try {
+      const res = await fetch(`/api/clubs/${clubId}/requests/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      if (!res.ok) return
+      const { request: updated } = await res.json() as { request: Request }
+      onUpdated(updated)
+      setEditOpen(false)
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
   const proposedIds = new Set(request.proposals.map(p => p.player.id))
 
   return (
@@ -243,7 +282,7 @@ export default function ClubRequestCard({
           {request.proposals.length > 0 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
               style={{ background: 'rgba(0,200,150,0.1)', color: '#00c896' }}>
-              {request.proposals.length} proposed
+              {request.proposals.length} Players Proposed
             </span>
           )}
           <svg className="w-3.5 h-3.5 transition-transform" style={{ color: 'var(--text-faint)', transform: expanded ? 'rotate(180deg)' : 'none' }}
@@ -284,6 +323,17 @@ export default function ClubRequestCard({
                 </svg>
                 Add Manually
               </button>
+              <button
+                onClick={openEdit}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                Edit
+              </button>
               <button onClick={handleClose}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
                 style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
@@ -291,15 +341,32 @@ export default function ClubRequestCard({
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}>
                 Close Request
               </button>
-              <button onClick={() => { if (deleteConfirm) handleDelete(); else setDeleteConfirm(true) }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto"
-                style={deleteConfirm
-                  ? { background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }
-                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                onMouseEnter={e => { if (!deleteConfirm) { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' } }}
-                onMouseLeave={e => { if (!deleteConfirm) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' } }}>
-                {deleteConfirm ? 'Confirm Delete' : 'Delete'}
-              </button>
+              {deleteConfirm ? (
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <button
+                    onClick={() => setDeleteConfirm(false)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                    style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    Confirm Delete
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setDeleteConfirm(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ml-auto"
+                  style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                  Delete
+                </button>
+              )}
             </div>
 
             {/* Manual player search */}
@@ -345,7 +412,8 @@ export default function ClubRequestCard({
                     borderRadius: 10,
                     boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
                     zIndex: 9999,
-                    overflow: 'hidden',
+                    maxHeight: Math.min(260, window.innerHeight - dropdownRect.bottom - 12),
+                    overflowY: 'auto',
                   }}>
                     {manualResults.map(p => {
                       const alreadyProposed = proposedIds.has(p.id)
@@ -510,13 +578,32 @@ export default function ClubRequestCard({
                             <option key={v} value={v}>{s.label}</option>
                           ))}
                         </select>
-                        <button onClick={() => handleRemoveProposal(p.id)}
-                          className="w-5 h-5 flex items-center justify-center rounded text-[10px]"
-                          style={{ color: 'var(--text-faint)' }}
-                          onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }}
-                          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)' }}>
-                          ✕
-                        </button>
+                        {proposalDeleteConfirm === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setProposalDeleteConfirm(null)}
+                              className="text-[10px] px-2 py-0.5 rounded font-medium transition-all"
+                              style={{ color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border)' }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)' }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => { handleRemoveProposal(p.id); setProposalDeleteConfirm(null) }}
+                              className="text-[10px] px-2 py-0.5 rounded font-medium"
+                              style={{ color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                              Delete
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setProposalDeleteConfirm(p.id)}
+                            className="w-5 h-5 flex items-center justify-center rounded text-[10px]"
+                            style={{ color: 'var(--text-faint)' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444' }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)' }}>
+                            ✕
+                          </button>
+                        )}
                       </div>
                       <div className="px-3 pb-2">
                         <button
@@ -538,6 +625,105 @@ export default function ClubRequestCard({
           )}
         </div>
       )}
+      {/* Edit Request Modal */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setEditOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl overflow-hidden"
+            style={{ background: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg, #6c8fff, #5a7aff)' }} />
+            <div className="p-6">
+              <h2 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Edit Request</h2>
+              <p className="text-xs mb-4" style={{ color: 'var(--text-faint)' }}>{clubName}</p>
+              <div className="flex flex-col gap-3 mb-5">
+                {/* Team Level */}
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Team</label>
+                  {teamLevels.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {teamLevels.map(l => (
+                        <button key={l} onClick={() => setEditForm(f => ({ ...f, teamLevel: f.teamLevel === l ? '' : l }))}
+                          className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                          style={editForm.teamLevel === l
+                            ? { background: 'rgba(108,143,255,0.18)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.5)' }
+                            : { background: 'var(--subtle-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <input type="text" value={editForm.teamLevel} onChange={e => setEditForm(f => ({ ...f, teamLevel: e.target.value }))}
+                      placeholder="e.g. First Team, U18…"
+                      className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none"
+                      style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+                      onFocus={e => e.currentTarget.style.borderColor = '#6c8fff'}
+                      onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'} />
+                  )}
+                </div>
+                <EField label="Position" value={editForm.position} onChange={v => setEditForm(f => ({ ...f, position: v }))} placeholder="e.g. Striker, Centre-Back" />
+                <div className="grid grid-cols-2 gap-3">
+                  <EField label="Min Age" value={editForm.ageMin} onChange={v => setEditForm(f => ({ ...f, ageMin: v }))} placeholder="e.g. 18" type="number" />
+                  <EField label="Max Age" value={editForm.ageMax} onChange={v => setEditForm(f => ({ ...f, ageMax: v }))} placeholder="e.g. 28" type="number" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Transfer Type</label>
+                  <div className="flex gap-2">
+                    {(['buy', 'loan', 'free'] as const).map(t => (
+                      <button key={t} onClick={() => setEditForm(f => ({ ...f, transferType: f.transferType === t ? '' : t }))}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-medium capitalize transition-all"
+                        style={editForm.transferType === t
+                          ? { background: 'rgba(108,143,255,0.15)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.4)' }
+                          : { background: 'var(--subtle-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <EField label="Budget (€/year)" value={editForm.budget} onChange={v => setEditForm(f => ({ ...f, budget: v }))} placeholder="e.g. 200000" type="number" />
+                <EField label="Nationality" value={editForm.nationality} onChange={v => setEditForm(f => ({ ...f, nationality: v }))} placeholder="e.g. Israeli, French" />
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Notes</label>
+                  <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                    rows={2} placeholder="Any additional requirements…"
+                    className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none resize-none"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+                    onFocus={e => e.currentTarget.style.borderColor = '#6c8fff'}
+                    onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'} />
+                </div>
+              </div>
+              <div className="flex gap-2.5">
+                <button onClick={() => setEditOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                  style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                  Cancel
+                </button>
+                <button onClick={handleEditRequest} disabled={editSaving}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg, #6c8fff, #5a7aff)', color: '#fff' }}>
+                  {editSaving ? 'Saving…' : 'Save Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EField({ label, value, onChange, placeholder, type = 'text' }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>{label}</label>
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none"
+        style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+        onFocus={e => e.currentTarget.style.borderColor = '#6c8fff'}
+        onBlur={e => e.currentTarget.style.borderColor = 'var(--input-border)'} />
     </div>
   )
 }

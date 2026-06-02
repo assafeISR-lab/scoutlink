@@ -5,6 +5,14 @@ import type { ClubRow } from './ClubsClient'
 import ClubRequestCard from './ClubRequestCard'
 import { sortLevels, DEFAULT_LEVELS, SUGGESTED_LEVELS } from './TeamPicker'
 
+const PROPOSAL_STATUSES = [
+  { value: 'proposed',      label: 'Proposed',       color: '#6c8fff', bg: 'rgba(108,143,255,0.1)',  border: 'rgba(108,143,255,0.3)'  },
+  { value: 'in_discussion', label: 'In Discussion',  color: '#ff9f43', bg: 'rgba(255,159,67,0.1)',   border: 'rgba(255,159,67,0.3)'   },
+  { value: 'offer',         label: 'Offer',          color: '#00c896', bg: 'rgba(0,200,150,0.1)',    border: 'rgba(0,200,150,0.3)'    },
+  { value: 'signed',        label: '✓ Signed',       color: '#00c896', bg: 'rgba(0,200,150,0.15)',   border: 'rgba(0,200,150,0.5)'    },
+  { value: 'rejected',      label: 'Rejected',       color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)'    },
+]
+
 interface TeamContact {
   id: string
   teamLevel: string
@@ -62,6 +70,15 @@ export default function ClubPanel({
   const [club, setClub] = useState<FullClub | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedLevel, setSelectedLevel] = useState<string | null>(initialLevel ?? null)
+  const [proposalStatusFilter, setProposalStatusFilter] = useState<string | null>(null)
+
+  // Request filters
+  const [filterPosition, setFilterPosition] = useState('')
+  const [filterTransferType, setFilterTransferType] = useState('')
+  const [filterNationality, setFilterNationality] = useState('')
+  const [filterAgeMin, setFilterAgeMin] = useState('')
+  const [filterAgeMax, setFilterAgeMax] = useState('')
+  const [filterBudgetMax, setFilterBudgetMax] = useState('')
 
   // Modals
   const [editOpen, setEditOpen] = useState(false)
@@ -81,6 +98,7 @@ export default function ClubPanel({
   // New request modal
   const [addReqOpen, setAddReqOpen] = useState(false)
   const [reqForm, setReqForm] = useState({ teamLevel: '', position: '', ageMin: '', ageMax: '', budget: '', transferType: '', nationality: '', notes: '' })
+  const [reqTeamLevels, setReqTeamLevels] = useState<string[]>([])
   const [addingReq, setAddingReq] = useState(false)
 
   // Error toast
@@ -115,15 +133,26 @@ export default function ClubPanel({
   const openRequests = club?.requests.filter(r => r.status === 'open') ?? []
   const closedRequests = club?.requests.filter(r => r.status === 'closed') ?? []
 
-  const filteredOpen = selectedLevel
-    ? openRequests.filter(r => r.teamLevel === selectedLevel)
-    : openRequests
-  const filteredClosed = selectedLevel
-    ? closedRequests.filter(r => r.teamLevel === selectedLevel)
-    : closedRequests
+  function applyRequestFilters(reqs: FullRequest[]) {
+    return reqs
+      .filter(r => !filterPosition || (r.position ?? '').toLowerCase().includes(filterPosition.toLowerCase()))
+      .filter(r => !filterTransferType || r.transferType === filterTransferType)
+      .filter(r => !filterNationality || (r.nationality ?? '').toLowerCase().includes(filterNationality.toLowerCase()))
+      .filter(r => !filterAgeMin || (r.ageMax == null || r.ageMax >= parseInt(filterAgeMin)))
+      .filter(r => !filterAgeMax || (r.ageMin == null || r.ageMin <= parseInt(filterAgeMax)))
+      .filter(r => !filterBudgetMax || (r.budget != null && r.budget <= parseFloat(filterBudgetMax) * 1000))
+      .filter(r => !proposalStatusFilter || r.proposals.some(p => p.status === proposalStatusFilter))
+  }
+
+  const filteredOpen = applyRequestFilters(
+    selectedLevel ? openRequests.filter(r => r.teamLevel === selectedLevel) : openRequests
+  )
+  const filteredClosed = applyRequestFilters(
+    selectedLevel ? closedRequests.filter(r => r.teamLevel === selectedLevel) : closedRequests
+  )
 
   // Group open requests by teamLevel for "All" view
-  const groupedOpen = selectedLevel ? null : groupByLevel(openRequests, teamLevels)
+  const groupedOpen = selectedLevel ? null : groupByLevel(filteredOpen, teamLevels)
 
   function groupByLevel(reqs: FullRequest[], levels: string[]): { level: string | null; requests: FullRequest[] }[] {
     const groups: { level: string | null; requests: FullRequest[] }[] = []
@@ -213,17 +242,30 @@ export default function ClubPanel({
   async function handleAddRequest() {
     setAddingReq(true)
     try {
-      const res = await fetch(`/api/clubs/${initialClub.id}/requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reqForm),
-      })
-      if (!res.ok) { showError('Failed to add request.'); return }
-      const { request } = await res.json() as { request: FullRequest }
-      setClub(prev => prev ? { ...prev, requests: [request, ...prev.requests] } : null)
-      onRequestCountChange(initialClub.id, 1, reqForm.teamLevel || null)
+      // When predefined levels exist, create one request per selected team.
+      // If nothing selected, create one request with no team level.
+      const hasPredefinedLevels = teamLevels.length > 0
+      const teamsToCreate: (string | null)[] = hasPredefinedLevels
+        ? (reqTeamLevels.length > 0 ? reqTeamLevels : [null])
+        : [reqForm.teamLevel || null]
+
+      const newRequests: FullRequest[] = []
+      for (const teamLevel of teamsToCreate) {
+        const res = await fetch(`/api/clubs/${initialClub.id}/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...reqForm, teamLevel }),
+        })
+        if (!res.ok) { showError('Failed to add request.'); return }
+        const { request } = await res.json() as { request: FullRequest }
+        newRequests.push(request)
+      }
+
+      setClub(prev => prev ? { ...prev, requests: [...newRequests, ...prev.requests] } : null)
+      for (const req of newRequests) onRequestCountChange(initialClub.id, 1, req.teamLevel)
       setAddReqOpen(false)
       setReqForm({ teamLevel: selectedLevel ?? '', position: '', ageMin: '', ageMax: '', budget: '', transferType: '', nationality: '', notes: '' })
+      setReqTeamLevels(selectedLevel ? [selectedLevel] : [])
     } catch { showError('Failed to add request.')
     } finally { setAddingReq(false) }
   }
@@ -244,6 +286,7 @@ export default function ClubPanel({
 
   function openNewRequest() {
     setReqForm({ teamLevel: selectedLevel ?? '', position: '', ageMin: '', ageMax: '', budget: '', transferType: '', nationality: '', notes: '' })
+    setReqTeamLevels(selectedLevel ? [selectedLevel] : [])
     setAddReqOpen(true)
   }
 
@@ -329,6 +372,111 @@ export default function ClubPanel({
           </button>
         </div>
 
+        {/* ── REQUESTS filter row ── */}
+        <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
+          <span className="text-[10px] uppercase font-bold flex-shrink-0" style={{ color: '#6c8fff', letterSpacing: '0.7px' }}>Requests</span>
+
+          {/* Position */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Position</span>
+            <input type="text" value={filterPosition} onChange={e => setFilterPosition(e.target.value)}
+              placeholder="any…"
+              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+              style={{ background: 'var(--input-bg)', border: filterPosition ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 80 }} />
+          </div>
+
+          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+          {/* Transfer Type */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Transfer</span>
+            {(['buy', 'loan', 'free'] as const).map(val => (
+              <button key={val} onClick={() => setFilterTransferType(filterTransferType === val ? '' : val)}
+                className="px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize transition-all"
+                style={filterTransferType === val
+                  ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
+                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                {val}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+          {/* Nationality */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Nationality</span>
+            <input type="text" value={filterNationality} onChange={e => setFilterNationality(e.target.value)}
+              placeholder="any…"
+              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+              style={{ background: 'var(--input-bg)', border: filterNationality ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 80 }} />
+          </div>
+
+          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+          {/* Age range */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Age</span>
+            <input type="number" value={filterAgeMin} onChange={e => setFilterAgeMin(e.target.value)}
+              placeholder="min"
+              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+              style={{ background: 'var(--input-bg)', border: filterAgeMin ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 50 }} />
+            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>–</span>
+            <input type="number" value={filterAgeMax} onChange={e => setFilterAgeMax(e.target.value)}
+              placeholder="max"
+              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+              style={{ background: 'var(--input-bg)', border: filterAgeMax ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 50 }} />
+          </div>
+
+          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+          {/* Budget max */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Budget ≤</span>
+            <input type="number" value={filterBudgetMax} onChange={e => setFilterBudgetMax(e.target.value)}
+              placeholder="K€/yr"
+              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+              style={{ background: 'var(--input-bg)', border: filterBudgetMax ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 70 }} />
+          </div>
+
+          {/* Reset */}
+          {(filterPosition || filterTransferType || filterNationality || filterAgeMin || filterAgeMax || filterBudgetMax || proposalStatusFilter) && (
+            <button
+              onClick={() => { setFilterPosition(''); setFilterTransferType(''); setFilterNationality(''); setFilterAgeMin(''); setFilterAgeMax(''); setFilterBudgetMax(''); setProposalStatusFilter(null) }}
+              className="ml-auto text-[11px] px-2 py-0.5 rounded-lg transition-all"
+              style={{ color: 'var(--text-faint)', background: 'transparent', border: '1px solid var(--border)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.background = 'transparent' }}>
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* ── PROPOSALS filter row ── */}
+        <div className="flex items-center gap-2 flex-wrap px-4 py-2.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
+          <span className="text-[10px] uppercase font-bold flex-shrink-0" style={{ color: '#00c896', letterSpacing: '0.7px' }}>Proposals</span>
+          <button onClick={() => setProposalStatusFilter(null)}
+            className="px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all"
+            style={!proposalStatusFilter
+              ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
+              : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+            All
+          </button>
+          {PROPOSAL_STATUSES.map(({ value, label, color, bg, border }) => {
+            const count = openRequests.filter(r => r.proposals.some(p => p.status === value)).length
+            const active = proposalStatusFilter === value
+            return (
+              <button key={value} onClick={() => setProposalStatusFilter(active ? null : value)}
+                className="px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all"
+                style={active
+                  ? { background: bg, color, border: `1px solid ${border}` }
+                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                {label}{count > 0 && <span className="ml-1 text-[10px] opacity-60">{count}</span>}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Team contact card — only when a specific level is selected */}
         {selectedLevel && (
           <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -404,6 +552,7 @@ export default function ClubPanel({
             // Filtered view — flat list
             filteredOpen.map(req => (
               <ClubRequestCard key={req.id} request={req} clubId={initialClub.id} clubName={displayClub.name}
+                teamLevels={teamLevels}
                 onUpdated={handleRequestUpdated} onDeleted={handleRequestDeleted} />
             ))
           ) : (
@@ -528,23 +677,36 @@ export default function ClubPanel({
             onClick={e => e.stopPropagation()}>
             <div style={{ height: 3, background: 'linear-gradient(90deg, #6c8fff, #5a7aff)' }} />
             <div className="p-6">
-              <h2 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>New Request</h2>
-              <p className="text-xs mb-4" style={{ color: 'var(--text-faint)' }}>What is {displayClub.name} looking for?</p>
+              <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+                New Request
+                <span style={{ color: '#6c8fff' }}> — {displayClub.name}</span>
+              </h2>
               <div className="flex flex-col gap-3 mb-5">
                 {/* Team Level */}
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Team</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Team</label>
+                    {teamLevels.length > 0 && reqTeamLevels.length > 0 && (
+                      <span className="text-[10px]" style={{ color: '#6c8fff' }}>
+                        {reqTeamLevels.length} selected
+                      </span>
+                    )}
+                  </div>
                   {teamLevels.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
-                      {teamLevels.map(l => (
-                        <button key={l} onClick={() => setReqForm(f => ({ ...f, teamLevel: f.teamLevel === l ? '' : l }))}
-                          className="px-3 py-1 rounded-full text-xs font-medium transition-all"
-                          style={reqForm.teamLevel === l
-                            ? { background: 'rgba(108,143,255,0.18)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.5)' }
-                            : { background: 'var(--subtle-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                          {l}
-                        </button>
-                      ))}
+                      {teamLevels.map(l => {
+                        const active = reqTeamLevels.includes(l)
+                        return (
+                          <button key={l}
+                            onClick={() => setReqTeamLevels(prev => active ? prev.filter(x => x !== l) : [...prev, l])}
+                            className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                            style={active
+                              ? { background: 'rgba(108,143,255,0.18)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.5)' }
+                              : { background: 'var(--subtle-bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                            {l}
+                          </button>
+                        )
+                      })}
                     </div>
                   ) : (
                     <input type="text" value={reqForm.teamLevel} onChange={e => setReqForm(f => ({ ...f, teamLevel: e.target.value }))}
@@ -590,7 +752,7 @@ export default function ClubPanel({
               <div className="flex gap-2.5">
                 <button onClick={() => setAddReqOpen(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium" style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>Cancel</button>
                 <button onClick={handleAddRequest} disabled={addingReq} className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #6c8fff, #5a7aff)', color: '#fff' }}>
-                  {addingReq ? 'Adding…' : 'Add Request'}
+                  {addingReq ? 'Adding…' : reqTeamLevels.length > 1 ? `Add ${reqTeamLevels.length} Requests` : 'Add Request'}
                 </button>
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import ClubPanel from './ClubPanel'
+import AllRequestsView from './AllRequestsView'
 import { TeamPicker, sortLevels, DEFAULT_LEVELS } from './TeamPicker'
 
 export interface ClubRow {
@@ -23,6 +24,7 @@ export default function ClubsClient({ initialClubs }: { initialClubs: ClubRow[] 
   const [selectedId, setSelectedId] = useState<string | null>(clubs[0]?.id ?? null)
   const [search, setSearch] = useState('')
   const [activeLevel, setActiveLevel] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'clubs' | 'requests'>('clubs')
 
   // Add Club modal
   const [addOpen, setAddOpen] = useState(false)
@@ -135,7 +137,7 @@ export default function ClubsClient({ initialClubs }: { initialClubs: ClubRow[] 
       </div>
 
       {/* Split layout */}
-      <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 130px)', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 110px)', alignItems: 'flex-start' }}>
 
         {/* ── Left panel ── */}
         <div style={{ width: 260, flexShrink: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -271,27 +273,53 @@ export default function ClubsClient({ initialClubs }: { initialClubs: ClubRow[] 
         <div style={{ flexShrink: 0, width: 3, alignSelf: 'stretch', background: 'var(--border-strong)', margin: '0 12px', borderRadius: 2 }} />
 
         {/* ── Right panel ── */}
-        <div style={{ flex: 1, minWidth: 0, height: '100%', overflowY: 'auto' }}>
-          {selected ? (
-            <ClubPanel
-              key={`${selected.id}-${activeLevel ?? 'all'}`}
-              club={selected}
-              initialLevel={activeLevel}
-              onClubUpdated={handleClubUpdated}
-              onClubDeleted={handleClubDeleted}
-              onRequestCountChange={handleRequestCountChange}
-            />
-          ) : (
-            <div className="rounded-2xl flex flex-col items-center justify-center text-center h-full"
-              style={{ background: 'var(--subtle-bg)', border: '1px dashed rgba(108,143,255,0.25)', minHeight: 300 }}>
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: 'rgba(108,143,255,0.08)', border: '1px solid rgba(108,143,255,0.2)' }}>
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#6c8fff"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+        <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+
+          {/* View toggle */}
+          <div className="flex items-center gap-4 mb-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+            <button
+              onClick={() => setViewMode('clubs')}
+              className="px-1 pb-2 text-sm font-semibold transition-all"
+              style={viewMode === 'clubs'
+                ? { color: '#6c8fff', borderBottom: '2px solid #6c8fff', marginBottom: -9 }
+                : { color: 'var(--text-muted)', borderBottom: '2px solid transparent', marginBottom: -9 }}>
+              Club Requests
+            </button>
+            <button
+              onClick={() => setViewMode('requests')}
+              className="px-1 pb-2 text-sm font-semibold transition-all"
+              style={viewMode === 'requests'
+                ? { color: '#6c8fff', borderBottom: '2px solid #6c8fff', marginBottom: -9 }
+                : { color: 'var(--text-muted)', borderBottom: '2px solid transparent', marginBottom: -9 }}>
+              All Clubs Requests
+            </button>
+          </div>
+
+          {/* Content */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {viewMode === 'requests' ? (
+              <AllRequestsView clubs={clubs} />
+            ) : selected ? (
+              <ClubPanel
+                key={`${selected.id}-${activeLevel ?? 'all'}`}
+                club={selected}
+                initialLevel={activeLevel}
+                onClubUpdated={handleClubUpdated}
+                onClubDeleted={handleClubDeleted}
+                onRequestCountChange={handleRequestCountChange}
+              />
+            ) : (
+              <div className="rounded-2xl flex flex-col items-center justify-center text-center h-full"
+                style={{ background: 'var(--subtle-bg)', border: '1px dashed rgba(108,143,255,0.25)', minHeight: 300 }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+                  style={{ background: 'rgba(108,143,255,0.08)', border: '1px solid rgba(108,143,255,0.2)' }}>
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#6c8fff"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+                </div>
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Select a club</p>
+                <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Choose a club from the list to view its requests.</p>
               </div>
-              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>Select a club</p>
-              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Choose a club from the list to view its requests.</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
