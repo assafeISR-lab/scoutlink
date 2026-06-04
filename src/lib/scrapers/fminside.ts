@@ -75,7 +75,8 @@ export const fmInsideScraper: SiteScraper = {
     const queryWords = stripAccents(query.toLowerCase()).split(/\s+/).filter(w => w.length > 1)
     const nameMatches = (name: string) => {
       const lower = stripAccents(name.toLowerCase())
-      return queryWords.filter(w => lower.includes(w)).length >= Math.min(2, queryWords.length)
+      const minWords = queryWords.length >= 3 ? 2 : 1
+      return queryWords.filter(w => lower.includes(w)).length >= minWords
     }
 
     const players: ScrapedPlayer[] = []
@@ -131,12 +132,12 @@ export const fmInsideScraper: SiteScraper = {
         sourceName: 'FMInside',
       })
 
-      if (players.length >= 10) break
+      if (players.length >= 15) break
     }
 
     // Fetch profiles for top 3 in parallel to get attributes + wages (4s timeout each)
     await Promise.allSettled(
-      players.slice(0, 3).map(async player => {
+      players.slice(0, 5).map(async player => {
         const controller = new AbortController()
         const timer = setTimeout(() => controller.abort(), 4000)
         try {

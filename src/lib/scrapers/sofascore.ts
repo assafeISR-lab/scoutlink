@@ -241,7 +241,7 @@ export const sofascoreScraper: SiteScraper = {
       return type === 'player'
     })
 
-    const top = footballPlayers.slice(0, 3)
+    const top = footballPlayers.slice(0, 6)
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 20000)
     try {
