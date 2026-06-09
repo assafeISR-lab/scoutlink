@@ -15,7 +15,7 @@ const TABLE_COLUMNS = new Set([
   'position', 'team', 'league', 'nationality',
   'age', 'dateOfBirth', 'height',
   'marketValue', 'contractExpiry', 'preferredFoot', 'fmWages',
-  'availability', 'isRepresented',
+  'availability', 'isRepresented', 'pipelineStatus',
 ])
 
 // ─── Column groups (mirrors the order in PARAM_KEYS) ─────────────────────────
@@ -47,16 +47,17 @@ const GROUPS: { label: string; keys: string[] }[] = [
   },
   {
     label: 'Agent',
-    keys: ['isRepresented'],
+    keys: ['isRepresented', 'pipelineStatus'],
   },
 ]
 
 const EXTRA_LABELS: Record<string, string> = {
-  twitterLink:   'Twitter / X',
-  tiktokLink:    'TikTok',
-  playerPhone:   'Player Phone',
-  agentPhone:    'Agent Phone',
-  isRepresented: 'I Represent the Player',
+  twitterLink:    'Twitter / X',
+  tiktokLink:     'TikTok',
+  playerPhone:    'Player Phone',
+  agentPhone:     'Agent Phone',
+  isRepresented:  'I Represent the Player',
+  pipelineStatus: 'Pipeline Stage',
 }
 
 // Label lookup — PARAM_LABELS covers built-ins; EXTRA_LABELS covers new profile-only fields

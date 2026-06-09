@@ -58,7 +58,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string; border: string;
   proposed:      { bg: 'rgba(108,143,255,0.1)',  color: '#6c8fff', border: 'rgba(108,143,255,0.3)',  label: 'Proposed' },
   in_discussion: { bg: 'rgba(255,159,67,0.1)',   color: '#ff9f43', border: 'rgba(255,159,67,0.3)',   label: 'In Discussion' },
   offer:         { bg: 'rgba(0,200,150,0.1)',    color: '#00c896', border: 'rgba(0,200,150,0.3)',    label: 'Offer' },
-  signed:        { bg: 'rgba(0,200,150,0.15)',   color: '#00c896', border: 'rgba(0,200,150,0.5)',    label: '✓ Signed' },
+  signed:        { bg: 'rgba(0,200,150,0.15)',   color: '#00c896', border: 'rgba(0,200,150,0.5)',    label: 'Signed' },
   rejected:      { bg: 'rgba(239,68,68,0.1)',    color: '#ef4444', border: 'rgba(239,68,68,0.3)',    label: 'Rejected' },
 }
 
@@ -180,14 +180,16 @@ export default function ClubRequestCard({
   }
 
   async function handleUpdateProposalStatus(proposalId: string, status: string) {
+    const snapshot = request
+    onUpdated({ ...request, proposals: request.proposals.map(p => p.id === proposalId ? { ...p, status } : p) })
     const res = await fetch(`/api/clubs/${clubId}/requests/${request.id}/proposals`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ proposalId, status }),
     })
-    if (!res.ok) return
+    if (!res.ok) { onUpdated(snapshot); return }
     const { proposal } = await res.json() as { proposal: Proposal }
-    onUpdated({ ...request, proposals: request.proposals.map(p => p.id === proposalId ? proposal : p) })
+    onUpdated({ ...snapshot, proposals: snapshot.proposals.map(p => p.id === proposalId ? proposal : p) })
   }
 
   async function handleRemoveProposal(proposalId: string) {
@@ -640,7 +642,7 @@ export default function ClubRequestCard({
               <div className="flex flex-col gap-3 mb-5">
                 {/* Team Level */}
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Team</label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Team - Age Group</label>
                   {teamLevels.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {teamLevels.map(l => (

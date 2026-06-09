@@ -620,17 +620,23 @@ function EvaluationCard({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function EvaluationSection({ databaseId, playerId, canWrite, currentUserId, initialEvaluations }: {
+export default function EvaluationSection({ databaseId, playerId, canWrite, currentUserId, initialEvaluations, onCountChange }: {
   databaseId: string
   playerId: string
   canWrite: boolean
   currentUserId: string
   initialEvaluations?: Evaluation[]
+  onCountChange?: (n: number) => void
 }) {
   const [evaluations, setEvaluations] = useState<Evaluation[]>(initialEvaluations ?? [])
   const [loading, setLoading]         = useState(!initialEvaluations)
   const [adding,  setAdding]          = useState(false)
   const [saveError, setSaveError]     = useState<string | null>(null)
+
+  // Notify parent of count changes — in effect to avoid setState-during-render
+  useEffect(() => {
+    if (!loading) onCountChange?.(evaluations.length)
+  }, [evaluations.length, loading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (initialEvaluations) return

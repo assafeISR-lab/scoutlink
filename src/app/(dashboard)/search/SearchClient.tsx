@@ -1206,6 +1206,7 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
       agentName:   editData.agentName?.trim()   || null,
       available:      editData.available ?? true,
       playsNational:  editData.playsNational ?? false,
+      pipelineStatus: 'spotted',
       dateOfBirth: editData.dateOfBirth?.trim() || player.dateOfBirth || null,
       heightCm:    heightStr ? parseInt(heightStr) : null,
       marketValue: parseMarketValueToNumber(mktStr || null),

@@ -889,7 +889,7 @@ const TOPICS: Topic[] = [
       title: 'How Clubs works',
       steps: [
         'Click "Clubs" in the left sidebar to open the Clubs workspace.',
-        'Add clubs you work with using the "Add Club" button. You can set up age groups (First Team, U23, U19…) when adding.',
+        'Add clubs you work with using the "Add Club" button. In the "Teams - Age Group" section, First Team is always enabled. Click + on any other age group to enable it, or ✕ to disable. Custom teams can be typed and toggled the same way.',
         'The right panel has two tabs at the top: "Club Requests" (one club at a time) and "All Clubs Requests" (across all clubs).',
         'In Club Requests: select a team tab to filter by age group. Use the Requests filter row to narrow by Position, Transfer type, Nationality, Age, and Budget. Use the Proposals row to filter by proposal status.',
         'In All Clubs Requests: the same filter bars appear, with an additional Status pill (Open / Closed) to show or hide closed requests.',
@@ -903,7 +903,7 @@ const TOPICS: Topic[] = [
       title: 'איך עובד מסך המועדונים',
       steps: [
         'לחץ על "Clubs" בסרגל הצד לפתיחת סביבת המועדונים.',
-        'הוסף מועדונים איתם אתה עובד בעזרת כפתור "Add Club". ניתן להגדיר קבוצות גיל (קבוצה ראשונה, U23, U19...) בעת ההוספה.',
+        'הוסף מועדונים איתם אתה עובד בעזרת כפתור "Add Club". בחלק "Teams - Age Group", קבוצה ראשונה תמיד מופעלת. לחץ + על קבוצת גיל אחרת להפעלה, או ✕ לביטול. קבוצות מותאמות ניתן להקליד ולהחליף באותה צורה.',
         'לפנל הימני יש שתי לשוניות בחלק העליון: "Club Requests" (מועדון אחד בכל פעם) ו-"All Clubs Requests" (על פני כל המועדונים).',
         'ב-Club Requests: בחר לשונית קבוצה לסינון לפי קבוצת גיל. השתמש בשורת פילטר Requests לצמצום לפי עמדה, סוג העברה, לאום, גיל ותקציב. השתמש בשורת Proposals לסינון לפי סטטוס הצעה.',
         'ב-All Clubs Requests: אותם פילטרים מופיעים, עם פיל Status נוסף (Open / Closed) להצגה או הסתרה של בקשות סגורות.',
@@ -925,6 +925,7 @@ const TOPICS: Topic[] = [
         'In the modal: remove any teams the club doesn\'t have, add back removed ones, or type a custom name (e.g. "B Team", "Reserves").',
         'Click Save — changes apply immediately.',
         'For each team, you can add a separate contact person. Select the team pill, then click "+ Add Contact".',
+        'To change the age group on an existing request: click "Edit" on the request card, then pick a different team from the "Team - Age Group" pills.',
       ],
       tip: 'Each team can have its own contact — useful when the U19 coach and First Team director are different people.',
     },
@@ -937,6 +938,7 @@ const TOPICS: Topic[] = [
         'במודל: הסר קבוצות שאין למועדון, הוסף בחזרה שהוסרו, או הקלד שם מותאם אישית (למשל "B Team", "Reserves").',
         'לחץ Save — השינויים מיושמים מיד.',
         'לכל קבוצה ניתן להוסיף איש קשר נפרד. בחר את לשונית הקבוצה, ולחץ "+ Add Contact".',
+        'לשינוי קבוצת הגיל על בקשה קיימת: לחץ "Edit" על כרטיס הבקשה, ובחר קבוצה אחרת מלשוניות "Team - Age Group".',
       ],
       tip: 'לכל קבוצה יכול להיות איש קשר משלה — שימושי כאשר מאמן ה-U19 ומנהל הקבוצה הראשונה הם אנשים שונים.',
     },

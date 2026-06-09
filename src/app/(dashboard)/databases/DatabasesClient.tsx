@@ -13,6 +13,7 @@ import AddPlayerButton from './[id]/AddPlayerButton'
 import CreateReportModal, { type PlayerSnapshot } from './CreateReportModal'
 import { loadActive, loadCustomActive } from '@/app/(dashboard)/search/SearchParamsPanel'
 import { positionPillStyle } from '@/lib/positionColor'
+import { PIPELINE_LABELS } from '@/components/PipelineStepper'
 
 type DbItem = {
   id: string
@@ -41,6 +42,7 @@ type PlayerRow = {
   available: boolean
   playsNational?: boolean
   isRepresented?: boolean
+  pipelineStatus?: string | null
   createdAt?: string
   customFields: { id?: string; fieldName: string; value: string }[]
   // Full data included in the list response — used to pre-warm the panel cache
@@ -140,6 +142,7 @@ function searchListPlayerToPlayerRow(p: SearchListPlayer): PlayerRow {
     heightCm: p.heightCm,
     marketValue: p.marketValue,
     available: true,
+    pipelineStatus: p.pipelineStatus,
     customFields: p.customFields,
   }
 }
@@ -167,10 +170,10 @@ const TABLE_COLS = new Set([
   'position', 'team', 'league', 'nationality',
   'age', 'dateOfBirth', 'height',
   'marketValue', 'contractExpiry', 'preferredFoot', 'fmWages',
-  'availability',
+  'availability', 'pipelineStatus',
 ])
 
-type SortKey = 'name' | 'availability' | 'position' | 'team' | 'nationality' | 'age' | 'height' | 'marketValue' | 'contractExpiry' | 'preferredFoot' | 'fmWages' | 'isRepresented'
+type SortKey = 'name' | 'availability' | 'position' | 'team' | 'nationality' | 'age' | 'height' | 'marketValue' | 'contractExpiry' | 'preferredFoot' | 'fmWages' | 'isRepresented' | 'pipelineStatus'
 
 function SortTh({ label, sortKey, current, dir, onSort }: {
   label: string
@@ -465,7 +468,8 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
           av = cy(a); bv = cy(b); break
         }
         case 'preferredFoot': av = cf(a, 'foot');                   bv = cf(b, 'foot');                   break
-        case 'fmWages':       av = parseFloat(cf(a, 'fmWages')) || -1; bv = parseFloat(cf(b, 'fmWages')) || -1; break
+        case 'fmWages':        av = parseFloat(cf(a, 'fmWages')) || -1; bv = parseFloat(cf(b, 'fmWages')) || -1; break
+        case 'pipelineStatus': av = a.pipelineStatus ?? '';              bv = b.pipelineStatus ?? '';              break
       }
       if (av < bv) return sortDir === 'asc' ? -1 : 1
       if (av > bv) return sortDir === 'asc' ? 1 : -1
@@ -540,6 +544,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
               <SortTh label="Player"       sortKey="name"          {...thProps} />
               {show('availability') && <SortTh label="Status"      sortKey="availability"   {...thProps} />}
               {show('isRepresented') && <SortTh label="Represented" sortKey="isRepresented" {...thProps} />}
+              {show('pipelineStatus') && <SortTh label="Pipeline" sortKey="pipelineStatus" {...thProps} />}
               {show('position')    && <SortTh label="Position"     sortKey="position"     {...thProps} />}
               {(show('team') || show('league')) && <SortTh label="Club / League" sortKey="team" {...thProps} />}
               {show('nationality') && <SortTh label="Nat."         sortKey="nationality"  {...thProps} />}
@@ -677,6 +682,24 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
                         ? <span className="text-[11px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap" style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }}>★ Yes</span>
                         : <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
                       }
+                    </td>
+                  )}
+                  {show('pipelineStatus') && (
+                    <td className="px-4 py-2.5">
+                      {p.pipelineStatus
+                        ? (() => {
+                            const isTerminal = p.pipelineStatus === 'placed' || p.pipelineStatus === 'passed'
+                            const color = p.pipelineStatus === 'placed' ? '#00c896' : p.pipelineStatus === 'passed' ? '#ef4444' : 'var(--text-secondary)'
+                            const bg    = p.pipelineStatus === 'placed' ? 'rgba(0,200,150,0.1)' : p.pipelineStatus === 'passed' ? 'rgba(239,68,68,0.08)' : 'var(--subtle-bg)'
+                            const border = p.pipelineStatus === 'placed' ? 'rgba(0,200,150,0.3)' : p.pipelineStatus === 'passed' ? 'rgba(239,68,68,0.25)' : 'var(--border)'
+                            return (
+                              <span className="text-[11px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap"
+                                style={{ background: bg, color, border: `1px solid ${border}` }}>
+                                {PIPELINE_LABELS[p.pipelineStatus] ?? p.pipelineStatus}
+                              </span>
+                            )
+                          })()
+                        : <span style={{ color: 'var(--text-faint)' }}>—</span>}
                     </td>
                   )}
 

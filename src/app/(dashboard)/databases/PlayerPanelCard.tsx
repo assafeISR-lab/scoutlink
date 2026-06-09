@@ -13,6 +13,7 @@ import FMAttributesEditor from '@/components/FMAttributesEditor'
 import { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import HeatmapDisplay from '@/components/HeatmapDisplay'
 import { positionPillStyle } from '@/lib/positionColor'
+import PipelineStepper, { STAGE_ORDER } from '@/components/PipelineStepper'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ type FullPlayer = {
   playsNational: boolean
   available: boolean
   isRepresented: boolean
+  pipelineStatus: string | null
   createdAt: string
   fieldSources: FieldSource[]
   customFields: CustomField[]
@@ -69,6 +71,8 @@ type InitialPlayerData = {
   position: string | null; clubName: string | null; nationality: string | null
   agentName?: string | null; dateOfBirth: string | null; heightCm: number | null
   marketValue: number | null; available: boolean; playsNational?: boolean
+  isRepresented?: boolean
+  pipelineStatus?: string | null
   customFields: { fieldName: string; value: string }[]
 }
 
@@ -78,7 +82,8 @@ function buildInitialPlayer(p: InitialPlayerData): FullPlayer {
     lastName: p.lastName, position: p.position, nationality: p.nationality,
     dateOfBirth: p.dateOfBirth, heightCm: p.heightCm, clubName: p.clubName,
     marketValue: p.marketValue, agentName: p.agentName ?? null,
-    playsNational: p.playsNational ?? false, available: p.available, isRepresented: false,
+    playsNational: p.playsNational ?? false, available: p.available, isRepresented: p.isRepresented ?? false,
+    pipelineStatus: p.pipelineStatus ?? null,
     createdAt: new Date().toISOString(), fieldSources: [],
     customFields: p.customFields as CustomField[], notes: [], addedBy: { fullName: '' },
   }
@@ -263,7 +268,13 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const [injuryType,         setInjuryType]         = useState(cf('injuryType'))
   const [injuryReturn,       setInjuryReturn]       = useState(cf('injuryReturn'))
   const [isRepresented,      setIsRepresented]      = useState(player.isRepresented)
+  const [pipelineStatus,     setPipelineStatus]     = useState<string | null>(player.pipelineStatus ?? 'spotted')
+  const [evalCount,          setEvalCount]          = useState<number | null>(null)
+  const [proposalCount,      setProposalCount]      = useState<number | null>(null)
   const [mandateDate,        setMandateDate]        = useState(cf('mandateDate'))
+  const [contractUrl,        setContractUrl]        = useState(cf('representationContractUrl'))
+  const [contractUploading,  setContractUploading]  = useState(false)
+  const contractInputRef = useRef<HTMLInputElement>(null)
   const [playsNational,      setPlaysNational]      = useState(player.playsNational)
   const [transfermarktUrl,   setTransfermarktUrl]   = useState(
     cf('transfermarktUrl') || player.fieldSources.find(s => s.sourceName === 'Transfermarkt' && s.isActive)?.sourceUrl || ''
@@ -333,6 +344,23 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const dirtyDbRef      = useRef<Set<string>>(new Set())
   const dirtyCustomRef  = useRef<Set<string>>(new Set())
 
+  // Fetch evaluation + proposal counts on card open
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/databases/${dbId}/players/${player.id}/evaluations`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: unknown) => { if (!cancelled && Array.isArray(data)) setEvalCount(data.length) })
+      .catch(() => {})
+    fetch(`/api/databases/${dbId}/players/${player.id}/proposals`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: unknown) => {
+        if (!cancelled && data && typeof data === 'object' && 'proposals' in data)
+          setProposalCount((data as { proposals: unknown[] }).proposals.length)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [player.id, dbId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fetch name banks for autocomplete dropdowns
   useEffect(() => {
     fetch('/api/name-banks').then(r => r.ok ? r.json() : null).then(data => {
@@ -387,7 +415,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
       foot, passports, playerPhone,
       league, joiningDate, contractExpiry,
       fmWages, transferFeeExpect, transferFeeReal, salaryExpect, salaryReal,
-      agentPhone, sentBy, recentForm, injuryType, injuryReturn, mandateDate, description,
+      agentPhone, sentBy, recentForm, injuryType, injuryReturn, mandateDate, representationContractUrl: contractUrl, description,
       transfermarktUrl, sofascoreUrl, fmInsideUrl,
       instagram, twitter, tiktok, highlights,
       fmAttributes: fmAttributesRef.current,
@@ -426,6 +454,45 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
     const next = !available
     setAvailable(next)
     markDirty('available')
+  }
+
+  async function uploadContract(file: File) {
+    if (file.size > 20 * 1024 * 1024) return
+    setContractUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`/api/databases/${dbId}/players/${player.id}/files`, { method: 'POST', body: form })
+      if (res.ok) {
+        const data = await res.json()
+        setContractUrl(data.fileUrl)
+        markDirty(undefined, 'representationContractUrl')
+        dirtyCustomRef.current.add('representationContractUrl')
+        // persist immediately — don't wait for Save Profile
+        await fetch(`/api/databases/${dbId}/players/${player.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ changedFields: [], customFields: { representationContractUrl: data.fileUrl } }),
+        })
+      }
+    } finally {
+      setContractUploading(false)
+      if (contractInputRef.current) contractInputRef.current.value = ''
+    }
+  }
+
+  async function savePipelineStatus(newVal: string) {
+    const prev = pipelineStatus
+    setPipelineStatus(newVal)
+    try {
+      await fetch(`/api/databases/${dbId}/players/${player.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipelineStatus: newVal, changedFields: ['pipelineStatus'], customFields: {} }),
+      })
+    } catch {
+      setPipelineStatus(prev)
+    }
   }
 
   async function addNote() {
@@ -510,11 +577,17 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const dateAdded = new Date(player.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   const photoUrl  = cf('photo')
 
+  function fmtInjuryDate(raw: string): string {
+    const d = new Date(raw)
+    if (isNaN(d.getTime())) return raw
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+  }
+
   return (
     <div className="px-4 pt-4 pb-8 flex flex-col gap-4">
 
       {/* ── Header ── */}
-      <div className="pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+      <div className="pb-2 border-b" style={{ borderColor: 'var(--border)' }}>
         {/* Row 1: photo + name + availability */}
         <div className="flex items-start gap-3 mb-2">
           <div
@@ -530,7 +603,8 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
             }
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-bold leading-tight mb-1" style={{ fontSize: 16, color: 'var(--text-primary)' }}>{fullName}</p>
+            <p className="font-bold leading-tight mb-1" style={{ fontSize: 18, textTransform: 'capitalize', color: 'var(--text-primary)' }}>{fullName}</p>
+            {/* Row 1: identity — position · club · nationality · age */}
             <div className="flex items-center flex-wrap" style={{ gap: '3px 6px' }}>
               {position && (() => {
                 const pos = displayPos(position)
@@ -542,22 +616,24 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
               {clubName && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{clubName}</span>}
               {nationality && <><span style={{ color: 'var(--text-faint)', fontSize: 11 }}>·</span><span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{nationality}</span></>}
               {age && <><span style={{ color: 'var(--text-faint)', fontSize: 11 }}>·</span><span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>{age}y</span></>}
-              {injuryType && <>
-                <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>·</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                  style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-                  ⚠ {injuryType}
-                </span>
-                {injuryReturn && <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>· back {injuryReturn}</span>}
-              </>}
-              {isRepresented && <>
-                <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>·</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                  style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }}>
-                  ★ I Represent the Player
-                </span>
-              </>}
             </div>
+            {/* Row 2: status badges — injury chip · representation */}
+            {(injuryType || isRepresented) && (
+              <div className="flex items-center flex-wrap mt-1" style={{ gap: '3px 5px' }}>
+                {injuryType && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                    ⚠ {injuryType}{injuryReturn ? ` · back ${fmtInjuryDate(injuryReturn)}` : ''}
+                  </span>
+                )}
+                {isRepresented && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{ background: 'rgba(0,200,150,0.12)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)' }}>
+                    I Represent the Player
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {/* Save Profile */}
@@ -606,6 +682,35 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
 
 
       </div>
+
+      {/* ── Pipeline Stepper ── */}
+      {(() => {
+        const stageIdx = STAGE_ORDER.indexOf(pipelineStatus ?? 'spotted')
+        const pipelineHints: Partial<Record<string, string>> = {}
+        if (stageIdx >= STAGE_ORDER.indexOf('spotted') && !position) {
+          pipelineHints.spotted = 'Position not set — add it in Physical'
+        }
+        if (stageIdx >= STAGE_ORDER.indexOf('scouted') && (evalCount === null || evalCount === 0)) {
+          pipelineHints.scouted = 'No evaluation logged — add one in the Evaluations tab'
+        }
+
+        if (stageIdx >= STAGE_ORDER.indexOf('approached') && !agentName) {
+          pipelineHints.approached = 'Agent name not filled — add it in Agent Info'
+        }
+        if (stageIdx >= STAGE_ORDER.indexOf('represented')) {
+          if (!isRepresented)
+            pipelineHints.represented = 'Player not marked as Represented — toggle it in Agent Info'
+          else if (!contractUrl)
+            pipelineHints.represented = 'Representation contract not uploaded — add it in Agent Info'
+        }
+        if (stageIdx >= STAGE_ORDER.indexOf('in_market') && !marketValue) {
+          pipelineHints.in_market = 'Market value not set — add it in Contract & Value'
+        }
+        if (pipelineStatus === 'placed' && proposalCount !== null && proposalCount === 0) {
+          pipelineHints.placed = 'No signed proposal — close an offer in the Proposals tab'
+        }
+        return <PipelineStepper status={pipelineStatus} onChange={savePipelineStatus} canEdit={canWrite} hints={pipelineHints} />
+      })()}
 
       {/* ── Create Report modal ── */}
       {reportOpen && (
@@ -748,15 +853,15 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
       {/* ── Tab Bar ── */}
       <div className="flex items-center" style={{ borderBottom: '1px solid var(--border)', background: 'var(--subtle-bg)' }}>
         {([
-          { id: 'profile' as const, label: 'Profile' },
-          { id: 'evaluations' as const, label: 'Evaluations' },
-          { id: 'report' as const, label: 'AI Report' },
-          { id: 'proposals' as const, label: 'Proposals' },
+          { id: 'profile' as const,     label: 'Profile',     count: null          },
+          { id: 'evaluations' as const, label: 'Evaluations', count: evalCount     },
+          { id: 'report' as const,      label: 'AI Report',   count: null          },
+          { id: 'proposals' as const,   label: 'Proposals',   count: proposalCount },
         ]).map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className="px-4 py-2.5 text-[11px] font-semibold transition-all"
+            className="flex items-center gap-1 px-4 py-2.5 text-[11px] font-semibold transition-all"
             style={{
               color: activeTab === tab.id ? '#00c896' : 'var(--text-muted)',
               borderBottom: activeTab === tab.id ? '2px solid #00c896' : '2px solid transparent',
@@ -764,6 +869,12 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
             }}
           >
             {tab.label}
+            {tab.count !== null && tab.count !== undefined && tab.count > 0 && (
+              <span className="text-[9px] px-1 py-0.5 rounded font-semibold"
+                style={{ background: 'rgba(108,143,255,0.15)', color: '#6c8fff' }}>
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -850,6 +961,46 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
             {isRepresented && (
               <Row label="Mandate Since" display={mandateDate || null} manual={cfHas('mandateDate')} inputValue={mandateDate} onChange={setMandateDate} onSave={canWrite ? () => markDirty(undefined, 'mandateDate') : undefined} inputType="date" />
             )}
+            {isRepresented && (
+              <div className="flex items-center justify-between gap-2 py-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Contract</span>
+                <input ref={contractInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadContract(f) }} />
+                {contractUrl ? (
+                  <div className="flex items-center gap-1">
+                    <a href={contractUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-[10px] font-medium px-2 py-0.5 hover:opacity-80"
+                      style={{ color: '#00c896', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderRadius: '6px 0 0 6px', textDecoration: 'none' }}>
+                      View ↗
+                    </a>
+                    {canWrite && (
+                      <>
+                        <button onClick={() => contractInputRef.current?.click()}
+                          className="text-[10px] font-medium px-1.5 py-0.5 hover:opacity-80"
+                          style={{ color: '#00c896', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderLeft: 'none', borderRadius: 0 }}>
+                          {contractUploading ? '…' : '↑'}
+                        </button>
+                        <button onClick={async () => { setContractUrl(''); await fetch(`/api/databases/${dbId}/players/${player.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ changedFields: [], customFields: { representationContractUrl: '' } }) }) }}
+                          className="text-[10px] font-medium px-1.5 py-0.5 hover:opacity-80"
+                          style={{ color: 'var(--text-faint)', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderLeft: 'none', borderRadius: '0 6px 6px 0' }}>
+                          ✕
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : canWrite ? (
+                  <button onClick={() => contractInputRef.current?.click()} disabled={contractUploading}
+                    className="text-[10px] font-medium px-2 py-0.5 transition-all disabled:opacity-50"
+                    style={{ color: 'var(--text-faint)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 6 }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#00c896'; e.currentTarget.style.borderColor = 'rgba(0,200,150,0.4)' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                    {contractUploading ? 'Uploading…' : '+ Upload contract'}
+                  </button>
+                ) : (
+                  <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -918,6 +1069,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
             playerId={player.id}
             canWrite={canWrite}
             currentUserId={currentUserId}
+            onCountChange={setEvalCount}
           />
         </div>
       )}
@@ -935,7 +1087,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
       )}
 
       {activeTab === 'proposals' && (
-        <ProposalsSection key={`proposals-${player.id}`} playerId={player.id} dbId={dbId} />
+        <ProposalsSection key={`proposals-${player.id}`} playerId={player.id} dbId={dbId} onProposalSigned={() => savePipelineStatus('placed')} />
       )}
 
     </div>

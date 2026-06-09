@@ -37,7 +37,7 @@ const PROPOSAL_STATUSES = [
   { value: 'proposed',      label: 'Proposed',      color: '#6c8fff', bg: 'rgba(108,143,255,0.1)',  border: 'rgba(108,143,255,0.3)'  },
   { value: 'in_discussion', label: 'In Discussion', color: '#ff9f43', bg: 'rgba(255,159,67,0.1)',   border: 'rgba(255,159,67,0.3)'   },
   { value: 'offer',         label: 'Offer',         color: '#00c896', bg: 'rgba(0,200,150,0.1)',    border: 'rgba(0,200,150,0.3)'    },
-  { value: 'signed',        label: '✓ Signed',      color: '#00c896', bg: 'rgba(0,200,150,0.15)',   border: 'rgba(0,200,150,0.5)'    },
+  { value: 'signed',        label: 'Signed',        color: '#00c896', bg: 'rgba(0,200,150,0.15)',   border: 'rgba(0,200,150,0.5)'    },
   { value: 'rejected',      label: 'Rejected',      color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)'    },
 ]
 

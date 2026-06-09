@@ -30,7 +30,8 @@ export default function ClubsClient({ initialClubs }: { initialClubs: ClubRow[] 
   const [addOpen, setAddOpen] = useState(false)
   const [addName, setAddName] = useState('')
   const [addCountry, setAddCountry] = useState('')
-  const [addTeamLevels, setAddTeamLevels] = useState<string[]>([...DEFAULT_LEVELS])
+  const [addTeamLevels, setAddTeamLevels] = useState<string[]>(['First Team'])
+  const [addCustomTeams, setAddCustomTeams] = useState<string[]>([])
   const [addCustomInput, setAddCustomInput] = useState('')
   const [adding, setAdding] = useState(false)
 
@@ -82,7 +83,8 @@ export default function ClubsClient({ initialClubs }: { initialClubs: ClubRow[] 
       setAddOpen(false)
       setAddName('')
       setAddCountry('')
-      setAddTeamLevels([])
+      setAddTeamLevels(['First Team'])
+      setAddCustomTeams([])
     } finally {
       setAdding(false)
     }
@@ -90,7 +92,8 @@ export default function ClubsClient({ initialClubs }: { initialClubs: ClubRow[] 
 
   function addCustomTeam() {
     const val = addCustomInput.trim()
-    if (!val || addTeamLevels.includes(val)) return
+    if (!val || addCustomTeams.includes(val) || DEFAULT_LEVELS.includes(val)) return
+    setAddCustomTeams(prev => [...prev, val])
     setAddTeamLevels(prev => sortLevels([...prev, val]))
     setAddCustomInput('')
   }
@@ -99,7 +102,8 @@ export default function ClubsClient({ initialClubs }: { initialClubs: ClubRow[] 
     setAddOpen(false)
     setAddName('')
     setAddCountry('')
-    setAddTeamLevels([...DEFAULT_LEVELS])
+    setAddTeamLevels(['First Team'])
+    setAddCustomTeams([])
     setAddCustomInput('')
   }
 
@@ -368,17 +372,52 @@ export default function ClubsClient({ initialClubs }: { initialClubs: ClubRow[] 
 
                 {/* Team levels */}
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Teams</label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Teams - Age Group</label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {addTeamLevels.map(l => (
-                      <span key={l} className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium"
-                        style={{ background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.3)' }}>
-                        {l}
-                        <button
-                          onClick={() => setAddTeamLevels(prev => prev.filter(x => x !== l))}
-                          className="opacity-50 hover:opacity-100 transition-opacity ml-0.5">✕</button>
-                      </span>
-                    ))}
+                    {DEFAULT_LEVELS.map(l => {
+                      const enabled = addTeamLevels.includes(l)
+                      const isFirst = l === 'First Team'
+                      return (
+                        <span key={l} className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium"
+                          style={enabled
+                            ? { background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.3)' }
+                            : { background: 'var(--subtle-bg)', color: 'var(--text-faint)', border: '1px solid var(--border)' }}>
+                          {l}
+                          {isFirst ? (
+                            <svg className="w-2.5 h-2.5 ml-0.5 opacity-40 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                          ) : (
+                            <button
+                              onClick={() => setAddTeamLevels(prev =>
+                                enabled ? prev.filter(x => x !== l) : sortLevels([...prev, l])
+                              )}
+                              className="opacity-50 hover:opacity-100 transition-opacity ml-0.5 flex-shrink-0 leading-none">
+                              {enabled ? '✕' : '+'}
+                            </button>
+                          )}
+                        </span>
+                      )
+                    })}
+                    {/* Custom teams */}
+                    {addCustomTeams.map(l => {
+                      const enabled = addTeamLevels.includes(l)
+                      return (
+                        <span key={l} className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium"
+                          style={enabled
+                            ? { background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.3)' }
+                            : { background: 'var(--subtle-bg)', color: 'var(--text-faint)', border: '1px solid var(--border)' }}>
+                          {l}
+                          <button
+                            onClick={() => setAddTeamLevels(prev =>
+                              enabled ? prev.filter(x => x !== l) : sortLevels([...prev, l])
+                            )}
+                            className="opacity-50 hover:opacity-100 transition-opacity ml-0.5 flex-shrink-0 leading-none">
+                            {enabled ? '✕' : '+'}
+                          </button>
+                        </span>
+                      )
+                    })}
                   </div>
                   <div className="flex gap-2">
                     <input

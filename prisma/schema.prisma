@@ -92,6 +92,7 @@ model Player {
   playsNational  Boolean @default(false)
   available      Boolean @default(true)
   isRepresented  Boolean @default(false)
+  pipelineStatus String?
   marketValue    Float?
 
   // Relations

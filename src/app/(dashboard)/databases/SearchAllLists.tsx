@@ -7,6 +7,7 @@ import {
   getActiveChips, isFilterActive, clearFilterForKey,
   type Filters, type FilterMode, type FilterKey, type RangeBound,
 } from '@/components/PlayerFilterBar'
+import { PIPELINE_STAGE_OPTIONS, PIPELINE_LABELS } from '@/components/PipelineStepper'
 import type { PlayerSnapshot } from './CreateReportModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ export interface Player {
   marketValue: number | null
   available: boolean
   isRepresented: boolean
+  pipelineStatus: string | null
   customFields: CustomFieldEntry[]
 }
 
@@ -81,6 +83,10 @@ function matchesFilters(player: Player, f: Filters, mode: FilterMode): boolean {
   })
   if (f.representations.length) checks.push(() => {
     return f.representations.includes(player.isRepresented ? 'I Represent the Player' : 'Not Represented')
+  })
+  if (f.pipelineStages.length) checks.push(() => {
+    const label = PIPELINE_LABELS[player.pipelineStatus ?? ''] ?? ''
+    return f.pipelineStages.includes(label)
   })
   if (f.contractExpiryYearMin !== null || f.contractExpiryYearMax !== null) checks.push(() => { const cy = contractYear ?? 0; return (f.contractExpiryYearMin === null || cy >= f.contractExpiryYearMin) && (f.contractExpiryYearMax === null || cy <= f.contractExpiryYearMax) })
   if (f.fmWagesMin !== null || f.fmWagesMax !== null) checks.push(() => { const w = fmWages ?? 0; return (f.fmWagesMin === null || w >= f.fmWagesMin) && (f.fmWagesMax === null || w <= f.fmWagesMax) })
@@ -151,6 +157,7 @@ export default function SearchAllLists({ databaseIds, bare, onCreateReport, onAc
     availability: ['Available', 'Not Available'],
     injury: ['Injured', 'Not Injured'],
     representation: ['I Represent the Player', 'Not Represented'],
+    pipelineStatus: PIPELINE_STAGE_OPTIONS,
   }
 
   const rangeBounds: Record<string, RangeBound> = {

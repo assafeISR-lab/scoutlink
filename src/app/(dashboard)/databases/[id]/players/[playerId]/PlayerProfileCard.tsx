@@ -14,6 +14,7 @@ import SeasonStatsGrid, { SeasonStatsEditor } from '@/components/SeasonStatsGrid
 import HeatmapDisplay from '@/components/HeatmapDisplay'
 import { loadActive } from '@/app/(dashboard)/search/SearchParamsPanel'
 import { positionPillStyle } from '@/lib/positionColor'
+import PipelineStepper, { STAGE_ORDER } from '@/components/PipelineStepper'
 
 interface FieldSource {
   id: string
@@ -44,6 +45,7 @@ interface PlayerData {
   playsNational: boolean
   available: boolean
   isRepresented: boolean
+  pipelineStatus: string | null
   createdAt: Date
   fieldSources: FieldSource[]
   customFields: CustomFieldEntry[]
@@ -79,6 +81,32 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   const [nameBanksLoading,    setNameBanksLoading]    = useState(true)
   const agentPhoneMap = useRef<Map<string, string | null>>(new Map())
   const [activeTab, setActiveTab] = useState<'profile' | 'evaluations' | 'report' | 'pitches'>('profile')
+  const [pipelineStatus, setPipelineStatus] = useState<string | null>(player.pipelineStatus ?? null)
+  const [evalCount, setEvalCount] = useState<number | null>(initialEvaluations ? initialEvaluations.length : null)
+  const [contractUploading, setContractUploading] = useState(false)
+  const contractInputRef = useRef<HTMLInputElement>(null)
+
+  async function uploadContract(file: File) {
+    if (file.size > 20 * 1024 * 1024) return
+    setContractUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`/api/databases/${databaseId}/players/${player.id}/files`, { method: 'POST', body: form })
+      if (res.ok) {
+        const data = await res.json()
+        setField('representationContractUrl', data.fileUrl)
+        await fetch(`/api/databases/${databaseId}/players/${player.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ changedFields: [], customFields: { representationContractUrl: data.fileUrl } }),
+        })
+      }
+    } finally {
+      setContractUploading(false)
+      if (contractInputRef.current) contractInputRef.current.value = ''
+    }
+  }
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => { setPhotoEnabled(loadActive().has('photo')) }, [])
@@ -151,6 +179,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     injuryType:        cf('injuryType'),
     injuryReturn:      cf('injuryReturn'),
     mandateDate:       cf('mandateDate'),
+    representationContractUrl: cf('representationContractUrl'),
   })
 
   const [form, setForm] = useState(initialForm)
@@ -158,6 +187,17 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
   function setField(name: string, value: string | boolean) {
     setForm(f => ({ ...f, [name]: value }))
     setChangedFields(prev => new Set([...prev, name]))
+  }
+
+  async function savePipelineStatus(newVal: string) {
+    const prev = pipelineStatus
+    setPipelineStatus(newVal)
+    const res = await fetch(`/api/databases/${databaseId}/players/${player.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pipelineStatus: newVal, changedFields: ['pipelineStatus'], customFields: {} }),
+    })
+    if (!res.ok) setPipelineStatus(prev)
   }
 
   async function saveAvailability(newVal: boolean) {
@@ -179,7 +219,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
     // Split changed fields into DB fields and custom fields
     const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','available','isRepresented'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone','injuryType','injuryReturn','mandateDate']
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone','injuryType','injuryReturn','mandateDate','representationContractUrl']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -311,6 +351,35 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         </div>
       </div>
 
+      {/* ── Pipeline Stepper ── */}
+      {(() => {
+        const stageIdx = STAGE_ORDER.indexOf(pipelineStatus ?? 'spotted')
+        const pipelineHints: Partial<Record<string, string>> = {}
+        if (stageIdx >= STAGE_ORDER.indexOf('spotted') && !form.position) {
+          pipelineHints.spotted = 'Position not set — add it in Physical'
+        }
+        if (stageIdx >= STAGE_ORDER.indexOf('scouted') && (evalCount === null || evalCount === 0)) {
+          pipelineHints.scouted = 'No evaluation logged — add one in the Evaluations tab'
+        }
+
+        if (stageIdx >= STAGE_ORDER.indexOf('approached') && !form.agentName) {
+          pipelineHints.approached = 'Agent name not filled — add it in Agent Info'
+        }
+        if (stageIdx >= STAGE_ORDER.indexOf('represented')) {
+          if (!(form.isRepresented as boolean))
+            pipelineHints.represented = 'Player not marked as Represented — toggle it in Agent Info'
+          else if (!form.representationContractUrl)
+            pipelineHints.represented = 'Representation contract not uploaded — add it in Agent Info'
+        }
+        if (stageIdx >= STAGE_ORDER.indexOf('in_market') && !form.marketValue) {
+          pipelineHints.in_market = 'Market value not set — add it in Contract & Value'
+        }
+        if (pipelineStatus === 'placed') {
+          pipelineHints.placed = 'No signed proposal — close an offer in the Proposals tab'
+        }
+        return <PipelineStepper status={pipelineStatus} onChange={savePipelineStatus} canEdit={canWrite} hints={pipelineHints} />
+      })()}
+
       {/* ── Tab Bar ── */}
       <div className="flex items-center" style={{ borderBottom: '1px solid var(--border)', background: 'var(--subtle-bg)' }}>
         {([
@@ -422,6 +491,46 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             {(form.isRepresented as boolean) && (
               <Row label="Mandate Since" display={form.mandateDate ? fmtDate(form.mandateDate) : null} manual={cfGreen('mandateDate')} isEditing={false} inputValue={form.mandateDate} onChange={v => setField('mandateDate', v)} onQuickSave={canWrite ? handleSave : undefined} inputType="date" />
             )}
+            {(form.isRepresented as boolean) && (
+              <div className="flex items-center justify-between gap-2 py-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Contract</span>
+                <input ref={contractInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadContract(f) }} />
+                {form.representationContractUrl ? (
+                  <div className="flex items-center gap-1">
+                    <a href={form.representationContractUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-[10px] font-medium px-2 py-0.5 hover:opacity-80"
+                      style={{ color: '#00c896', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderRadius: '6px 0 0 6px', textDecoration: 'none' }}>
+                      View ↗
+                    </a>
+                    {canWrite && (
+                      <>
+                        <button onClick={() => contractInputRef.current?.click()}
+                          className="text-[10px] font-medium px-1.5 py-0.5 hover:opacity-80"
+                          style={{ color: '#00c896', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderLeft: 'none', borderRadius: 0 }}>
+                          {contractUploading ? '…' : '↑'}
+                        </button>
+                        <button onClick={async () => { setField('representationContractUrl', ''); await fetch(`/api/databases/${databaseId}/players/${player.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ changedFields: [], customFields: { representationContractUrl: '' } }) }) }}
+                          className="text-[10px] font-medium px-1.5 py-0.5 hover:opacity-80"
+                          style={{ color: 'var(--text-faint)', background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)', borderLeft: 'none', borderRadius: '0 6px 6px 0' }}>
+                          ✕
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : canWrite ? (
+                  <button onClick={() => contractInputRef.current?.click()} disabled={contractUploading}
+                    className="text-[10px] font-medium px-2 py-0.5 transition-all disabled:opacity-50"
+                    style={{ color: 'var(--text-faint)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 6 }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#00c896'; e.currentTarget.style.borderColor = 'rgba(0,200,150,0.4)' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                    {contractUploading ? 'Uploading…' : '+ Upload contract'}
+                  </button>
+                ) : (
+                  <span className="text-[11px]" style={{ color: 'var(--text-faint)' }}>—</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -512,6 +621,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
           canWrite={canWrite}
           currentUserId={currentUserId}
           initialEvaluations={initialEvaluations}
+          onCountChange={setEvalCount}
         />
       )}
 
@@ -529,7 +639,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
       )}
 
       {activeTab === 'pitches' && (
-        <ProposalsSection key={`proposals-${player.id}`} playerId={player.id} dbId={databaseId} />
+        <ProposalsSection key={`proposals-${player.id}`} playerId={player.id} dbId={databaseId} onProposalSigned={() => savePipelineStatus('placed')} />
       )}
 
     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import FMAttributesEditor from '@/components/FMAttributesEditor'
+import { STAGE_ORDER, PIPELINE_LABELS } from '@/components/PipelineStepper'
 import LinkChips from '@/components/LinkChips'
 import { SeasonStatsEditor } from '@/components/SeasonStatsGrid'
 import { positionPillStyle } from '@/lib/positionColor'
@@ -21,6 +22,8 @@ interface Form {
   agentName: string
   playsNational: boolean
   available: boolean
+  // DB fields (non-custom)
+  pipelineStatus: string
   // Custom fields (stored in CustomField table)
   foot: string
   passports: string
@@ -53,7 +56,7 @@ interface Form {
 const EMPTY: Form = {
   firstName: '', middleName: '', lastName: '', position: '', clubName: '',
   nationality: '', dateOfBirth: '', heightCm: '', marketValue: '',
-  agentName: '', playsNational: false, available: true,
+  agentName: '', playsNational: false, available: true, pipelineStatus: 'spotted',
   foot: '', passports: '', league: '', joiningDate: '', contractExpiry: '',
   fmWages: '', transferFeeExpect: '', transferFeeReal: '',
   salaryExpect: '', salaryReal: '', recentForm: '',
@@ -109,8 +112,9 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
         heightCm:     form.heightCm    ? parseFloat(form.heightCm)    : null,
         marketValue:  form.marketValue ? parseFloat(form.marketValue) * 1_000_000 : null,
         agentName:    form.agentName.trim() || null,
-        playsNational: form.playsNational,
-        available:    form.available,
+        playsNational:  form.playsNational,
+        available:      form.available,
+        pipelineStatus: form.pipelineStatus,
         customFields,
       }),
     })
@@ -331,6 +335,20 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     </CardRow>
                     <CardRow label="Added">
                       <span className="text-[11px] font-medium" style={{ color: 'var(--text-faint)' }}>{today}</span>
+                    </CardRow>
+                    <CardRow label="Pipeline Stage">
+                      <select
+                        value={form.pipelineStatus}
+                        onChange={e => set('pipelineStatus', e.target.value)}
+                        className="text-[11px] font-medium text-right bg-transparent focus:outline-none transition-all rounded px-1.5 py-0.5"
+                        style={{ width: 110, color: 'var(--text-primary)', border: '1px solid transparent' }}
+                        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,200,150,0.35)'; e.currentTarget.style.background = 'rgba(0,200,150,0.06)' }}
+                        onBlur={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
+                      >
+                        {STAGE_ORDER.map(key => (
+                          <option key={key} value={key}>{PIPELINE_LABELS[key]}</option>
+                        ))}
+                      </select>
                     </CardRow>
                     <CardRow label="Agent">
                       <CardInput value={form.agentName} onChange={v => set('agentName', v)} placeholder="Agent name" />

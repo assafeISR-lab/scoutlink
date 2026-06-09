@@ -9,7 +9,7 @@ export type FilterKey =
   | 'name' | 'position' | 'club' | 'nationality'
   | 'age' | 'marketValue' | 'height'
   | 'league' | 'preferredFoot' | 'contractExpiry' | 'fmWages'
-  | 'availability' | 'injury' | 'representation'
+  | 'availability' | 'injury' | 'representation' | 'pipelineStatus'
 export type FilterParamType = 'text' | 'range' | 'multi'
 
 export interface FilterParam {
@@ -30,6 +30,7 @@ export interface Filters {
   availabilities: string[]
   injuries: string[]
   representations: string[]
+  pipelineStages: string[]
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -42,6 +43,7 @@ export const DEFAULT_FILTERS: Filters = {
   availabilities: [],
   injuries: [],
   representations: [],
+  pipelineStages: [],
 }
 
 export const FILTER_PARAMS: FilterParam[] = [
@@ -56,9 +58,10 @@ export const FILTER_PARAMS: FilterParam[] = [
   { key: 'contractExpiry',label: 'Contract Expiry',group: 'Club / Career', type: 'range' },
   { key: 'marketValue',   label: 'Market Value',   group: 'Financial',     type: 'range' },
   { key: 'fmWages',       label: 'FM Wages',       group: 'Financial',     type: 'range' },
-  { key: 'availability',  label: 'Availability',        group: 'Status', type: 'multi' },
-  { key: 'injury',        label: 'Injury',              group: 'Status', type: 'multi' },
-  { key: 'representation',label: 'I Represent the Player', group: 'Status', type: 'multi' },
+  { key: 'availability',   label: 'Availability',           group: 'Status', type: 'multi' },
+  { key: 'injury',         label: 'Injury',                 group: 'Status', type: 'multi' },
+  { key: 'representation', label: 'I Represent the Player', group: 'Status', type: 'multi' },
+  { key: 'pipelineStatus', label: 'Pipeline Stage',         group: 'Status', type: 'multi' },
 ]
 
 // ─── Shared Helpers ───────────────────────────────────────────────────────────
@@ -79,6 +82,7 @@ export function getActiveChips(f: Filters): FilterKey[] {
   if (f.availabilities.length) keys.push('availability')
   if (f.injuries.length) keys.push('injury')
   if (f.representations.length) keys.push('representation')
+  if (f.pipelineStages.length) keys.push('pipelineStatus')
   return keys
 }
 
@@ -102,6 +106,7 @@ export function clearFilterForKey(key: FilterKey): Partial<Filters> {
   if (key === 'availability')   p.availabilities = []
   if (key === 'injury')         p.injuries = []
   if (key === 'representation') p.representations = []
+  if (key === 'pipelineStatus') p.pipelineStages = []
   return p
 }
 
@@ -123,6 +128,7 @@ function chipValueSummary(key: FilterKey, f: Filters): string {
     case 'availability':    return f.availabilities.join(', ')
     case 'injury':          return f.injuries.join(', ')
     case 'representation':  return f.representations.join(', ')
+    case 'pipelineStatus':  return f.pipelineStages.join(', ')
   }
   return ''
 }
@@ -354,7 +360,7 @@ function FilterInputPanel({ filterKey, filters, multiOptions, rangeBounds, onApp
   const [textVal, setTextVal] = useState(() =>
     filterKey === 'name' ? filters.name : filterKey === 'club' ? filters.club : filters.league)
   const [multiSelected, setMultiSelected] = useState<string[]>(() =>
-    filterKey === 'position' ? filters.positions : filterKey === 'nationality' ? filters.nationalities : filterKey === 'preferredFoot' ? filters.preferredFeet : filterKey === 'injury' ? filters.injuries : filterKey === 'representation' ? filters.representations : filters.availabilities)
+    filterKey === 'position' ? filters.positions : filterKey === 'nationality' ? filters.nationalities : filterKey === 'preferredFoot' ? filters.preferredFeet : filterKey === 'injury' ? filters.injuries : filterKey === 'representation' ? filters.representations : filterKey === 'pipelineStatus' ? filters.pipelineStages : filters.availabilities)
   const [rangeMin, setRangeMin] = useState(() => {
     const v = filterKey === 'age' ? filters.ageMin : filterKey === 'height' ? filters.heightMin : filterKey === 'marketValue' ? filters.marketValueMin : filterKey === 'contractExpiry' ? filters.contractExpiryYearMin : filters.fmWagesMin
     return v !== null ? String(v / scale) : ''
@@ -374,9 +380,10 @@ function FilterInputPanel({ filterKey, filters, multiOptions, rangeBounds, onApp
       if (filterKey === 'position')      return onApply({ positions: multiSelected })
       if (filterKey === 'nationality')   return onApply({ nationalities: multiSelected })
       if (filterKey === 'preferredFoot') return onApply({ preferredFeet: multiSelected })
-      if (filterKey === 'availability')  return onApply({ availabilities: multiSelected })
-      if (filterKey === 'injury')        return onApply({ injuries: multiSelected })
+      if (filterKey === 'availability')   return onApply({ availabilities: multiSelected })
+      if (filterKey === 'injury')         return onApply({ injuries: multiSelected })
       if (filterKey === 'representation') return onApply({ representations: multiSelected })
+      if (filterKey === 'pipelineStatus') return onApply({ pipelineStages: multiSelected })
     }
     if (param.type === 'range') {
       const lo = rangeMin !== '' ? parseFloat(rangeMin) * scale : null

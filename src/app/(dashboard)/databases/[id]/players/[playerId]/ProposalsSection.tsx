@@ -26,7 +26,7 @@ const STATUS = {
   proposed:      { bg: 'rgba(108,143,255,0.1)',  color: '#6c8fff', border: 'rgba(108,143,255,0.3)',  label: 'Proposed' },
   in_discussion: { bg: 'rgba(255,159,67,0.1)',   color: '#ff9f43', border: 'rgba(255,159,67,0.3)',   label: 'In Discussion' },
   offer:         { bg: 'rgba(0,200,150,0.1)',    color: '#00c896', border: 'rgba(0,200,150,0.3)',    label: 'Offer' },
-  signed:        { bg: 'rgba(0,200,150,0.15)',   color: '#00c896', border: 'rgba(0,200,150,0.5)',    label: '✓ Signed' },
+  signed:        { bg: 'rgba(0,200,150,0.15)',   color: '#00c896', border: 'rgba(0,200,150,0.5)',    label: 'Signed' },
   rejected:      { bg: 'rgba(239,68,68,0.1)',    color: '#ef4444', border: 'rgba(239,68,68,0.3)',    label: 'Rejected' },
 } as Record<string, { bg: string; color: string; border: string; label: string }>
 
@@ -46,7 +46,7 @@ function requestSummary(r: Proposal['request']): string[] {
   return parts
 }
 
-export default function ProposalsSection({ playerId, dbId }: { playerId: string; dbId: string }) {
+export default function ProposalsSection({ playerId, dbId, onProposalSigned }: { playerId: string; dbId: string; onProposalSigned?: (clubName: string) => void }) {
   const [proposals, setProposals] = useState<Proposal[] | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -58,14 +58,20 @@ export default function ProposalsSection({ playerId, dbId }: { playerId: string;
   }, [playerId, dbId])
 
   async function handleStatusChange(proposalId: string, status: string) {
+    const snapshot = proposals
+    setProposals(current => current ? current.map(p => p.id === proposalId ? { ...p, status } : p) : current)
+    if (status === 'signed') {
+      const proposal = proposals?.find(p => p.id === proposalId)
+      if (proposal) onProposalSigned?.(proposal.request.club.name)
+    }
     const res = await fetch(`/api/databases/${dbId}/players/${playerId}/proposals`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ proposalId, status }),
     })
-    if (!res.ok) return
-    const { proposal } = await res.json() as { proposal: Proposal }
-    setProposals(prev => prev ? prev.map(p => p.id === proposal.id ? proposal : p) : prev)
+    if (!res.ok) { setProposals(snapshot); return }
+    const { proposal: updated } = await res.json() as { proposal: Proposal }
+    setProposals(current => current ? current.map(p => p.id === updated.id ? updated : p) : current)
   }
 
   if (loading) {

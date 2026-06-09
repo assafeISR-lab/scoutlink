@@ -76,6 +76,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('playsNational'  in body) dbData.playsNational  = body.playsNational  ?? undefined
   if ('available'      in body) dbData.available      = body.available      ?? undefined
   if ('isRepresented'  in body) dbData.isRepresented  = body.isRepresented  ?? undefined
+  if ('pipelineStatus' in body) dbData.pipelineStatus = body.pipelineStatus || null
 
   const changedFields: string[] = Array.isArray(body.changedFields) ? body.changedFields : []
   const customFieldUpdates: Record<string, string> = body.customFields ?? {}

@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
       marketValue: p.marketValue,
       available: p.available,
       isRepresented: p.isRepresented,
+      pipelineStatus: p.pipelineStatus,
       playsNational: p.playsNational,
       customFields: p.customFields,
     })),

@@ -30,6 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         marketValue: true,
         available: true,
         isRepresented: true,
+        pipelineStatus: true,
         playsNational: true,
         createdAt: true,
         customFields: { select: { id: true, fieldName: true, value: true } },
@@ -97,8 +98,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       heightCm: body.heightCm ?? null,
       marketValue: body.marketValue ?? null,
       agentName: body.agentName?.trim() || null,
-      playsNational: body.playsNational ?? false,
-      available:    body.available ?? true,
+      playsNational:  body.playsNational ?? false,
+      available:      body.available ?? true,
+      pipelineStatus: body.pipelineStatus ?? 'spotted',
     },
   })
 
