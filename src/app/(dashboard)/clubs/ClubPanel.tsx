@@ -79,6 +79,8 @@ export default function ClubPanel({
   const [filterAgeMin, setFilterAgeMin] = useState('')
   const [filterAgeMax, setFilterAgeMax] = useState('')
   const [filterBudgetMax, setFilterBudgetMax] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
 
   // Modals
   const [editOpen, setEditOpen] = useState(false)
@@ -141,6 +143,8 @@ export default function ClubPanel({
       .filter(r => !filterAgeMin || (r.ageMax == null || r.ageMax >= parseInt(filterAgeMin)))
       .filter(r => !filterAgeMax || (r.ageMin == null || r.ageMin <= parseInt(filterAgeMax)))
       .filter(r => !filterBudgetMax || (r.budget != null && r.budget <= parseFloat(filterBudgetMax) * 1000))
+      .filter(r => !filterDateFrom || new Date(r.createdAt) >= new Date(filterDateFrom))
+      .filter(r => !filterDateTo   || new Date(r.createdAt) <= new Date(filterDateTo + 'T23:59:59'))
       .filter(r => !proposalStatusFilter || r.proposals.some(p => p.status === proposalStatusFilter))
   }
 
@@ -439,10 +443,24 @@ export default function ClubPanel({
               style={{ background: 'var(--input-bg)', border: filterBudgetMax ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 70 }} />
           </div>
 
+          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+          {/* Date range */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Date</span>
+            <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+              style={{ background: 'var(--input-bg)', border: filterDateFrom ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 120 }} />
+            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>–</span>
+            <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+              style={{ background: 'var(--input-bg)', border: filterDateTo ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 120 }} />
+          </div>
+
           {/* Reset */}
-          {(filterPosition || filterTransferType || filterNationality || filterAgeMin || filterAgeMax || filterBudgetMax || proposalStatusFilter) && (
+          {(filterPosition || filterTransferType || filterNationality || filterAgeMin || filterAgeMax || filterBudgetMax || filterDateFrom || filterDateTo || proposalStatusFilter) && (
             <button
-              onClick={() => { setFilterPosition(''); setFilterTransferType(''); setFilterNationality(''); setFilterAgeMin(''); setFilterAgeMax(''); setFilterBudgetMax(''); setProposalStatusFilter(null) }}
+              onClick={() => { setFilterPosition(''); setFilterTransferType(''); setFilterNationality(''); setFilterAgeMin(''); setFilterAgeMax(''); setFilterBudgetMax(''); setFilterDateFrom(''); setFilterDateTo(''); setProposalStatusFilter(null) }}
               className="ml-auto text-[11px] px-2 py-0.5 rounded-lg transition-all"
               style={{ color: 'var(--text-faint)', background: 'transparent', border: '1px solid var(--border)' }}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
