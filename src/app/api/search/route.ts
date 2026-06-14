@@ -236,7 +236,7 @@ export async function POST(req: NextRequest) {
           const merged: ScrapedPlayer = { ...ex }
           for (const key of Object.keys(p) as (keyof ScrapedPlayer)[]) {
             if (merged[key] == null && p[key] != null) {
-              (merged as Record<string, unknown>)[key] = p[key]
+              (merged as unknown as Record<string, unknown>)[key] = p[key]
             }
           }
           byId.set(p.id, merged)
