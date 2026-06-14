@@ -2,12 +2,10 @@
 
 import { useState } from 'react'
 
-export const STAGE_ORDER = ['spotted', 'scouted', 'shortlisted', 'approached', 'represented', 'in_market', 'placed', 'passed']
+export const STAGE_ORDER = ['spotted', 'approached', 'represented', 'in_market', 'placed', 'passed']
 
 export const PIPELINE_LABELS: Record<string, string> = {
   spotted:      'Spotted',
-  scouted:      'Evaluated',
-  shortlisted:  'Shortlisted',
   approached:   'Approached',
   represented:  'Represented',
   in_market:    'In Market',
@@ -16,7 +14,7 @@ export const PIPELINE_LABELS: Record<string, string> = {
 }
 
 export const PIPELINE_STAGE_OPTIONS = [
-  'Spotted', 'Evaluated', 'Shortlisted', 'Approached', 'Represented', 'In Market', 'Placed', 'Passed',
+  'Spotted', 'Approached', 'Represented', 'In Market', 'Placed', 'Passed',
 ]
 
 export const PIPELINE_KEY_TO_LABEL: Record<string, string> = PIPELINE_LABELS
@@ -25,7 +23,7 @@ export const PIPELINE_LABEL_TO_KEY: Record<string, string> = Object.fromEntries(
 )
 
 const TERMINAL    = ['placed', 'passed']
-const MAIN_STAGES = ['spotted', 'scouted', 'shortlisted', 'approached', 'represented', 'in_market']
+const MAIN_STAGES = ['spotted', 'approached', 'represented', 'in_market']
 const NOTCH       = 13    // px — depth of left notch / right arrow point
 const CHEVRON_H   = 36    // px — height of each main chevron
 const TERMINAL_H  = 17    // px — height of each terminal mini-chevron (2 × 17 + 2 gap = 36)
@@ -36,8 +34,6 @@ const LABEL_FONT: React.CSSProperties = {
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
   spotted:      'Player has been identified as a potential target',
-  scouted:      'A formal evaluation has been logged for this player',
-  shortlisted:  'Player is on the shortlist — serious consideration for signing',
   approached:   'Initial contact made with the player or their representative',
   represented:  'You currently represent this player',
   in_market:    'Player is actively available for transfer or signing',
@@ -45,7 +41,7 @@ const STAGE_DESCRIPTIONS: Record<string, string> = {
   passed:       'Player is not being pursued further at this time',
 }
 
-const GROUP_LABEL: Record<string, string> = { spotted: 'Scout', approached: 'Agent' }
+const GROUP_LABEL: Record<string, string> = {}
 
 interface Props {
   status: string | null
