@@ -161,7 +161,6 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
     transferFeeReal:   cf('transferFeeReal'),
     salaryExpect:      cf('salaryExpect'),
     salaryReal:        cf('salaryReal'),
-    recentForm:        cf('recentForm'),
     transfermarktUrl:  cf('transfermarktUrl') || player.fieldSources.find(s => s.sourceName === 'Transfermarkt' && s.isActive)?.sourceUrl || '',
     sofascoreUrl:      cf('sofascoreUrl')     || player.fieldSources.find(s => s.sourceName === 'Sofascore'     && s.isActive)?.sourceUrl || '',
     fmInsideUrl:       cf('fmInsideUrl'),
@@ -219,7 +218,7 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
 
     // Split changed fields into DB fields and custom fields
     const dbFields = new Set(['position','heightCm','dateOfBirth','nationality','clubName','marketValue','agentName','playsNational','available','isRepresented'])
-    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','recentForm','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone','injuryType','injuryReturn','mandateDate','representationContractUrl']
+    const customFieldKeys = ['foot','passports','league','joiningDate','contractExpiry','fmWages','transferFeeExpect','transferFeeReal','salaryExpect','salaryReal','transfermarktUrl','sofascoreUrl','fmInsideUrl','instagram','twitter','tiktok','highlights','fmAttributes','seasonStats','heatmap','description','sentBy','playerPhone','agentPhone','injuryType','injuryReturn','mandateDate','representationContractUrl']
 
     const changedDbFields = [...changedFields].filter(f => dbFields.has(f))
     const changedCustomFields = [...changedFields].filter(f => customFieldKeys.includes(f))
@@ -358,12 +357,8 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
         if (stageIdx >= STAGE_ORDER.indexOf('spotted') && !form.position) {
           pipelineHints.spotted = 'Position not set — add it in Physical'
         }
-        if (stageIdx >= STAGE_ORDER.indexOf('scouted') && (evalCount === null || evalCount === 0)) {
-          pipelineHints.scouted = 'No evaluation logged — add one in the Evaluations tab'
-        }
-
-        if (stageIdx >= STAGE_ORDER.indexOf('approached') && !form.agentName) {
-          pipelineHints.approached = 'Agent name not filled — add it in Agent Info'
+        if (stageIdx >= STAGE_ORDER.indexOf('approached') && (evalCount === null || evalCount === 0)) {
+          pipelineHints.approached = 'No evaluation logged — add one in the Evaluations tab'
         }
         if (stageIdx >= STAGE_ORDER.indexOf('represented')) {
           if (!(form.isRepresented as boolean))
@@ -442,13 +437,14 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
             <Row label="Fee (Real)"      display={form.transferFeeReal || null}   manual={cfGreen('transferFeeReal')}   isEditing={false} inputValue={form.transferFeeReal}    onChange={v => setField('transferFeeReal', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Salary Expectation" display={form.salaryExpect || null}   manual={cfGreen('salaryExpect')}      isEditing={false} inputValue={form.salaryExpect}       onChange={v => setField('salaryExpect', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <Row label="Salary (Real)"   display={form.salaryReal || null}        manual={cfGreen('salaryReal')}        isEditing={false} inputValue={form.salaryReal}         onChange={v => setField('salaryReal', v)} onQuickSave={canWrite ? handleSave : undefined} />
+            <Row label="Plays in the National team" display={(form.playsNational as boolean) ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={false} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool neutralFalse boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
           </div>
         </div>
 
-        {/* Scout Info + Agent Info */}
+        {/* Tracking Info + Agent Info */}
         <div className="p-4">
-          {/* Scout Info */}
-          <p className="text-[10px] uppercase font-bold mb-3 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Scout Info</p>
+          {/* Tracking Info */}
+          <p className="text-[10px] uppercase font-bold mb-3 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Tracking Info</p>
           <div>
             <Row label="Added"           display={dateAdded}  isEditing={false} inputValue="" onChange={() => {}} />
             <Row label="Sent by / Scout" display={addedByName} isEditing={false} inputValue="" onChange={() => {}} />
@@ -458,8 +454,6 @@ export default function PlayerProfileCard({ player, addedByName, currentUserId, 
                 <AutocompleteField value={form.sentBy || ''} onChange={v => setField('sentBy', v)} onSave={canWrite ? handleSave : undefined} suggestions={referralSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} />
               </div>
             </div>
-            <Row label="Plays National"  display={(form.playsNational as boolean) ? 'Yes' : 'No'} manual={isManual('playsNational')} isEditing={false} inputValue={form.playsNational ? 'Yes' : 'No'} onChange={() => {}} isBool neutralFalse boolValue={form.playsNational as boolean} onBoolChange={v => setField('playsNational', v)} />
-            <Row label="Recent Form"     display={form.recentForm || null}       manual={cfGreen('recentForm')}   isEditing={false} inputValue={form.recentForm}  onChange={v => setField('recentForm', v)} onQuickSave={canWrite ? handleSave : undefined} />
             <LinkChips canEdit={canWrite} links={[
               { label: 'Transfermarkt', value: form.transfermarktUrl || tmUrl,           onChange: v => setField('transfermarktUrl', v), onBlur: canWrite ? handleSave : undefined },
               { label: 'Sofascore',     value: form.sofascoreUrl     || scUrl,           onChange: v => setField('sofascoreUrl', v),     onBlur: canWrite ? handleSave : undefined },

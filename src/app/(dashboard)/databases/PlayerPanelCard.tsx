@@ -91,7 +91,7 @@ function buildInitialPlayer(p: InitialPlayerData): FullPlayer {
 
 // ── Outer loader ──────────────────────────────────────────────────────────────
 
-export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initialCanWrite = false, initialTab, onDeleted, triggerAction, onTriggerHandled, onLoaded, onSaveComplete, flushRef, onDirtyChange, onClose }: {
+export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initialCanWrite = false, initialTab, onDeleted, triggerAction, onTriggerHandled, onLoaded, onSaveComplete, flushRef, onDirtyChange, onClose, onPipelineStatusChange }: {
   playerId: string
   dbId: string
   initialPlayer?: InitialPlayerData
@@ -105,6 +105,7 @@ export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initial
   flushRef?: { current: (() => Promise<void>) | undefined }
   onDirtyChange?: (dirty: boolean) => void
   onClose?: () => void
+  onPipelineStatusChange?: (newStatus: string) => void
 }) {
   const cacheKey = `${dbId}:${playerId}`
   const cached = playerCache.get(cacheKey)
@@ -180,6 +181,7 @@ export default function PlayerPanelCard({ playerId, dbId, initialPlayer, initial
       flushRef={flushRef}
       onDirtyChange={onDirtyChange}
       onClose={onClose}
+      onPipelineStatusChange={onPipelineStatusChange}
     />
   )
 }
@@ -224,7 +226,7 @@ function timeAgo(date: string) {
 
 // ── Main card ─────────────────────────────────────────────────────────────────
 
-function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoading, initialTab, onDeleted, triggerAction, onTriggerHandled, onSaveComplete, flushRef, onDirtyChange, onClose }: {
+function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoading, initialTab, onDeleted, triggerAction, onTriggerHandled, onSaveComplete, flushRef, onDirtyChange, onClose, onPipelineStatusChange }: {
   player: FullPlayer; dbId: string; canWrite: boolean; currentUserId: string; notesLoading?: boolean
   initialTab?: 'profile' | 'evaluations' | 'report' | 'proposals'
   onDeleted?: () => void
@@ -234,6 +236,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   flushRef?: { current: (() => Promise<void>) | undefined }
   onDirtyChange?: (dirty: boolean) => void
   onClose?: () => void
+  onPipelineStatusChange?: (newStatus: string) => void
 }) {
   const cf = (name: string) => player.customFields.find(f => f.fieldName === name)?.value ?? ''
   const isManual = (fieldName: string) =>
@@ -264,7 +267,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   const [agentName,          setAgentName]          = useState(player.agentName ?? '')
   const [agentPhone,         setAgentPhone]         = useState(cf('agentPhone'))
   const [sentBy,             setSentBy]             = useState(cf('sentBy'))
-  const [recentForm,         setRecentForm]         = useState(cf('recentForm'))
+
   const [injuryType,         setInjuryType]         = useState(cf('injuryType'))
   const [injuryReturn,       setInjuryReturn]       = useState(cf('injuryReturn'))
   const [isRepresented,      setIsRepresented]      = useState(player.isRepresented)
@@ -415,7 +418,7 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
       foot, passports, playerPhone,
       league, joiningDate, contractExpiry,
       fmWages, transferFeeExpect, transferFeeReal, salaryExpect, salaryReal,
-      agentPhone, sentBy, recentForm, injuryType, injuryReturn, mandateDate, representationContractUrl: contractUrl, description,
+      agentPhone, sentBy, injuryType, injuryReturn, mandateDate, representationContractUrl: contractUrl, description,
       transfermarktUrl, sofascoreUrl, fmInsideUrl,
       instagram, twitter, tiktok, highlights,
       fmAttributes: fmAttributesRef.current,
@@ -484,6 +487,8 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
   async function savePipelineStatus(newVal: string) {
     const prev = pipelineStatus
     setPipelineStatus(newVal)
+    onPipelineStatusChange?.(newVal)
+    window.dispatchEvent(new CustomEvent('scoutlink:pipeline-updated', { detail: { playerId: player.id, status: newVal } }))
     try {
       await fetch(`/api/databases/${dbId}/players/${player.id}`, {
         method: 'PATCH',
@@ -492,6 +497,8 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
       })
     } catch {
       setPipelineStatus(prev)
+      onPipelineStatusChange?.(prev ?? '')
+      window.dispatchEvent(new CustomEvent('scoutlink:pipeline-updated', { detail: { playerId: player.id, status: prev ?? '' } }))
     }
   }
 
@@ -690,12 +697,8 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
         if (stageIdx >= STAGE_ORDER.indexOf('spotted') && !position) {
           pipelineHints.spotted = 'Position not set — add it in Physical'
         }
-        if (stageIdx >= STAGE_ORDER.indexOf('scouted') && (evalCount === null || evalCount === 0)) {
-          pipelineHints.scouted = 'No evaluation logged — add one in the Evaluations tab'
-        }
-
-        if (stageIdx >= STAGE_ORDER.indexOf('approached') && !agentName) {
-          pipelineHints.approached = 'Agent name not filled — add it in Agent Info'
+        if (stageIdx >= STAGE_ORDER.indexOf('approached') && (evalCount === null || evalCount === 0)) {
+          pipelineHints.approached = 'No evaluation logged — add one in the Evaluations tab'
         }
         if (stageIdx >= STAGE_ORDER.indexOf('represented')) {
           if (!isRepresented)
@@ -930,23 +933,21 @@ function PlayerPanelCardInner({ player, dbId, canWrite, currentUserId, notesLoad
           <Row label="Fee (Real)"        display={transferFeeReal || null}   manual={cfHas('transferFeeReal')}      inputValue={transferFeeReal}    onChange={setTransferFeeReal}   onSave={canWrite ? () => markDirty(undefined, 'transferFeeReal')     : undefined} />
           <Row label="Salary Expect."    display={salaryExpect || null}      manual={cfHas('salaryExpect')}         inputValue={salaryExpect}       onChange={setSalaryExpect}      onSave={canWrite ? () => markDirty(undefined, 'salaryExpect')        : undefined} />
           <Row label="Salary (Real)"     display={salaryReal || null}        manual={cfHas('salaryReal')}           inputValue={salaryReal}         onChange={setSalaryReal}        onSave={canWrite ? () => markDirty(undefined, 'salaryReal')          : undefined} />
+          <BoolRow label="Plays in the National team" value={playsNational} onToggle={canWrite ? () => { const n = !playsNational; setPlaysNational(n); markDirty('playsNational') } : undefined} neutral trueLabel="Yes" falseLabel="No" />
         </div>
 
         {/* Scout Info + Agent Info */}
         <div className="p-3">
-          {/* Scout Info */}
-          <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Scout Info</p>
+          {/* Tracking Info */}
+          <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Tracking Info</p>
           <Row     label="Added"          display={dateAdded}   inputValue="" onChange={() => {}} />
-          <Row     label="Scout"          display={player.addedBy.fullName} inputValue="" onChange={() => {}} />
+          <Row     label="Added By"       display={player.addedBy.fullName} inputValue="" onChange={() => {}} />
           <div className="flex items-center justify-between py-1" style={{ borderBottom: '1px solid var(--border)' }}>
             <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Referral</span>
             <div className="w-32">
               <AutocompleteField value={sentBy} onChange={v => { setSentBy(v); markDirty(undefined, 'sentBy') }} onSave={canWrite ? () => {} : undefined} suggestions={referralSuggestions} placeholder="Name…" canEdit={canWrite} loading={nameBanksLoading} />
             </div>
           </div>
-          <BoolRow label="Plays National" value={playsNational} onToggle={canWrite ? () => { const n = !playsNational; setPlaysNational(n); markDirty('playsNational') } : undefined} neutral trueLabel="Yes" falseLabel="No" />
-          <Row     label="Recent Form"    display={recentForm || null}      manual={cfHas('recentForm')} inputValue={recentForm} onChange={setRecentForm} onSave={canWrite ? () => markDirty(undefined, 'recentForm') : undefined} />
-
           {/* Agent Info */}
           <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
             <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Agent Info</p>

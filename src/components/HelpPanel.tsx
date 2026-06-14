@@ -26,7 +26,7 @@ const TOPICS: Topic[] = [
       category: 'Getting Started',
       title: 'What is ScoutLink?',
       steps: [
-        'ScoutLink is your personal football scouting app.',
+        'ScoutLink is your personal football agent platform.',
         'You can create lists of players you want to track — like "My Wingers" or "Under-21 Strikers".',
         'For each player you can store stats, notes, a heat map, and contact info.',
         'You can also search the internet for players and pull their data automatically.',
@@ -36,7 +36,7 @@ const TOPICS: Topic[] = [
       category: 'התחלה',
       title: 'מה זה ScoutLink?',
       steps: [
-        'ScoutLink היא אפליקציית סקאוטינג כדורגל אישית שלך.',
+        'ScoutLink היא הפלטפורמה האישית שלך לניהול ייצוג שחקני כדורגל.',
         'אפשר ליצור רשימות של שחקנים שרוצים לעקוב אחריהם — למשל "הכנפיים שלי" או "תוקפים מתחת לגיל 21".',
         'לכל שחקן אפשר לשמור סטטיסטיקות, הערות, מפת חום ופרטי קשר.',
         'אפשר גם לחפש שחקנים באינטרנט ולמשוך את הנתונים שלהם אוטומטית.',
@@ -52,7 +52,7 @@ const TOPICS: Topic[] = [
       steps: [
         'The sidebar on the left is your main menu.',
         '"Databases" shows all your player lists.',
-        '"Scout Board" is your personal tracking board — like a whiteboard for players.',
+        '"Dashboard" is your analytics and tracking overview for the agent pipeline.',
         '"Search All Lists" lets you filter players across every list you have.',
         '"Reports" lets you create printable player reports.',
         '"Settings" is where you manage your branding and account details.',
@@ -64,7 +64,7 @@ const TOPICS: Topic[] = [
       steps: [
         'סרגל הצד משמאל הוא התפריט הראשי שלך.',
         '"Databases" מציג את כל רשימות השחקנים שלך.',
-        '"Scout Board" הוא לוח המעקב האישי שלך — כמו לוח לבן לשחקנים.',
+        '"Dashboard" הוא לוח האנליטיקה והמעקב האישי שלך לצינור הסוכן.',
         '"Search All Lists" מאפשר לסנן שחקנים מכל הרשימות שלך.',
         '"Reports" מאפשר ליצור דוחות שחקנים להדפסה.',
         '"Settings" הוא המקום לנהל את המיתוג ופרטי החשבון שלך.',
@@ -240,9 +240,9 @@ const TOPICS: Topic[] = [
     keywords: ['web scout', 'search', 'scrape', 'find', 'sofascore', 'transfermarkt', 'חיפוש', 'לחפש'],
     en: {
       category: 'Players',
-      title: 'How to search for a player (Web Scout)',
+      title: 'How to search for a player (Web Search)',
       steps: [
-        'Click "Web Scout" in the left sidebar.',
+        'Click "Web Search" in the player list toolbar.',
         'Type the player\'s name in the search box and press Enter.',
         'ScoutLink will search Transfermarkt, Sofascore, and FMInside for you.',
         'You\'ll see a card for each player found with stats, position, club, and more.',
@@ -252,9 +252,9 @@ const TOPICS: Topic[] = [
     },
     he: {
       category: 'שחקנים',
-      title: 'איך לחפש שחקן (Web Scout)',
+      title: 'איך לחפש שחקן (Web Search)',
       steps: [
-        'לחץ על "Web Scout" בסרגל הצד.',
+        'לחץ על "Web Search" בסרגל הכלים של רשימת השחקנים.',
         'הקלד את שם השחקן בתיבת החיפוש ולחץ Enter.',
         'ScoutLink יחפש עבורך ב-Transfermarkt, Sofascore ו-FMInside.',
         'תראה כרטיס לכל שחקן שנמצא עם סטטיסטיקות, עמדה, מועדון ועוד.',
@@ -268,11 +268,11 @@ const TOPICS: Topic[] = [
     keywords: ['url', 'link', 'paste', 'sofascore', 'transfermarkt', 'fminside', 'scout', 'קישור', 'לינק'],
     en: {
       category: 'Players',
-      title: 'How to scout a player by URL',
+      title: 'How to add a player by URL',
       steps: [
         'Find the player\'s profile page on Sofascore, Transfermarkt, or FMInside in your browser.',
         'Copy the full URL (web address) from the top of your browser.',
-        'Go to "Web Scout" in ScoutLink.',
+        'Go to "Web Search" in ScoutLink.',
         'Paste the URL into the search box and press Enter.',
         'ScoutLink will read the player\'s name from the link and search all 3 sites automatically.',
       ],
@@ -280,11 +280,11 @@ const TOPICS: Topic[] = [
     },
     he: {
       category: 'שחקנים',
-      title: 'איך לאתר שחקן לפי קישור (URL)',
+      title: 'איך להוסיף שחקן לפי קישור (URL)',
       steps: [
         'מצא את דף הפרופיל של השחקן ב-Sofascore, Transfermarkt או FMInside בדפדפן שלך.',
         'העתק את ה-URL המלא (כתובת האתר) מלמעלה בדפדפן.',
-        'עבור ל-"Web Scout" ב-ScoutLink.',
+        'עבור ל-"Web Search" ב-ScoutLink.',
         'הדבק את ה-URL בתיבת החיפוש ולחץ Enter.',
         'ScoutLink יקרא את שם השחקן מהקישור ויחפש בכל 3 האתרים אוטומטית.',
       ],
@@ -359,7 +359,7 @@ const TOPICS: Topic[] = [
         'Open any list and find the player in the table.',
         'Click the player\'s name (it\'s a blue link).',
         'This opens the full profile card with all their info, stats, and heat map.',
-        'Use the three tabs at the top — "Profile" for all player data, "Evaluations" for match observations, and "AI Report" to generate a professional scouting report.',
+        'Use the three tabs at the top — "Profile" for all player data, "Evaluations" for match observations, and "AI Report" to generate a professional player report.',
       ],
     },
     he: {
@@ -456,7 +456,7 @@ const TOPICS: Topic[] = [
       steps: [
         'Season Stats is a table showing the player\'s performance numbers over the last 3 seasons.',
         'Rows are stats (Goals, Assists, Appearances, etc.). Columns are the 3 most recent seasons.',
-        'Stats are pulled automatically from Sofascore when you import or scout a player.',
+        'Stats are pulled automatically from Sofascore when you import or search for a player.',
         'You can click any number to edit it manually if needed.',
       ],
     },
@@ -477,20 +477,20 @@ const TOPICS: Topic[] = [
     id: 'scout-board',
     keywords: ['scout board', 'board', 'kanban', 'track', 'pipeline', 'לוח', 'סקאוטינג'],
     en: {
-      category: 'Scout Board',
-      title: 'What is the Scout Board?',
+      category: 'Dashboard',
+      title: 'What is the Dashboard?',
       steps: [
-        'The Scout Board is like a sticky-note board for tracking players through a scouting process.',
+        'The Dashboard is your analytics overview — player counts, pipeline stage stats, recent notes, and activity.',
         'You can create columns (stages) like "Watch List", "Contacted", "Recommended".',
         'Players from any of your lists can be added to the board.',
         'Drag players between columns as their status changes.',
       ],
     },
     he: {
-      category: 'לוח הסקאוטינג',
-      title: 'מה זה לוח הסקאוטינג?',
+      category: 'לוח מחוונים',
+      title: 'מה זה הדשבורד?',
       steps: [
-        'לוח הסקאוטינג הוא כמו לוח פתקיות למעקב אחר שחקנים בתהליך הסקאוטינג.',
+        'הדשבורד הוא לוח האנליטיקה שלך — ספירת שחקנים, סטטיסטיקות שלבי הצינור, הערות אחרונות ופעילות.',
         'ניתן ליצור עמודות (שלבים) כמו "רשימת צפייה", "יצרנו קשר", "מומלץ".',
         'שחקנים מכל הרשימות שלך יכולים להתווסף ללוח.',
         'גרור שחקנים בין עמודות כאשר הסטטוס שלהם משתנה.',
@@ -532,7 +532,7 @@ const TOPICS: Topic[] = [
       category: 'Calendar',
       title: 'What is the Calendar?',
       steps: [
-        'The Calendar is your scouting schedule — a place to log meetings, calls, reminders, and deadlines.',
+        'The Calendar is your schedule — a place to log meetings, calls, reminders, and deadlines.',
         'You can view it by day, week, month, or year using the buttons at the top.',
         'Player notes you write also appear on the calendar automatically, so everything is in one place.',
         'Use the arrows or the "Today" button to move between dates.',
@@ -652,27 +652,27 @@ const TOPICS: Topic[] = [
       category: 'Player Profile',
       title: 'How to mark a player you represent',
       steps: [
-        'Open a player\'s profile and find the "Agent Info" section (below Scout Info in the third column).',
+        'Open a player\'s profile and find the "Agent Info" section (below Tracking Info in the third column).',
         'Toggle "I Represent the Player" to Yes.',
         'Optionally set a "Mandate Since" date — the date you started representing them.',
         'Click "Save Profile" — a green ★ badge appears in the player\'s header.',
         'Use the "I Represent the Player" filter in the filter bar to see all your represented players at once.',
         'Enable the "I Represent the Player" column in the Columns picker to see representation status in the player table.',
       ],
-      tip: 'The Agent Info section also holds the agent name, agent phone, and your mandate date — keeping all representation details separate from scouting observations.',
+      tip: 'The Agent Info section also holds the agent name, agent phone, and your mandate date — keeping all representation details separate from tracking observations.',
     },
     he: {
       category: 'פרופיל שחקן',
       title: 'איך לסמן שחקן שאתה מייצג',
       steps: [
-        'פתח את פרופיל השחקן ומצא את קטע "Agent Info" (מתחת ל-Scout Info בעמודה השלישית).',
+        'פתח את פרופיל השחקן ומצא את קטע "Agent Info" (מתחת ל-Tracking Info בעמודה השלישית).',
         'הפעל את הכפתור "I Represent the Player" לכן.',
         'בחר באופן אופציונלי תאריך "Mandate Since" — התאריך שבו התחלת לייצג אותם.',
         'לחץ "Save Profile" — תג ירוק ★ יופיע בכותרת השחקן.',
         'השתמש בפילטר "I Represent the Player" בסרגל הפילטרים לראות את כל השחקנים שאתה מייצג.',
         'הפעל את עמודת "I Represent the Player" בבורר העמודות לראות סטטוס ייצוג בטבלת השחקנים.',
       ],
-      tip: 'קטע Agent Info מכיל גם את שם הסוכן, טלפון הסוכן ותאריך המנדט — שומר את כל פרטי הייצוג נפרדים מהתצפיות הסקאוטינג.',
+      tip: 'קטע Agent Info מכיל גם את שם הסוכן, טלפון הסוכן ותאריך המנדט — שומר את כל פרטי הייצוג נפרדים מנתוני המעקב.',
     },
   },
   {
@@ -682,7 +682,7 @@ const TOPICS: Topic[] = [
       category: 'Player Profile',
       title: 'Agent & Referral smart dropdowns',
       steps: [
-        'In the Scout Info section of a player profile, click the "Agent" or "Referral" field.',
+        'In the Tracking Info section of a player profile, click the "Agent" or "Referral" field.',
         'A dropdown appears with all agent or referral names you have used before across all your lists.',
         'Select a name from the list — no need to retype it each time.',
         'For agents: if a phone number is stored for that agent, the "Agent Phone" field fills automatically.',
@@ -695,7 +695,7 @@ const TOPICS: Topic[] = [
       category: 'פרופיל שחקן',
       title: 'רשימות חכמות לסוכן ולהפניה',
       steps: [
-        'בקטע Scout Info בפרופיל שחקן, לחץ על שדה "Agent" או "Referral".',
+        'בקטע Tracking Info בפרופיל שחקן, לחץ על שדה "Agent" או "Referral".',
         'מופיעה רשימה נפתחת עם כל שמות הסוכנים וההפניות שהשתמשת בהם קודם בכל הרשימות שלך.',
         'בחר שם מהרשימה — אין צורך להקליד מחדש בכל פעם.',
         'לסוכנים: אם מספר הטלפון שלהם שמור, שדה "Agent Phone" מתמלא אוטומטית.',
@@ -736,7 +736,7 @@ const TOPICS: Topic[] = [
       category: 'Player Profile',
       title: 'How to add highlight videos',
       steps: [
-        'In the Scout Info section, find the "Highlights" area.',
+        'In the Tracking Info section, find the "Highlights" area.',
         'Click "+ Add highlight" to add a video URL (YouTube, Wyscout, Vimeo, etc.).',
         'Type or paste the URL and press Enter or click away to save.',
         'You can add multiple video links — each appears as a numbered chip (Video 1, Video 2…).',
@@ -748,7 +748,7 @@ const TOPICS: Topic[] = [
       category: 'פרופיל שחקן',
       title: 'איך להוסיף סרטוני הייליט',
       steps: [
-        'בקטע Scout Info, מצא את אזור "Highlights".',
+        'בקטע Tracking Info, מצא את אזור "Highlights".',
         'לחץ "+ Add highlight" להוספת כתובת URL (YouTube, Wyscout, Vimeo וכו\').',
         'הקלד או הדבק את ה-URL ולחץ Enter או לחץ מחוץ לשמירה.',
         'ניתן להוסיף מספר קישורי וידאו — כל אחד מופיע כצ\'יפ ממוספר (Video 1, Video 2…).',
@@ -764,12 +764,12 @@ const TOPICS: Topic[] = [
     keywords: ['ai', 'report', 'generate', 'draft', 'finalize', 'scouting report', 'claude', 'בינה', 'דוח', 'ליצור', 'טיוטה'],
     en: {
       category: 'Player Profile',
-      title: 'How to generate an AI scouting report',
+      title: 'How to generate an AI player report',
       steps: [
         'Open a player\'s profile by clicking their name in the list.',
         'Click the "AI Report" tab at the top of the profile card.',
         'Choose which sections to include — Physical, Contract & Value, Season Stats, FM Attributes, Evaluations, and more.',
-        'Click "Generate Report" — Claude AI writes a professional scouting report draft based on all the player\'s saved data.',
+        'Click "Generate Report" — Claude AI writes a professional player report draft based on all the player\'s saved data.',
         'Review and edit the draft text directly in the text area.',
         'Click "Save Draft" to keep your edits, or "Finalize Report" when the report is ready to send.',
         'Once finalized, click "Save PDF" to download a formatted PDF report to your device.',
@@ -778,12 +778,12 @@ const TOPICS: Topic[] = [
     },
     he: {
       category: 'פרופיל שחקן',
-      title: 'איך ליצור דוח סקאוטינג עם AI',
+      title: 'איך ליצור דוח שחקן עם AI',
       steps: [
         'פתח את פרופיל השחקן על ידי לחיצה על שמו ברשימה.',
         'לחץ על לשונית "AI Report" בחלק העליון של כרטיס הפרופיל.',
         'בחר אילו סעיפים לכלול — פיזי, חוזה, סטטיסטיקות עונה, מאפייני FM, הערכות ועוד.',
-        'לחץ "Generate Report" — Claude AI כותב טיוטת דוח סקאוטינג מקצועית על בסיס כל הנתונים השמורים של השחקן.',
+        'לחץ "Generate Report" — Claude AI כותב טיוטת דוח שחקן מקצועית על בסיס כל הנתונים השמורים של השחקן.',
         'סקור וערוך את טיוטת הטקסט ישירות בתיבת הטקסט.',
         'לחץ "Save Draft" לשמירת עריכותיך, או "Finalize Report" כשהדוח מוכן לשליחה.',
         'לאחר הסיום, לחץ "Save PDF" להורדת דוח PDF מעוצב למכשיר שלך.',
@@ -801,7 +801,7 @@ const TOPICS: Topic[] = [
       title: 'How to set up My Branding',
       steps: [
         'Go to Settings in the left sidebar.',
-        'Enter your agency or club name, and optionally a signature line (e.g. "Head Scout, Agency Name").',
+        'Enter your agency or club name, and optionally a signature line (e.g. "Football Agent, Agency Name").',
         'Click "Upload Logo" and choose an image file — a preview appears immediately.',
         'Add your phone, email, and website if you want them on reports.',
         'Click "Save Branding" — your details are saved once and used on every exported PDF report automatically.',
@@ -813,7 +813,7 @@ const TOPICS: Topic[] = [
       title: 'איך להגדיר את המיתוג שלי',
       steps: [
         'עבור ל-Settings בסרגל הצד.',
-        'הזן את שם הסוכנות או המועדון שלך, ובאופן אופציונלי שורת חתימה (למשל "ראש סקאוטינג, שם הסוכנות").',
+        'הזן את שם הסוכנות או המועדון שלך, ובאופן אופציונלי שורת חתימה (למשל "סוכן כדורגל, שם הסוכנות").',
         'לחץ "Upload Logo" ובחר קובץ תמונה — תצוגה מקדימה מופיעה מיד.',
         'הוסף טלפון, אימייל ואתר אם ברצונך שיופיעו בדוחות.',
         'לחץ "Save Branding" — הפרטים שלך נשמרים פעם אחת ומשמשים בכל דוח PDF שתייצא אוטומטית.',

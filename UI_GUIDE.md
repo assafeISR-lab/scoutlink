@@ -1727,9 +1727,9 @@ The search card's editable field row. Looks nearly identical to `Row` from the p
 
 ---
 
-## 44. Plays National — Filled Pill (Search Card Variant)
+## 44. Plays in the National team — Filled Pill (Search Card Variant)
 
-The search result card uses a **filled `rounded-full` pill** for "Plays National" — not the `BoolRow` neutral variant used on the profile card.
+The search result card uses a **filled `rounded-full` pill** for "Plays in the National team" — not the `BoolRow` neutral variant used on the profile card. Lives in the Contract & Value section.
 
 ```tsx
 {/* True — green fill */}
@@ -1920,19 +1920,21 @@ An `<a>` tag with the `download` attribute that triggers a file save dialog. Use
 
 ---
 
-## 48. Scout Info / Agent Info Split
+## 48. Tracking Info / Agent Info Split
 
 The third column of the player card is divided into two sub-sections separated by a divider:
 
-**Scout Info** — observation/tracking data: Added, Sent by, Referral, Plays National, Recent Form, Links, Highlights, Description
+**Tracking Info** — observation/tracking data: Added, Sent by, Referral, Links, Highlights, Description
 
 **Agent Info** — representation/business data: Agent, Agent Phone, I Represent the Player, Mandate Since
 
+Note: "Plays in the National team" is in the Contract & Value column (not Tracking Info).
+
 ```tsx
-{/* Scout Info */}
+{/* Tracking Info */}
 <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2"
-  style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Scout Info</p>
-{/* ... scout rows ... */}
+  style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Tracking Info</p>
+{/* ... tracking rows ... */}
 
 {/* Agent Info */}
 <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>

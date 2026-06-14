@@ -50,7 +50,7 @@ interface EditForm {
   foot: string; passports: string; league: string; joiningDate: string
   contractExpiry: string; fmWages: string; transferFeeExpect: string
   transferFeeReal: string; salaryExpect: string; salaryReal: string
-  recentForm: string; transfermarktUrl: string; sofascoreUrl: string
+  transfermarktUrl: string; sofascoreUrl: string
   fmInsideUrl: string; instagram: string; twitter: string; tiktok: string
   highlights: string; playerPhone: string; agentPhone: string
   sentBy: string; description: string; fmAttributes: string; seasonStats: string; heatmap: string
@@ -59,7 +59,7 @@ interface EditForm {
 const CUSTOM_FIELD_KEYS: (keyof EditForm)[] = [
   'foot', 'passports', 'league', 'joiningDate', 'contractExpiry',
   'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
-  'recentForm', 'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
+  'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
   'instagram', 'twitter', 'tiktok', 'highlights',
   'playerPhone', 'agentPhone', 'sentBy', 'description', 'fmAttributes', 'seasonStats', 'heatmap',
 ]
@@ -89,7 +89,6 @@ function initForm(player: PlayerForEdit): EditForm {
     transferFeeReal:  cf('transferFeeReal'),
     salaryExpect:     cf('salaryExpect'),
     salaryReal:       cf('salaryReal'),
-    recentForm:       cf('recentForm'),
     transfermarktUrl: cf('transfermarktUrl'),
     sofascoreUrl:     cf('sofascoreUrl'),
     fmInsideUrl:      cf('fmInsideUrl'),
@@ -296,12 +295,23 @@ export default function EditPlayerModal({ player, singleId, onClose, onSaved }: 
                 <CardRow label="Fee (Real)"><CardInput value={form.transferFeeReal} onChange={v => set('transferFeeReal', v)} placeholder="e.g. 18M" /></CardRow>
                 <CardRow label="Salary Expectation"><CardInput value={form.salaryExpect} onChange={v => set('salaryExpect', v)} placeholder="e.g. 80K/w" /></CardRow>
                 <CardRow label="Salary (Real)"><CardInput value={form.salaryReal} onChange={v => set('salaryReal', v)} placeholder="e.g. 72K/w" /></CardRow>
+                <CardRow label="Plays in the National team">
+                  <button type="button" onClick={() => set('playsNational', !form.playsNational)}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded-full transition-all"
+                    style={{
+                      background: form.playsNational ? '#00c896' : 'var(--hover-bg)',
+                      color: form.playsNational ? '#fff' : 'var(--text-faint)',
+                      border: `1px solid ${form.playsNational ? '#00c896' : 'var(--border)'}`,
+                    }}>
+                    {form.playsNational ? 'Yes' : 'No'}
+                  </button>
+                </CardRow>
               </div>
             </div>
 
-            {/* Scout Info */}
+            {/* Tracking Info */}
             <div className="p-4">
-              <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
+              <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Tracking Info</p>
               <div>
                 <CardRow label="Availability">
                   <button type="button" onClick={() => set('available', !form.available)}
@@ -317,18 +327,6 @@ export default function EditPlayerModal({ player, singleId, onClose, onSaved }: 
                 <CardRow label="Agent"><CardInput value={form.agentName} onChange={v => set('agentName', v)} placeholder="Agent name" /></CardRow>
                 <CardRow label="Agent Phone"><CardInput value={form.agentPhone} onChange={v => set('agentPhone', v)} placeholder="+1 …" /></CardRow>
                 <CardRow label="Referral"><CardInput value={form.sentBy} onChange={v => set('sentBy', v)} placeholder="Who sent this lead" /></CardRow>
-                <CardRow label="Plays National">
-                  <button type="button" onClick={() => set('playsNational', !form.playsNational)}
-                    className="text-[11px] font-medium px-2 py-0.5 rounded-full transition-all"
-                    style={{
-                      background: form.playsNational ? '#00c896' : 'var(--hover-bg)',
-                      color: form.playsNational ? '#fff' : 'var(--text-faint)',
-                      border: `1px solid ${form.playsNational ? '#00c896' : 'var(--border)'}`,
-                    }}>
-                    {form.playsNational ? 'Yes' : 'No'}
-                  </button>
-                </CardRow>
-                <CardRow label="Recent Form"><CardInput value={form.recentForm} onChange={v => set('recentForm', v)} placeholder="e.g. WWDLW" /></CardRow>
                 <LinkChips canEdit links={[
                   { label: 'Transfermarkt', value: form.transfermarktUrl, onChange: v => set('transfermarktUrl', v) },
                   { label: 'Sofascore',     value: form.sofascoreUrl,     onChange: v => set('sofascoreUrl', v) },

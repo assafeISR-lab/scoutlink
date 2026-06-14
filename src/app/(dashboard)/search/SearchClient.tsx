@@ -87,7 +87,6 @@ interface PlayerEditData {
   agentName: string
   agentPhone: string
   sentBy: string
-  recentForm: string
   injuryType: string
   injuryReturn: string
   highlights: string
@@ -222,7 +221,7 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
                   <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                 </svg>
               </div>
-              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Web Scout</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Web Search</span>
             </div>
           )}
 
@@ -390,7 +389,7 @@ export default function SearchClient({ databases, userName, panelMode, targetDat
             <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(255,159,67,0.1)', border: '1px solid rgba(255,159,67,0.25)' }}>
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#ff9f43"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
             </div>
-            <p className="text-sm font-medium mb-1" style={{ color: '#ff9f43' }}>No scouting sites selected</p>
+            <p className="text-sm font-medium mb-1" style={{ color: '#ff9f43' }}>No search sites selected</p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Check the boxes next to the sites you want to search in below</p>
           </div>
         )}
@@ -631,9 +630,7 @@ const FIELD_PARAM_KEY: Record<string, string> = {
   'Player Phone':           'playerPhone',
   'Agent':                  'agentName',
   'Agent Phone':            'agentPhone',
-  'Sent by / Scout Name':   'sentBy',
-  'Referral':               'sentBy',
-  'Recent Form':            'recentForm',
+
   'Injury':                 'injuryType',
   'Return Date':            'injuryReturn',
   'Transfermarkt':          'transfermarktLink',
@@ -700,7 +697,6 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
     agentName: '',
     agentPhone: '',
     sentBy: '',
-    recentForm: '',
     injuryType: '',
     injuryReturn: '',
     highlights: '',
@@ -870,18 +866,8 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
             {show('Fee (Real)')         && <EditableField label="Fee (Real)"         displayValue={editData.transferFeeReal || null}   editValue={editData.transferFeeReal}   onChange={v => updateField('transferFeeReal', v)} />}
             {show('Salary Expectation') && <EditableField label="Salary Expectation" displayValue={editData.salaryExpect || null}     editValue={editData.salaryExpect}      onChange={v => updateField('salaryExpect', v)} />}
             {show('Salary (Real)')      && <EditableField label="Salary (Real)"      displayValue={editData.salaryReal || null}       editValue={editData.salaryReal}        onChange={v => updateField('salaryReal', v)} />}
-          </div>
-        </div>
-
-        {/* Scout Info */}
-        <div className="p-4">
-          <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Scout Info</p>
-          <div>
-            <CardField label="Added" value={dateAdded} />
-            {show('Sent by / Scout Name') && <CardField label="Sent by / Scout Name" value={userName} />}
-            {show('Referral')     && <EditableField label="Referral"     displayValue={editData.sentBy || null}     editValue={editData.sentBy}     onChange={v => updateField('sentBy', v)} />}
             <div className="field-row flex items-center justify-between gap-2 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
-              <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Plays National</span>
+              <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>Plays in the National team</span>
               <button
                 type="button"
                 onClick={() => setEditData(prev => ({ ...prev, playsNational: !prev.playsNational }))}
@@ -895,7 +881,14 @@ function PlayerCard({ player, databases, userName, visibleParams, panelMode, tar
                 {editData.playsNational ? 'Yes' : 'No'}
               </button>
             </div>
-            {show('Recent Form')  && <EditableField label="Recent Form"  displayValue={editData.recentForm || null} editValue={editData.recentForm} onChange={v => updateField('recentForm', v)} />}
+          </div>
+        </div>
+
+        {/* Scout Info */}
+        <div className="p-4">
+          <p className="text-[10px] uppercase font-bold mb-2.5 pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#00c896' }}>Tracking Info</p>
+          <div>
+            <CardField label="Added" value={dateAdded} />
             {show('Description')  && <EditableField label="Description"  displayValue={editData.description || null} editValue={editData.description} onChange={v => updateField('description', v)} multiline />}
           </div>
 
@@ -1162,7 +1155,7 @@ function ImportModal({ player, editData, databases, onClose, preSelectedDbId, on
     if (editData.sentBy)            edCf.sentBy             = editData.sentBy
     if (editData.twitterUrl)        edCf.twitter            = editData.twitterUrl
     if (editData.tiktokUrl)         edCf.tiktok             = editData.tiktokUrl
-    if (editData.recentForm)        edCf.recentForm         = editData.recentForm
+
     if (editData.injuryType)        edCf.injuryType         = editData.injuryType
     if (editData.injuryReturn)      edCf.injuryReturn       = editData.injuryReturn
     if (editData.highlights)        edCf.highlights         = editData.highlights

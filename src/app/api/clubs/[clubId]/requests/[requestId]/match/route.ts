@@ -33,9 +33,8 @@ export async function POST(
 
   const message = parts.length > 0 ? parts.join(', ') : 'any player'
 
-  // Call the existing scout-search API internally
   const origin = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  const searchRes = await fetch(`${origin}/api/scout-search`, {
+  const searchRes = await fetch(`${origin}/api/player-search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Cookie: _req.headers.get('cookie') ?? '' },
     body: JSON.stringify({ message }),

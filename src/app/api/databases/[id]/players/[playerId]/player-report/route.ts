@@ -78,7 +78,7 @@ function buildPrompt(
   const cfs = player.customFields
   const name = [player.firstName, player.middleName, player.lastName].filter(Boolean).join(' ')
   const selectedLabels: Record<SectionKey, string> = {
-    physical: 'Physical Profile', contract: 'Contract & Value', scoutInfo: 'Scout Info',
+    physical: 'Physical Profile', contract: 'Contract & Value', scoutInfo: 'Tracking Info',
     description: 'Description', heatMap: 'Heat Map', seasonStats: 'Season Statistics',
     fmAttributes: 'FM Attributes', evaluations: 'Evaluations', files: 'Files', highlights: 'Highlight Videos',
   }
@@ -132,16 +132,15 @@ function buildPrompt(
       `Agent: ${player.agentName ?? cf(cfs, 'agentName') ?? 'Unknown'}`,
       `Agent Phone: ${cf(cfs, 'agentPhone') || 'Not recorded'}`,
       `Referral / Sent By: ${cf(cfs, 'sentBy') || 'Not recorded'}`,
-      `Recent Form: ${cf(cfs, 'recentForm') || 'Not recorded'}`,
     ]
     const instagram = cf(cfs, 'instagram')
     if (instagram) lines.push(`Instagram: ${instagram}`)
-    blocks.push(`SCOUT INFO:\n${lines.join('\n')}`)
+    blocks.push(`TRACKING INFO:\n${lines.join('\n')}`)
   }
 
   if (sections.description) {
     const desc = cf(cfs, 'description')
-    blocks.push(`SCOUT DESCRIPTION:\n${desc || 'No description recorded'}`)
+    blocks.push(`PLAYER DESCRIPTION:\n${desc || 'No description recorded'}`)
   }
 
   if (sections.heatMap) {
@@ -161,7 +160,7 @@ function buildPrompt(
 
   if (sections.evaluations) {
     if (player.evaluations.length === 0) {
-      blocks.push('SCOUT EVALUATIONS:\nNo formal evaluations recorded for this player.')
+      blocks.push('PLAYER EVALUATIONS:\nNo formal evaluations recorded for this player.')
     } else {
       const recLabels: Record<string, string> = { top_target: 'Top Talent', monitor: 'Monitor', pass: 'Reject' }
       const evalBlocks = player.evaluations.map((e, i) => {
@@ -188,7 +187,7 @@ function buildPrompt(
         ]
         return lines.join('\n')
       })
-      blocks.push(`SCOUT EVALUATIONS (${player.evaluations.length} total):\n\n${evalBlocks.join('\n\n')}`)
+      blocks.push(`PLAYER EVALUATIONS (${player.evaluations.length} total):\n\n${evalBlocks.join('\n\n')}`)
     }
   }
 
@@ -215,18 +214,18 @@ function buildPrompt(
     }
   }
 
-  blocks.push(`Reporting Scout: ${scoutName}`)
+  blocks.push(`Reporting Agent: ${scoutName}`)
   return blocks.join('\n\n')
 }
 
-const REPORT_SYSTEM = `You are a professional football scouting analyst writing a player report for a club, director of football, or sporting director.
+const REPORT_SYSTEM = `You are a professional football analyst writing a player report for a club, director of football, or sporting director.
 
 CRITICAL RULES:
 - The input will specify SELECTED SECTIONS. Only write content for those sections. Do not write about anything else.
 - Base every sentence strictly on the data provided in the input. Do not use external knowledge about the player — even if you recognise their name.
 - If a selected section's data is empty or missing, write one sentence: "[Section]: No data recorded."
 - Do not invent, infer, or estimate any fact not explicitly present in the input.
-- Write in third person ("The player demonstrates…"), professional scouting language, uppercase section labels followed by a colon, plain text — no markdown.
+- Write in third person ("The player demonstrates…"), professional language, uppercase section labels followed by a colon, plain text — no markdown.
 
 Section guidelines (only apply to selected sections):
 - PLAYER SUMMARY: Who the player is based only on the provided facts. One paragraph.
@@ -238,7 +237,7 @@ Section guidelines (only apply to selected sections):
 - EVALUATION HISTORY: Synthesise only the evaluations provided. Note trends if multiple exist. If conflicting recommendations, note it.
 - RISK ASSESSMENT: Based only on risk flags from the evaluations provided.
 - CONTRACT & MARKET SITUATION: Based only on contract and value data provided.
-- SCOUT VERDICT: Overall recommendation and confidence based only on the evaluations and data provided. If no evaluations exist, state that a verdict cannot be given without formal observations.
+- AGENT VERDICT: Overall recommendation and confidence based only on the evaluations and data provided. If no evaluations exist, state that a verdict cannot be given without formal observations.
 
 Ratings scale: 1-2 below standard, 3 adequate, 4 good, 5 exceptional.
 This report will be printed and shared with clubs — keep it professional.`

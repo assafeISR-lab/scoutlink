@@ -107,8 +107,8 @@ export default function ReportsList({ reports: initial, scoutReports: initialSco
             </svg>
           </div>
           <div>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Scout Reports</h2>
-            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Detailed per-player scout reports</p>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Player Reports</h2>
+            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Detailed per-player reports</p>
           </div>
         </div>
 

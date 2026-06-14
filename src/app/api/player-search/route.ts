@@ -28,7 +28,7 @@ interface RankedResult {
   explanation: string
 }
 
-const EXTRACT_SYSTEM = `You are a football scouting assistant. Extract structured search filters from a scout's player description.
+const EXTRACT_SYSTEM = `You are a football agent assistant. Extract structured search filters from a player description.
 Return ONLY a valid JSON object with these fields (use null for anything not mentioned or unclear):
 {
   "position": string | null,
@@ -47,17 +47,17 @@ Return ONLY a valid JSON object with these fields (use null for anything not men
   "club": string | null
 }
 Rules:
-- position: a specific position or comma-separated list to INCLUDE (e.g. "Striker,Centre-Back"). Set to null if scout says "all positions" or does not restrict by position.
-- positionExclude: comma-separated positions to EXCLUDE (e.g. "LB,RB"). Use when scout says "except", "not", "excluding" certain positions.
+- position: a specific position or comma-separated list to INCLUDE (e.g. "Striker,Centre-Back"). Set to null if description says "all positions" or does not restrict by position.
+- positionExclude: comma-separated positions to EXCLUDE (e.g. "LB,RB"). Use when description says "except", "not", "excluding" certain positions.
 - marketValue values are in euros.
-- salaryMin/salaryMax: annual salary in euros (convert if given per week or per month). Use when scout mentions budget, salary, wages.
+- salaryMin/salaryMax: annual salary in euros (convert if given per week or per month). Use when description mentions budget, salary, wages.
 - contractExpiryYearMax: latest year the contract can expire (e.g. "expiring soon" → current year + 1).
-- freeAgentOnly: true if scout says "free", "free agent", "out of contract", "no transfer fee needed", "available for free".
+- freeAgentOnly: true if description says "free", "free agent", "out of contract", "no transfer fee needed", "available for free".
 Return no text outside the JSON object.`
 
-const RANK_SYSTEM = `You are an expert football scout analyst. Given a scout's player description and a list of candidate players, score and rank the best matches.
+const RANK_SYSTEM = `You are an expert football analyst. Given a player description and a list of candidate players, score and rank the best matches.
 Each player may include: name, position, nationality, club, league, age, heightCm, marketValue, foot, passports, contractExpiry, fmWages, transferFeeExpect, transferFeeReal, salaryExpect, salaryReal, playsNational, agentName, description, fmAttributes.
-Use every available field to judge fit. Pay special attention to description as it contains scout context.
+Use every available field to judge fit. Pay special attention to description as it contains agent tracking context.
 Return ONLY a valid JSON array of up to 10 objects, sorted by score descending:
 [{"playerId": "...", "score": 85, "explanation": "..."}]
 score: 0–100 (100 = perfect match). explanation: 1–2 sentences on why this player matches.
@@ -255,7 +255,7 @@ export async function POST(req: NextRequest) {
     system: [{ type: 'text', text: RANK_SYSTEM, cache_control: { type: 'ephemeral' } }] as Parameters<typeof anthropic.messages.create>[0]['system'],
     messages: [{
       role: 'user',
-      content: `Scout's description:\n${message}\n\nCandidates:\n${JSON.stringify(playerSummaries, null, 2)}`,
+      content: `Description:\n${message}\n\nCandidates:\n${JSON.stringify(playerSummaries, null, 2)}`,
     }],
   })
 

@@ -5,9 +5,9 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
-const REPORT_SYSTEM = `You are a professional football scouting analyst writing a scouting report for a club or director of football. Your task is to convert a scout's structured evaluation data into a polished, professional scouting report.
+const REPORT_SYSTEM = `You are a professional football analyst writing a player report for a club or director of football. Your task is to convert an agent's structured evaluation data into a polished, professional player report.
 
-Write in a professional scouting tone — authoritative, specific, and grounded in what was observed. Use real football scouting language.
+Write in a professional tone — authoritative, specific, and grounded in what was observed. Use clear football language.
 
 Structure the report with these exact section labels (uppercase label, colon, then the text on the same or next line):
 
@@ -27,7 +27,7 @@ POTENTIAL: Development ceiling and future outlook. Two to three sentences.
 
 RISK ASSESSMENT: Summarise any flagged risk factors. If no risks were flagged, write "No significant risk flags identified."
 
-SCOUT VERDICT: Clear recommendation (Top Talent / Monitor / Reject) with confidence level and a 2-3 sentence justification.
+AGENT VERDICT: Clear recommendation (Top Talent / Monitor / Reject) with confidence level and a 2-3 sentence justification.
 
 Guidelines:
 - Ratings are 1-5: 1-2 = below standard, 3 = adequate, 4 = good, 5 = exceptional
@@ -103,23 +103,23 @@ Competition: ${evaluation.competition ?? 'Not recorded'}
 Opponent: ${evaluation.opponent ?? 'Not recorded'}
 Match Result: ${evaluation.matchResult ?? 'Not recorded'}
 
-SCOUT RATINGS:
-Technical: ${ratingDesc(evaluation.ratingTechnical)}${evaluation.commentTechnical ? ` — Scout note: "${evaluation.commentTechnical}"` : ''}
-Tactical: ${ratingDesc(evaluation.ratingTactical)}${evaluation.commentTactical ? ` — Scout note: "${evaluation.commentTactical}"` : ''}
-Physical: ${ratingDesc(evaluation.ratingPhysical)}${evaluation.commentPhysical ? ` — Scout note: "${evaluation.commentPhysical}"` : ''}
-Mentality: ${ratingDesc(evaluation.ratingMentality)}${evaluation.commentMentality ? ` — Scout note: "${evaluation.commentMentality}"` : ''}
-Potential: ${ratingDesc(evaluation.ratingPotential)}${evaluation.commentPotential ? ` — Scout note: "${evaluation.commentPotential}"` : ''}
+RATINGS:
+Technical: ${ratingDesc(evaluation.ratingTechnical)}${evaluation.commentTechnical ? ` — Note: "${evaluation.commentTechnical}"` : ''}
+Tactical: ${ratingDesc(evaluation.ratingTactical)}${evaluation.commentTactical ? ` — Note: "${evaluation.commentTactical}"` : ''}
+Physical: ${ratingDesc(evaluation.ratingPhysical)}${evaluation.commentPhysical ? ` — Note: "${evaluation.commentPhysical}"` : ''}
+Mentality: ${ratingDesc(evaluation.ratingMentality)}${evaluation.commentMentality ? ` — Note: "${evaluation.commentMentality}"` : ''}
+Potential: ${ratingDesc(evaluation.ratingPotential)}${evaluation.commentPotential ? ` — Note: "${evaluation.commentPotential}"` : ''}
 
-SCOUT JUDGMENT:
+JUDGMENT:
 Recommendation: ${recLabels[evaluation.recommendation ?? ''] ?? 'Not given'}
 Confidence: ${evaluation.confidence ? evaluation.confidence.charAt(0).toUpperCase() + evaluation.confidence.slice(1) : 'Not given'}
 
 RISK FLAGS: ${riskFlags || 'None'}
 
-SCOUT'S OBSERVATION NOTES:
+OBSERVATION NOTES:
 ${evaluation.observationNotes ?? 'No raw notes provided.'}
 
-Evaluating Scout: ${evaluation.agent.fullName}`
+Evaluating Agent: ${evaluation.agent.fullName}`
 
   const resp = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',

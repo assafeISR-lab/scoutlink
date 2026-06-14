@@ -242,7 +242,7 @@ function AIResultsPanel({ results, query, onCreateReport, onClose, onPlayerSelec
               onClick={() => onCreateReport(results.map(toSnap))}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
               style={{ background: 'rgba(255,159,67,0.1)', color: '#ff9f43', border: '1px solid rgba(255,159,67,0.25)' }}
-              title="Saved and visible in Scout Reports"
+              title="Saved and visible in Reports"
             >
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
@@ -365,6 +365,15 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
     }
     window.addEventListener('scoutlink:player-added', handler)
     return () => window.removeEventListener('scoutlink:player-added', handler)
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { playerId, status } = (e as CustomEvent<{ playerId: string; status: string }>).detail
+      setPlayers(prev => prev ? prev.map(p => p.id === playerId ? { ...p, pipelineStatus: status } : p) : prev)
+    }
+    window.addEventListener('scoutlink:pipeline-updated', handler)
+    return () => window.removeEventListener('scoutlink:pipeline-updated', handler)
   }, [])
 
   useEffect(() => {
@@ -514,7 +523,7 @@ function InlinePlayersTable({ databaseIds, allDbs, onCreateReport, fillHeight, o
               onClick={() => onCreateReport(displayRows.map(rowToSnapshot))}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
               style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-              title="Saved and visible in Scout Reports"
+              title="Saved and visible in Reports"
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--subtle-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-faint)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}
             >
@@ -988,7 +997,7 @@ export default function DatabasesClient({
           <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
           </svg>
-          Web Scout
+          Web Search
         </button>
       </div>
 
@@ -1338,7 +1347,7 @@ function ScoutAIBar({ databaseIds, bare, onResults, onSearchingChange }: {
       try {
         const body: Record<string, string> = { message: q }
         if (databaseIds?.length === 1) body.databaseId = databaseIds[0]
-        const res = await fetch('/api/scout-search', {
+        const res = await fetch('/api/player-search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -1352,7 +1361,7 @@ function ScoutAIBar({ databaseIds, bare, onResults, onSearchingChange }: {
       const params = new URLSearchParams()
       params.set('q', q)
       if (databaseIds && databaseIds.length > 0) params.set('databaseIds', databaseIds.join(','))
-      router.push(`/scout-search?${params}`)
+      router.push(`/player-search?${params}`)
     }
   }
 
@@ -1368,7 +1377,7 @@ function ScoutAIBar({ databaseIds, bare, onResults, onSearchingChange }: {
           value={value}
           onChange={e => setValue(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && submit()}
-          placeholder="Scout AI — describe the player you are looking for"
+          placeholder="AI Search — describe the player you are looking for"
           className="flex-1 bg-transparent text-sm focus:outline-none min-w-0"
           style={{ color: 'var(--text-primary)' }}
         />

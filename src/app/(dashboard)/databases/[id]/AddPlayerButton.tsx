@@ -35,7 +35,6 @@ interface Form {
   transferFeeReal: string
   salaryExpect: string
   salaryReal: string
-  recentForm: string
   injuryType: string
   injuryReturn: string
   transfermarktUrl: string
@@ -59,7 +58,7 @@ const EMPTY: Form = {
   agentName: '', playsNational: false, available: true, pipelineStatus: 'spotted',
   foot: '', passports: '', league: '', joiningDate: '', contractExpiry: '',
   fmWages: '', transferFeeExpect: '', transferFeeReal: '',
-  salaryExpect: '', salaryReal: '', recentForm: '',
+  salaryExpect: '', salaryReal: '',
   injuryType: '', injuryReturn: '',
   transfermarktUrl: '', sofascoreUrl: '', fmInsideUrl: '',
   instagram: '', twitter: '', tiktok: '', highlights: '',
@@ -70,7 +69,7 @@ const EMPTY: Form = {
 const CUSTOM_FIELD_KEYS: (keyof Form)[] = [
   'foot', 'passports', 'league', 'joiningDate', 'contractExpiry',
   'fmWages', 'transferFeeExpect', 'transferFeeReal', 'salaryExpect', 'salaryReal',
-  'recentForm', 'injuryType', 'injuryReturn', 'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
+  'injuryType', 'injuryReturn', 'transfermarktUrl', 'sofascoreUrl', 'fmInsideUrl',
   'instagram', 'twitter', 'tiktok', 'highlights',
   'playerPhone', 'agentPhone', 'sentBy', 'description', 'fmAttributes', 'seasonStats',
 ]
@@ -312,12 +311,26 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="Salary (Real)">
                       <CardInput value={form.salaryReal} onChange={v => set('salaryReal', v)} placeholder="e.g. 72K/w" />
                     </CardRow>
+                    <CardRow label="Plays in the National team">
+                      <button
+                        type="button"
+                        onClick={() => set('playsNational', !form.playsNational)}
+                        className="text-[11px] font-medium px-2 py-0.5 rounded transition-all"
+                        style={{
+                          background: form.playsNational ? 'rgba(0,200,150,0.12)' : 'var(--hover-bg)',
+                          color: form.playsNational ? '#00c896' : 'var(--text-faint)',
+                          border: `1px solid ${form.playsNational ? 'rgba(0,200,150,0.3)' : 'var(--border)'}`,
+                        }}
+                      >
+                        {form.playsNational ? 'Yes' : 'No'}
+                      </button>
+                    </CardRow>
                   </div>
                 </div>
 
-                {/* Scout Info */}
+                {/* Tracking Info */}
                 <div className="p-4">
-                  <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Scout Info</p>
+                  <p className="text-[9px] uppercase font-bold mb-3" style={{ letterSpacing: '0.9px', color: 'var(--text-muted)' }}>Tracking Info</p>
                   <div>
                     <CardRow label="Availability">
                       <button
@@ -359,23 +372,7 @@ export default function AddPlayerButton({ databaseId }: { databaseId: string }) 
                     <CardRow label="Referral">
                       <CardInput value={form.sentBy} onChange={v => set('sentBy', v)} placeholder="Who sent this lead" />
                     </CardRow>
-                    <CardRow label="Plays National">
-                      <button
-                        type="button"
-                        onClick={() => set('playsNational', !form.playsNational)}
-                        className="text-[11px] font-medium px-2 py-0.5 rounded transition-all"
-                        style={{
-                          background: form.playsNational ? 'rgba(0,200,150,0.12)' : 'var(--hover-bg)',
-                          color: form.playsNational ? '#00c896' : 'var(--text-faint)',
-                          border: `1px solid ${form.playsNational ? 'rgba(0,200,150,0.3)' : 'var(--border)'}`,
-                        }}
-                      >
-                        {form.playsNational ? 'Yes' : 'No'}
-                      </button>
-                    </CardRow>
-                    <CardRow label="Recent Form">
-                      <CardInput value={form.recentForm} onChange={v => set('recentForm', v)} placeholder="e.g. WWDLW" />
-                    </CardRow>
+
                     <CardRow label="Injury">
                       <CardInput value={form.injuryType} onChange={v => set('injuryType', v)} placeholder="e.g. Hamstring" />
                     </CardRow>

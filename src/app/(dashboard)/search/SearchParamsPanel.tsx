@@ -32,13 +32,11 @@ export const PARAM_KEYS = [
   // Scouting data
   'heatMap',
   'fmAttributes',
-  'recentForm',
   'description',
   // Scout contact
   'playerPhone',
   'agentName',
   'agentPhone',
-  'sentBy',
   // Links & meta
   'transfermarktLink',
   'sofascoreLink',
@@ -81,13 +79,11 @@ export const PARAM_LABELS: Record<ParamKey, string> = {
   // Scouting data
   heatMap:              'Heat Map',
   fmAttributes:         'FM Attributes (Top 7 / Low 7)',
-  recentForm:           'Recent Form',
   description:          'Bio / Description',
   // Scout contact
   playerPhone:          'Player Phone',
   agentName:            'Agent Name',
   agentPhone:           'Agent Phone',
-  sentBy:               'Sent By',
   // Links & meta
   transfermarktLink:    'Transfermarkt Link',
   sofascoreLink:        'Sofascore Link',
@@ -128,13 +124,11 @@ export const PARAM_SOURCES: Record<ParamKey, string> = {
   // Scouting data
   heatMap:              'Sofascore',
   fmAttributes:         'FMInside',
-  recentForm:           '',
   description:          '',
   // Scout contact
   playerPhone:          '',
   agentName:            '',
   agentPhone:           '',
-  sentBy:               '',
   // Links & meta
   transfermarktLink:    '',
   sofascoreLink:        '',
