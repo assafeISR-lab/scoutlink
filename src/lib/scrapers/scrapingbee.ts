@@ -5,6 +5,7 @@ export async function sbFetch(
   signal?: AbortSignal,
   waitMs?: number,
   forwardHeaders?: Record<string, string>,
+  premiumProxy = false,
 ): Promise<Response> {
   const apiKey = process.env.SCRAPINGBEE_API_KEY
   if (!apiKey) throw new Error('SCRAPINGBEE_API_KEY not configured')
@@ -14,6 +15,7 @@ export async function sbFetch(
   endpoint.searchParams.set('render_js', renderJs ? 'true' : 'false')
   if (waitMs) endpoint.searchParams.set('wait', String(waitMs))
   if (forwardHeaders) endpoint.searchParams.set('forward_headers', 'true')
+  if (premiumProxy) endpoint.searchParams.set('premium_proxy', 'true')
   const init: RequestInit = {}
   if (signal) init.signal = signal
   if (forwardHeaders) init.headers = forwardHeaders

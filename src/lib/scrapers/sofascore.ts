@@ -233,15 +233,22 @@ export const sofascoreScraper: SiteScraper = {
     const searchCtrl = new AbortController()
     const searchTimer = setTimeout(() => searchCtrl.abort(), 15000)
     let searchRes: Response
+    const searchUrl = `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`
     try {
-      searchRes = await apiFetch(
-        `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`,
-        searchCtrl.signal
-      )
+      // Try direct fetch first
+      try {
+        const direct = await fetch(searchUrl, { signal: searchCtrl.signal, headers: SOFASCORE_HEADERS })
+        if (direct.ok) { searchRes = direct }
+        else throw new Error(`HTTP ${direct.status}`)
+      } catch (err) {
+        if ((err as Error)?.name === 'AbortError') throw err
+        // Fall back to ScrapingBee with premium (residential) proxy + forwarded headers
+        searchRes = await sbFetch(searchUrl, false, searchCtrl.signal, undefined, SOFASCORE_HEADERS, true)
+      }
     } finally {
       clearTimeout(searchTimer)
     }
-    if (!searchRes.ok) throw new Error(`Sofascore search HTTP ${searchRes.status}`)
+    if (!searchRes!.ok) throw new Error(`Sofascore search HTTP ${searchRes!.status}`)
 
     let data: Record<string, unknown>
     try {
