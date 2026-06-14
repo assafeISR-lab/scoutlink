@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
   // Run all scrapers in parallel — 15 s timeout per site so one slow site can't block others
   // Each scraper runs all query variations in parallel and deduplicates by player id
   const withTimeout = (p: Promise<ScrapedPlayer[]>): Promise<ScrapedPlayer[]> =>
-    Promise.race([p, new Promise<ScrapedPlayer[]>((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))])
+    Promise.race([p, new Promise<ScrapedPlayer[]>((_, rej) => setTimeout(() => rej(new Error('timeout')), 50000))])
 
   const results = await Promise.allSettled(
     uniqueScrapers.map(async e => {
@@ -230,11 +230,16 @@ export async function POST(req: NextRequest) {
         if (!ex) {
           byId.set(p.id, p)
         } else {
-          byId.set(p.id, {
-            ...ex,
-            seasonStats: ex.seasonStats ?? p.seasonStats,
-            heatmap:     ex.heatmap     ?? p.heatmap,
-          })
+          // Merge: for every field, keep whichever result has a non-null value.
+          // This handles the case where one variation returns fallback (null fields)
+          // while another returns the fully-enriched result.
+          const merged: ScrapedPlayer = { ...ex }
+          for (const key of Object.keys(p) as (keyof ScrapedPlayer)[]) {
+            if (merged[key] == null && p[key] != null) {
+              (merged as Record<string, unknown>)[key] = p[key]
+            }
+          }
+          byId.set(p.id, merged)
         }
       }
       return [...byId.values()]

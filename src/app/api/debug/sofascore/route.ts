@@ -10,36 +10,53 @@ const SOFASCORE_HEADERS = {
   'Origin': 'https://www.sofascore.com',
 }
 
+async function testFetch(url: string, usePremium: boolean): Promise<{ status: number; ok: boolean; durationMs: number; error?: string }> {
+  const start = Date.now()
+  try {
+    const res = await sbFetch(url, false, undefined, undefined, SOFASCORE_HEADERS, usePremium)
+    return { status: res.status, ok: res.ok, durationMs: Date.now() - start }
+  } catch (e) {
+    return { status: 0, ok: false, durationMs: Date.now() - start, error: String(e) }
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('q') ?? 'Mohamed Salah'
 
-  let players: unknown[] = []
-  let error: string | null = null
-  let rawResponse: unknown = null
   const start = Date.now()
 
-  // Also fetch the raw Sofascore search response so we can inspect the structure
-  try {
-    const url = `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`
-    const res = await sbFetch(url, false, undefined, undefined, SOFASCORE_HEADERS, true)
-    rawResponse = res.ok ? await res.json() : { status: res.status, statusText: res.statusText }
-  } catch (e) {
-    rawResponse = { fetchError: String(e) }
-  }
+  // Test 1: search with standard proxy
+  const searchStandard = await testFetch(
+    `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`,
+    false
+  )
 
+  // Test 2: profile fetch for Vinicius (id 868812) with standard proxy
+  const profileStandard = await testFetch('https://api.sofascore.com/api/v1/player/868812', false)
+
+  // Test 3: profile fetch with premium proxy
+  const profilePremium = await testFetch('https://api.sofascore.com/api/v1/player/868812', true)
+
+  // Test 4: full scraper search (uses premium for search, standard for enrichment)
+  let players: unknown[] = []
+  let scraperError: string | null = null
   try {
     players = await sofascoreScraper.search(query)
   } catch (e) {
-    error = String(e)
+    scraperError = String(e)
   }
 
   return NextResponse.json({
     query,
     durationMs: Date.now() - start,
-    error,
+    diagnostics: {
+      searchStandardProxy: searchStandard,
+      profileStandardProxy: profileStandard,
+      profilePremiumProxy: profilePremium,
+    },
+    scraperError,
     count: players.length,
     players,
-    rawResponse,
   })
 }

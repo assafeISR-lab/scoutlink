@@ -9,8 +9,9 @@ const SOFASCORE_HEADERS = {
   'Origin': 'https://www.sofascore.com',
 }
 
-// Direct fetch for Sofascore JSON API endpoints — much faster than going through
-// ScrapingBee. Falls back to sbFetch with forwarded headers if the direct call fails.
+// Direct fetch for Sofascore JSON API endpoints. Falls back to premium ScrapingBee
+// (residential IPs) when the direct call fails — Sofascore blocks both Vercel IPs
+// and datacenter proxies for all API endpoints.
 async function apiFetch(url: string, signal?: AbortSignal): Promise<Response> {
   try {
     const res = await fetch(url, { signal, headers: SOFASCORE_HEADERS })
@@ -18,7 +19,7 @@ async function apiFetch(url: string, signal?: AbortSignal): Promise<Response> {
     throw new Error(`HTTP ${res.status}`)
   } catch (err) {
     if ((err as Error)?.name === 'AbortError') throw err
-    return sbFetch(url, false, signal, undefined, SOFASCORE_HEADERS)
+    return sbFetch(url, false, signal, undefined, SOFASCORE_HEADERS, true)
   }
 }
 
@@ -125,7 +126,7 @@ async function enrichById(playerId: number, signal: AbortSignal): Promise<Scrape
           if (!seenCanon.has(canon)) { seenCanon.add(canon); acc.push(entry) }
           return acc
         }, [])
-        .slice(0, 6)
+        .slice(0, 3)
 
       const [statsResponses, heatmapResponses] = await Promise.all([
         Promise.allSettled(
@@ -136,16 +137,12 @@ async function enrichById(playerId: number, signal: AbortSignal): Promise<Scrape
             )
           )
         ),
-        // Try top 3 most-recent seasons in parallel — first non-empty wins
+        // Try only the most-recent season for heatmap — reduces concurrent premium proxy calls
         candidateYears.length > 0
-          ? Promise.all(
-              candidateYears.slice(0, 3).map(([, { tId, sId }]) =>
-                apiFetch(
-                  `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/heatmap`,
-                  signal
-                ).catch(() => null)
-              )
-            )
+          ? apiFetch(
+              `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${candidateYears[0][1].tId}/season/${candidateYears[0][1].sId}/heatmap`,
+              signal
+            ).then(r => [r]).catch(() => [null])
           : Promise.resolve([] as (Response | null)[]),
       ])
 
@@ -231,7 +228,7 @@ export const sofascoreScraper: SiteScraper = {
   name: 'Sofascore',
   async search(query: string): Promise<ScrapedPlayer[]> {
     const searchCtrl = new AbortController()
-    const searchTimer = setTimeout(() => searchCtrl.abort(), 15000)
+    const searchTimer = setTimeout(() => searchCtrl.abort(), 30000)
     let searchRes: Response
     const searchUrl = `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`
     try {
@@ -258,18 +255,20 @@ export const sofascoreScraper: SiteScraper = {
     }
     const entries = Array.isArray(data.results) ? data.results as Record<string, unknown>[] : []
 
-    const NON_PLAYER_TYPES = new Set(['team', 'unique-tournament', 'tournament', 'manager', 'coach', 'referee', 'venue', 'country', 'competition'])
     const footballPlayers = entries.filter(entry => {
-      const type = (entry.type as string | undefined)?.toLowerCase()
-      if (!type) return false
-      if (NON_PLAYER_TYPES.has(type)) return false
+      // Only accept player-type entries
+      if ((entry.type as string | undefined)?.toLowerCase() !== 'player') return false
       const entity = (entry.entity ?? entry) as Record<string, unknown>
-      return entity.id != null
+      if (entity.id == null) return false
+      // Skip non-football sports (e.g. minifootball, beach volley) when sport info is present
+      const sport = ((entity.team as Record<string, unknown> | null)?.sport as Record<string, unknown> | null)?.slug as string | undefined
+      if (sport && sport !== 'football') return false
+      return true
     })
 
     const top = footballPlayers.slice(0, 6)
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 20000)
+    const timer = setTimeout(() => controller.abort(), 45000)
     try {
       const enriched = await Promise.allSettled(
         top.map(entry => {
@@ -277,9 +276,42 @@ export const sofascoreScraper: SiteScraper = {
           return enrichById(p.id as number, controller.signal)
         })
       )
-      return enriched
-        .filter(r => r.status === 'fulfilled')
-        .map(r => (r as PromiseFulfilledResult<ScrapedPlayer>).value)
+      return enriched.map((r, i) => {
+        if (r.status === 'fulfilled') return r.value
+        // enrichById failed — build a minimal player from the search result entity so the
+        // player still appears (stats/heatmap will be null, but name/team/photo are present)
+        const entry = top[i]
+        const p = (entry.entity ?? entry) as Record<string, unknown>
+        const name = p.name as string
+        if (!name) return null
+        const team = p.team as Record<string, unknown> | null
+        const country = p.country as Record<string, unknown> | null
+        const id = p.id as number
+        const slug = (p.slug as string | undefined) ?? String(id)
+        return {
+          id: `sofascore-${id}`,
+          name,
+          nationality: (country?.name as string | undefined) ?? null,
+          team: (team?.name as string | undefined) ?? null,
+          league: null,
+          position: POSITION_MAP[p.position as string] ?? (p.position as string | undefined) ?? null,
+          dateOfBirth: null,
+          heightCm: null,
+          preferredFoot: null,
+          contractUntil: null,
+          passports: null,
+          joiningDate: null,
+          photo: `https://api.sofascore.com/api/v1/player/${id}/image`,
+          description: null,
+          marketValue: null,
+          fmWages: null,
+          fmAttributes: null,
+          seasonStats: null,
+          heatmap: null,
+          sourceUrl: `https://www.sofascore.com/player/${slug}/${id}`,
+          sourceName: 'Sofascore',
+        } as ScrapedPlayer
+      }).filter((p): p is ScrapedPlayer => p !== null)
     } finally {
       clearTimeout(timer)
     }
@@ -295,7 +327,7 @@ export async function scrapeByUrl(url: string): Promise<ScrapedPlayer | null> {
   if (isNaN(playerId)) return null
 
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 15000)
+  const timer = setTimeout(() => controller.abort(), 45000)
   try {
     return await enrichById(playerId, controller.signal)
   } catch {
@@ -350,15 +382,11 @@ export async function fetchSofascoreHeatmap(playerId: number): Promise<string | 
 
     if (!candidateYears.length) return null
 
-    // Try top 3 most-recent seasons — first one with non-empty points wins
-    const heatmapResponses = await Promise.all(
-      candidateYears.slice(0, 3).map(([, { tId, sId }]) =>
-        apiFetch(
-          `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/heatmap`,
-          controller.signal
-        ).catch(() => null)
-      )
-    )
+    // Try only the most-recent season for heatmap (reduces concurrent premium proxy load)
+    const heatmapResponses = await apiFetch(
+      `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${candidateYears[0][1].tId}/season/${candidateYears[0][1].sId}/heatmap`,
+      controller.signal
+    ).then(r => [r]).catch(() => [null])
 
     for (let hi = 0; hi < heatmapResponses.length; hi++) {
       const hmRes = heatmapResponses[hi]
