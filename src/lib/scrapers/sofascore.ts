@@ -1,25 +1,24 @@
 import type { SiteScraper, ScrapedPlayer } from './types'
 import { sbFetch } from './scrapingbee'
 
+const SOFASCORE_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+  'Accept': 'application/json, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Referer': 'https://www.sofascore.com/',
+  'Origin': 'https://www.sofascore.com',
+}
+
 // Direct fetch for Sofascore JSON API endpoints — much faster than going through
-// ScrapingBee. Falls back to sbFetch only if the direct call is blocked/fails.
+// ScrapingBee. Falls back to sbFetch with forwarded headers if the direct call fails.
 async function apiFetch(url: string, signal?: AbortSignal): Promise<Response> {
   try {
-    const res = await fetch(url, {
-      signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': 'application/json, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://www.sofascore.com/',
-        'Origin': 'https://www.sofascore.com',
-      },
-    })
+    const res = await fetch(url, { signal, headers: SOFASCORE_HEADERS })
     if (res.ok) return res
     throw new Error(`HTTP ${res.status}`)
   } catch (err) {
     if ((err as Error)?.name === 'AbortError') throw err
-    return sbFetch(url, false, signal)
+    return sbFetch(url, false, signal, undefined, SOFASCORE_HEADERS)
   }
 }
 

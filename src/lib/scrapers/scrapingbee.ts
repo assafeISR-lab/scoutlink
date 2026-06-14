@@ -4,6 +4,7 @@ export async function sbFetch(
   renderJs = false,
   signal?: AbortSignal,
   waitMs?: number,
+  forwardHeaders?: Record<string, string>,
 ): Promise<Response> {
   const apiKey = process.env.SCRAPINGBEE_API_KEY
   if (!apiKey) throw new Error('SCRAPINGBEE_API_KEY not configured')
@@ -12,7 +13,11 @@ export async function sbFetch(
   endpoint.searchParams.set('url', url)
   endpoint.searchParams.set('render_js', renderJs ? 'true' : 'false')
   if (waitMs) endpoint.searchParams.set('wait', String(waitMs))
-  return fetch(endpoint.toString(), signal ? { signal } : undefined)
+  if (forwardHeaders) endpoint.searchParams.set('forward_headers', 'true')
+  const init: RequestInit = {}
+  if (signal) init.signal = signal
+  if (forwardHeaders) init.headers = forwardHeaders
+  return fetch(endpoint.toString(), init)
 }
 
 /** Fetch via ScrapingBee with a JS interaction scenario (fill inputs, click, wait). */
