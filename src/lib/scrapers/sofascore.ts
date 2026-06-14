@@ -231,9 +231,17 @@ export const sofascoreScraper: SiteScraper = {
   domains: ['sofascore.com', 'www.sofascore.com'],
   name: 'Sofascore',
   async search(query: string): Promise<ScrapedPlayer[]> {
-    const searchRes = await sbFetch(
-      `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`
-    )
+    const searchCtrl = new AbortController()
+    const searchTimer = setTimeout(() => searchCtrl.abort(), 15000)
+    let searchRes: Response
+    try {
+      searchRes = await apiFetch(
+        `https://api.sofascore.com/api/v1/search/all?q=${encodeURIComponent(query)}&page=0`,
+        searchCtrl.signal
+      )
+    } finally {
+      clearTimeout(searchTimer)
+    }
     if (!searchRes.ok) throw new Error(`Sofascore search HTTP ${searchRes.status}`)
 
     let data: Record<string, unknown>
