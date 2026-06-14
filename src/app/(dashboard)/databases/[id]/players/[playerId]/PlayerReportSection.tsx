@@ -11,7 +11,7 @@ const ALL_SECTIONS: { key: SectionKey; label: string }[] = [
   { key: 'evaluations', label: 'Evaluations' },
   { key: 'physical',    label: 'Physical' },
   { key: 'contract',    label: 'Contract & Value' },
-  { key: 'scoutInfo',   label: 'Scout Info' },
+  { key: 'scoutInfo',   label: 'Tracking Info' },
   { key: 'description', label: 'Description' },
   { key: 'heatMap',     label: 'Heat Map' },
   { key: 'seasonStats', label: 'Season Stats' },

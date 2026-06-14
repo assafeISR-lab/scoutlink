@@ -25,9 +25,9 @@ export default function Sidebar({ userName, userEmail, userInitial }: SidebarPro
     { icon: <IconClubs />,    label: 'Clubs',  color: '#6c8fff', href: '/clubs' },
   ]
   const toolItems = [
-    { icon: <IconReports />,  label: 'Scout Reports', color: '#ff9f43', href: '/reports' },
-    { icon: <IconCalendar />, label: 'Calendar',    color: '#ff6b9d', href: '/calendar' },
-    { icon: <IconDashboard />, label: 'Scout Board', color: '#00c896', href: '/dashboard' },
+    { icon: <IconReports />,  label: 'Reports',   color: '#ff9f43', href: '/reports' },
+    { icon: <IconCalendar />, label: 'Calendar',  color: '#ff6b9d', href: '/calendar' },
+    { icon: <IconDashboard />, label: 'Dashboard', color: '#00c896', href: '/dashboard' },
   ]
 
   return (

@@ -161,7 +161,7 @@ export default function ResetPasswordPage() {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-white">ScoutLink</h1>
-          <p className="text-[#8b8fa8] text-sm mt-1">Football Scouting Platform</p>
+          <p className="text-[#8b8fa8] text-sm mt-1">Football Agent Platform</p>
         </div>
 
         <Suspense fallback={<p className="text-[#8b8fa8] text-sm text-center">Loading...</p>}>

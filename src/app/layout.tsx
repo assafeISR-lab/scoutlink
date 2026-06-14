@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ScoutLink — Football Scouting Platform",
-  description: "Professional football scouting and player management platform for agents",
+  title: "ScoutLink — Football Agent Platform",
+  description: "Professional football agent and player management platform",
 };
 
 export default function RootLayout({

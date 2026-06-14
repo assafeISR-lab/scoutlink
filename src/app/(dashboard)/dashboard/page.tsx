@@ -147,13 +147,13 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-bold text-white mb-1">
           Welcome Back, <span style={{ color: '#00c896' }}>{firstName}</span>
         </h1>
-        <p style={{ color: 'var(--text-muted)' }} className="text-sm">Here's what's happening in your scouting Board.</p>
+        <p style={{ color: 'var(--text-muted)' }} className="text-sm">Here's what's happening on your Dashboard.</p>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Players in Database" value={totalPlayers} icon={<IconDatabase />} color="#00c896" href="/databases" />
-        <StatCard label="Scouting Notes" value={totalNotes} icon={<IconNote />} color="#6c8fff" />
+        <StatCard label="Player Notes" value={totalNotes} icon={<IconNote />} color="#6c8fff" />
         <StatCard label="Reports Generated" value={totalReports} icon={<IconReports />} color="#ff9f43" href="/reports" />
         <StatCard label="Upcoming Events" value={upcomingEvents} icon={<IconCalendar />} color="#ff6b9d" href="/calendar" />
       </div>

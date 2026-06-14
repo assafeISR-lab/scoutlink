@@ -10,7 +10,7 @@ export default async function ScoutSearchPage() {
   return (
     <main className="p-6 md:p-8 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Scout AI Search</h1>
+        <h1 className="text-2xl font-bold text-white">AI Player Search</h1>
         <p className="text-sm mt-1.5" style={{ color: 'var(--text-muted)' }}>
           Describe the player you&apos;re looking for — position, age, style, contract situation — and AI finds the best matches from your lists.
         </p>

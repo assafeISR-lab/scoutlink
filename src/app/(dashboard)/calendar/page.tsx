@@ -10,7 +10,7 @@ export default async function CalendarPage() {
     <>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-1">Calendar</h1>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your scouting schedule and player notes timeline</p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your schedule and player notes timeline</p>
       </div>
       <CalendarClient />
     </>

@@ -91,7 +91,7 @@ export default function CreateDatabaseButton({ onCreated }: { onCreated?: (db: C
                 </div>
                 <div>
                   <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Create New List</h2>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>A new scouting database for your players</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>A new player database for your lists</p>
                 </div>
               </div>
 

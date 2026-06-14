@@ -96,7 +96,7 @@ export default async function PublicReportPage({
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Scouting Report</p>
+              <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Player Report</p>
               <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8' }}>{generatedDate}</p>
             </div>
           </div>
@@ -148,7 +148,7 @@ export default async function PublicReportPage({
           {/* Report body */}
           <div style={{ padding: '28px 28px 24px' }}>
             <p style={{ margin: '0 0 16px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Scout Analysis
+              Player Analysis
             </p>
             <div style={{
               fontSize: 14, lineHeight: 1.75, color: '#1e293b',
