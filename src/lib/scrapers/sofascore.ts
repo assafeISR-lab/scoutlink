@@ -128,7 +128,7 @@ async function enrichById(playerId: number, signal: AbortSignal): Promise<Scrape
         }, [])
         .slice(0, 6)
 
-      const [statsResponses, heatmapRes] = await Promise.all([
+      const [statsResponses, heatmapResponses] = await Promise.all([
         Promise.allSettled(
           candidateYears.map(([, { tId, sId }]) =>
             apiFetch(
@@ -137,12 +137,17 @@ async function enrichById(playerId: number, signal: AbortSignal): Promise<Scrape
             )
           )
         ),
+        // Try top 3 most-recent seasons in parallel — first non-empty wins
         candidateYears.length > 0
-          ? apiFetch(
-              `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${candidateYears[0][1].tId}/season/${candidateYears[0][1].sId}/heatmap`,
-              signal
-            ).catch(() => null)
-          : Promise.resolve(null),
+          ? Promise.all(
+              candidateYears.slice(0, 3).map(([, { tId, sId }]) =>
+                apiFetch(
+                  `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/heatmap`,
+                  signal
+                ).catch(() => null)
+              )
+            )
+          : Promise.resolve([] as (Response | null)[]),
       ])
 
       const parseStat = (n: number | undefined, decimals: number): number | null =>
@@ -179,17 +184,20 @@ async function enrichById(playerId: number, signal: AbortSignal): Promise<Scrape
 
       if (seasons.length > 0) seasonStats = JSON.stringify({ seasons })
 
-      if (heatmapRes?.ok) {
+      for (let hi = 0; hi < heatmapResponses.length; hi++) {
+        const hmRes = heatmapResponses[hi]
+        if (!hmRes?.ok) continue
         try {
-          const hmData = await heatmapRes.json() as Record<string, unknown>
+          const hmData = await hmRes.json() as Record<string, unknown>
           const pts = hmData.points as Array<{ x: number; y: number; count?: number }> | undefined
           if (pts && pts.length > 0) {
-            const [year, { tName }] = candidateYears[0]
+            const [year, { tName }] = candidateYears[hi]
             const maxVal = Math.max(...pts.flatMap(p => [p.x, p.y]))
             const normalized = maxVal <= 1.0 ? pts.map(p => ({ x: p.x * 100, y: p.y * 100 })) : pts.map(p => ({ x: p.x, y: p.y }))
             heatmap = JSON.stringify({ points: normalized, season: year, tournament: tName })
+            break
           }
-        } catch { /* skip heatmap */ }
+        } catch { /* try next season */ }
       }
     }
   }
@@ -236,9 +244,13 @@ export const sofascoreScraper: SiteScraper = {
     }
     const entries = Array.isArray(data.results) ? data.results as Record<string, unknown>[] : []
 
+    const NON_PLAYER_TYPES = new Set(['team', 'unique-tournament', 'tournament', 'manager', 'coach', 'referee', 'venue', 'country', 'competition'])
     const footballPlayers = entries.filter(entry => {
       const type = (entry.type as string | undefined)?.toLowerCase()
-      return type === 'player'
+      if (!type) return false
+      if (NON_PLAYER_TYPES.has(type)) return false
+      const entity = (entry.entity ?? entry) as Record<string, unknown>
+      return entity.id != null
     })
 
     const top = footballPlayers.slice(0, 6)
@@ -323,22 +335,31 @@ export async function fetchSofascoreHeatmap(playerId: number): Promise<string | 
       }, [])
 
     if (!candidateYears.length) return null
-    const [year, { tId, tName, sId }] = candidateYears[0]
 
-    const heatmapRes = await apiFetch(
-      `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/heatmap`,
-      controller.signal
-    ).catch(() => null)
+    // Try top 3 most-recent seasons — first one with non-empty points wins
+    const heatmapResponses = await Promise.all(
+      candidateYears.slice(0, 3).map(([, { tId, sId }]) =>
+        apiFetch(
+          `https://api.sofascore.com/api/v1/player/${playerId}/unique-tournament/${tId}/season/${sId}/heatmap`,
+          controller.signal
+        ).catch(() => null)
+      )
+    )
 
-    if (!heatmapRes?.ok) return null
-
-    const hmData = await heatmapRes.json() as Record<string, unknown>
-    const pts = hmData.points as Array<{ x: number; y: number; count?: number }> | undefined
-    if (!pts?.length) return null
-
-    const maxVal = Math.max(...pts.flatMap(p => [p.x, p.y]))
-    const normalized = maxVal <= 1.0 ? pts.map(p => ({ x: p.x * 100, y: p.y * 100 })) : pts.map(p => ({ x: p.x, y: p.y }))
-    return JSON.stringify({ points: normalized, season: year, tournament: tName })
+    for (let hi = 0; hi < heatmapResponses.length; hi++) {
+      const hmRes = heatmapResponses[hi]
+      if (!hmRes?.ok) continue
+      try {
+        const hmData = await hmRes.json() as Record<string, unknown>
+        const pts = hmData.points as Array<{ x: number; y: number; count?: number }> | undefined
+        if (!pts?.length) continue
+        const [year, { tName }] = candidateYears[hi]
+        const maxVal = Math.max(...pts.flatMap(p => [p.x, p.y]))
+        const normalized = maxVal <= 1.0 ? pts.map(p => ({ x: p.x * 100, y: p.y * 100 })) : pts.map(p => ({ x: p.x, y: p.y }))
+        return JSON.stringify({ points: normalized, season: year, tournament: tName })
+      } catch { /* try next */ }
+    }
+    return null
   } catch {
     return null
   } finally {
