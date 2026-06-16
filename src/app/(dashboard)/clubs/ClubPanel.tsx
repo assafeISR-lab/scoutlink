@@ -576,10 +576,24 @@ export default function ClubPanel({
       ) : filteredOpen.length === 0 ? (
         <div className="rounded-xl flex flex-col items-center justify-center text-center py-8 px-4"
           style={{ background: 'var(--subtle-bg)', border: '1px dashed rgba(108,143,255,0.25)' }}>
-          <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>No open requests</p>
-          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-            {selectedLevel ? `No ${selectedLevel} requests yet.` : 'Add a request to start matching players.'}
-          </p>
+          {hasActiveFilters ? (
+            <>
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>No requests match your filters</p>
+              <button
+                onClick={() => { setFilterPosition(''); setFilterTransferType(''); setFilterNationality(''); setFilterAgeMin(''); setFilterAgeMax(''); setFilterBudgetMax(''); setFilterDateFrom(''); setFilterDateTo(''); setProposalStatusFilter(null) }}
+                className="text-xs mt-1 transition-all"
+                style={{ color: '#6c8fff', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                Clear filters
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>No open requests</p>
+              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
+                {selectedLevel ? `No ${selectedLevel} requests yet.` : 'Add a request to start matching players.'}
+              </p>
+            </>
+          )}
         </div>
       ) : selectedLevel ? (
         filteredOpen.map(req => (
