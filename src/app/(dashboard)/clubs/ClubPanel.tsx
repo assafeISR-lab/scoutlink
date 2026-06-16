@@ -82,6 +82,10 @@ export default function ClubPanel({
   const [filterDateFrom, setFilterDateFrom] = useState('')
   const [filterDateTo, setFilterDateTo] = useState('')
 
+  // New UI state
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [closedOpen, setClosedOpen] = useState(false)
+
   // Modals
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({ name: initialClub.name, country: initialClub.country ?? '', contactName: initialClub.contactName ?? '', contactPhone: initialClub.contactPhone ?? '', contactEmail: initialClub.contactEmail ?? '', notes: initialClub.notes ?? '' })
@@ -128,7 +132,6 @@ export default function ClubPanel({
   }, [initialClub.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Computed ──────────────────────────────────────────────────────────────
-  // Fall back to defaults for clubs that haven't had teamLevels saved yet
   const teamLevels: string[] = (club?.teamLevels && club.teamLevels.length > 0)
     ? club.teamLevels
     : DEFAULT_LEVELS
@@ -161,12 +164,10 @@ export default function ClubPanel({
   function groupByLevel(reqs: FullRequest[], levels: string[]): { level: string | null; requests: FullRequest[] }[] {
     const groups: { level: string | null; requests: FullRequest[] }[] = []
     const used = new Set<string | null>()
-    // First: requests with a known teamLevel in order
     for (const level of levels) {
       const matching = reqs.filter(r => r.teamLevel === level)
       if (matching.length > 0) { groups.push({ level, requests: matching }); used.add(level) }
     }
-    // Then: requests with unknown/no teamLevel
     const unassigned = reqs.filter(r => !r.teamLevel || !used.has(r.teamLevel))
     if (unassigned.length > 0) groups.push({ level: null, requests: unassigned })
     return groups
@@ -175,6 +176,8 @@ export default function ClubPanel({
   const currentContact = selectedLevel
     ? (club?.teamContacts.find(c => c.teamLevel === selectedLevel) ?? null)
     : null
+
+  const hasActiveFilters = !!(filterPosition || filterTransferType || filterNationality || filterAgeMin || filterAgeMax || filterBudgetMax || filterDateFrom || filterDateTo || proposalStatusFilter)
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -246,8 +249,6 @@ export default function ClubPanel({
   async function handleAddRequest() {
     setAddingReq(true)
     try {
-      // When predefined levels exist, create one request per selected team.
-      // If nothing selected, create one request with no team level.
       const hasPredefinedLevels = teamLevels.length > 0
       const teamsToCreate: (string | null)[] = hasPredefinedLevels
         ? (reqTeamLevels.length > 0 ? reqTeamLevels : [null])
@@ -299,7 +300,7 @@ export default function ClubPanel({
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Club header */}
+      {/* Club header card — team pills now inside */}
       <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
         <div style={{ height: 3, background: 'linear-gradient(90deg, #6c8fff, #5a7aff)' }} />
         <div className="p-5">
@@ -335,288 +336,303 @@ export default function ClubPanel({
               </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Team pills row */}
-      <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--card-bg)', borderColor: 'var(--border)', boxShadow: 'var(--card-shadow)' }}>
-        <div className="flex items-center gap-2 flex-wrap px-4 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
-          <button
-            onClick={() => setSelectedLevel(null)}
-            className="px-3 py-1 rounded-full text-xs font-medium transition-all"
-            style={!selectedLevel
-              ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
-              : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-          >All</button>
-
-          {teamLevels.map(level => {
-            const active = selectedLevel === level
-            const count = openRequests.filter(r => r.teamLevel === level).length
-            return (
-              <button key={level} onClick={() => setSelectedLevel(level)}
+          {/* Team pills — inside the club header card */}
+          <div className="pt-3 mt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setSelectedLevel(null)}
                 className="px-3 py-1 rounded-full text-xs font-medium transition-all"
-                style={active
+                style={!selectedLevel
                   ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
-                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                {level}{count > 0 && <span className="ml-1.5 text-[10px] opacity-70">{count}</span>}
+                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+              >All</button>
+
+              {teamLevels.map(level => {
+                const active = selectedLevel === level
+                const count = openRequests.filter(r => r.teamLevel === level).length
+                return (
+                  <button key={level} onClick={() => setSelectedLevel(level)}
+                    className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+                    style={active
+                      ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
+                      : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                    {level}{count > 0 && <span className="ml-1.5 text-[10px] opacity-70">{count}</span>}
+                  </button>
+                )
+              })}
+
+              <button onClick={() => setManageTeamsOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ml-auto"
+                style={{ background: 'transparent', color: 'var(--text-faint)', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#6c8fff'; e.currentTarget.style.borderColor = 'rgba(108,143,255,0.4)'; e.currentTarget.style.background = 'rgba(108,143,255,0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'transparent' }}>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                </svg>
+                Manage Teams
               </button>
-            )
-          })}
+            </div>
 
-          {/* Manage Teams settings button */}
-          <button onClick={() => setManageTeamsOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ml-auto"
-            style={{ background: 'transparent', color: 'var(--text-faint)', border: '1px solid var(--border)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#6c8fff'; e.currentTarget.style.borderColor = 'rgba(108,143,255,0.4)'; e.currentTarget.style.background = 'rgba(108,143,255,0.06)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'transparent' }}>
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
-            </svg>
-            Manage Teams
-          </button>
-        </div>
-
-        {/* ── REQUESTS filter row ── */}
-        <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
-          <span className="text-[10px] uppercase font-bold flex-shrink-0" style={{ color: '#6c8fff', letterSpacing: '0.7px' }}>Requests</span>
-
-          {/* Position */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Position</span>
-            <input type="text" value={filterPosition} onChange={e => setFilterPosition(e.target.value)}
-              placeholder="any…"
-              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
-              style={{ background: 'var(--input-bg)', border: filterPosition ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 80 }} />
-          </div>
-
-          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
-
-          {/* Transfer Type */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Transfer</span>
-            {(['buy', 'loan', 'free'] as const).map(val => (
-              <button key={val} onClick={() => setFilterTransferType(filterTransferType === val ? '' : val)}
-                className="px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize transition-all"
-                style={filterTransferType === val
-                  ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
-                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                {val}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
-
-          {/* Nationality */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Nationality</span>
-            <input type="text" value={filterNationality} onChange={e => setFilterNationality(e.target.value)}
-              placeholder="any…"
-              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
-              style={{ background: 'var(--input-bg)', border: filterNationality ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 80 }} />
-          </div>
-
-          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
-
-          {/* Age range */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Age</span>
-            <input type="number" value={filterAgeMin} onChange={e => setFilterAgeMin(e.target.value)}
-              placeholder="min"
-              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
-              style={{ background: 'var(--input-bg)', border: filterAgeMin ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 50 }} />
-            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>–</span>
-            <input type="number" value={filterAgeMax} onChange={e => setFilterAgeMax(e.target.value)}
-              placeholder="max"
-              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
-              style={{ background: 'var(--input-bg)', border: filterAgeMax ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 50 }} />
-          </div>
-
-          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
-
-          {/* Budget max */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Budget ≤</span>
-            <input type="number" value={filterBudgetMax} onChange={e => setFilterBudgetMax(e.target.value)}
-              placeholder="K€/yr"
-              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
-              style={{ background: 'var(--input-bg)', border: filterBudgetMax ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 70 }} />
-          </div>
-
-          <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
-
-          {/* Date range */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Date</span>
-            <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
-              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
-              style={{ background: 'var(--input-bg)', border: filterDateFrom ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 120 }} />
-            <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>–</span>
-            <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
-              className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
-              style={{ background: 'var(--input-bg)', border: filterDateTo ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 120 }} />
-          </div>
-
-          {/* Reset */}
-          {(filterPosition || filterTransferType || filterNationality || filterAgeMin || filterAgeMax || filterBudgetMax || filterDateFrom || filterDateTo || proposalStatusFilter) && (
-            <button
-              onClick={() => { setFilterPosition(''); setFilterTransferType(''); setFilterNationality(''); setFilterAgeMin(''); setFilterAgeMax(''); setFilterBudgetMax(''); setFilterDateFrom(''); setFilterDateTo(''); setProposalStatusFilter(null) }}
-              className="ml-auto text-[11px] px-2 py-0.5 rounded-lg transition-all"
-              style={{ color: 'var(--text-faint)', background: 'transparent', border: '1px solid var(--border)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.background = 'transparent' }}>
-              Reset
-            </button>
-          )}
-        </div>
-
-        {/* ── PROPOSALS filter row ── */}
-        <div className="flex items-center gap-2 flex-wrap px-4 py-2.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--subtle-bg)' }}>
-          <span className="text-[10px] uppercase font-bold flex-shrink-0" style={{ color: '#00c896', letterSpacing: '0.7px' }}>Proposals</span>
-          <button onClick={() => setProposalStatusFilter(null)}
-            className="px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all"
-            style={!proposalStatusFilter
-              ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
-              : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-            All
-          </button>
-          {PROPOSAL_STATUSES.map(({ value, label, color, bg, border }) => {
-            const count = openRequests.filter(r => r.proposals.some(p => p.status === value)).length
-            const active = proposalStatusFilter === value
-            return (
-              <button key={value} onClick={() => setProposalStatusFilter(active ? null : value)}
-                className="px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all"
-                style={active
-                  ? { background: bg, color, border: `1px solid ${border}` }
-                  : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                {label}{count > 0 && <span className="ml-1 text-[10px] opacity-60">{count}</span>}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Team contact card — only when a specific level is selected */}
-        {selectedLevel && (
-          <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(108,143,255,0.1)', border: '1px solid rgba(108,143,255,0.2)' }}>
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="#6c8fff">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                  </svg>
-                </div>
-                {currentContact ? (
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{currentContact.contactName || '—'}</p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {currentContact.contactPhone && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>📞 {currentContact.contactPhone}</span>}
-                      {currentContact.contactEmail && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>✉ {currentContact.contactEmail}</span>}
-                    </div>
+            {/* Team contact row — only when a specific level is selected */}
+            {selectedLevel && (
+              <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(108,143,255,0.1)', border: '1px solid rgba(108,143,255,0.2)' }}>
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="#6c8fff">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
                   </div>
-                ) : (
-                  <p className="text-xs" style={{ color: 'var(--text-faint)' }}>No contact for {selectedLevel} yet</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => openContactEdit(selectedLevel)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
-                  style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
-                  {currentContact ? 'Edit' : '+ Add Contact'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Requests section */}
-        <div className="p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#6c8fff' }}>
-              Open Requests
-              {filteredOpen.length > 0 && (
-                <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                  style={{ background: 'rgba(108,143,255,0.15)', color: '#6c8fff' }}>
-                  {filteredOpen.length}
-                </span>
-              )}
-            </p>
-            <button onClick={openNewRequest}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
-              style={{ background: 'linear-gradient(135deg, #6c8fff, #5a7aff)', color: '#fff', boxShadow: '0 2px 8px rgba(108,143,255,0.25)' }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(108,143,255,0.45)' }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(108,143,255,0.25)' }}>
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-              New Request
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center gap-2 py-4">
-              <div className="w-4 h-4 rounded-full border-2 animate-spin" style={{ borderColor: '#6c8fff', borderTopColor: 'transparent' }} />
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading…</p>
-            </div>
-          ) : filteredOpen.length === 0 ? (
-            <div className="rounded-xl flex flex-col items-center justify-center text-center py-8 px-4"
-              style={{ background: 'var(--subtle-bg)', border: '1px dashed rgba(108,143,255,0.25)' }}>
-              <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>No open requests</p>
-              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                {selectedLevel ? `No ${selectedLevel} requests yet.` : 'Add a request to start matching players.'}
-              </p>
-            </div>
-          ) : selectedLevel ? (
-            // Filtered view — flat list
-            filteredOpen.map(req => (
-              <ClubRequestCard key={req.id} request={req} clubId={initialClub.id} clubName={displayClub.name}
-                teamLevels={teamLevels}
-                onUpdated={handleRequestUpdated} onDeleted={handleRequestDeleted} />
-            ))
-          ) : (
-            // All view — grouped by team level
-            groupedOpen!.map(({ level, requests }) => (
-              <div key={level ?? '__unassigned__'}>
-                {level ? (
-                  <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2"
-                    style={{ letterSpacing: '0.8px', color: 'var(--text-muted)', borderColor: 'rgba(108,143,255,0.4)' }}>
-                    {level}
-                  </p>
-                ) : teamLevels.length > 0 ? (
-                  <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2"
-                    style={{ letterSpacing: '0.8px', color: 'var(--text-faint)', borderColor: 'var(--border-strong)' }}>
-                    Unassigned
-                  </p>
-                ) : null}
-                <div className="flex flex-col gap-2">
-                  {requests.map(req => (
-                    <ClubRequestCard key={req.id} request={req} clubId={initialClub.id} clubName={displayClub.name}
-                      teamLevels={teamLevels}
-                      onUpdated={handleRequestUpdated} onDeleted={handleRequestDeleted} />
-                  ))}
+                  {currentContact ? (
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{currentContact.contactName || '—'}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {currentContact.contactPhone && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>📞 {currentContact.contactPhone}</span>}
+                        {currentContact.contactEmail && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>✉ {currentContact.contactEmail}</span>}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs" style={{ color: 'var(--text-faint)' }}>No contact for {selectedLevel} yet</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => openContactEdit(selectedLevel)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                    {currentContact ? 'Edit' : '+ Add Contact'}
+                  </button>
                 </div>
               </div>
-            ))
-          )}
-
-          {/* Closed requests */}
-          {filteredClosed.length > 0 && (
-            <div className="mt-2">
-              <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2"
-                style={{ letterSpacing: '0.9px', color: 'var(--text-muted)', borderColor: 'var(--border-strong)' }}>
-                Closed ({filteredClosed.length})
-              </p>
-              <div className="flex flex-col gap-2" style={{ opacity: 0.6 }}>
-                {filteredClosed.map(req => (
-                  <ClubRequestCard key={req.id} request={req} clubId={initialClub.id} clubName={displayClub.name}
-                    teamLevels={teamLevels}
-                    onUpdated={handleRequestUpdated} onDeleted={handleRequestDeleted} />
-                ))}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Section header — free-floating */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] uppercase font-bold pl-2 border-l-2" style={{ letterSpacing: '0.9px', color: 'var(--text-primary)', borderColor: '#6c8fff' }}>
+          Open Requests
+          {filteredOpen.length > 0 && (
+            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+              style={{ background: 'rgba(108,143,255,0.15)', color: '#6c8fff' }}>
+              {filteredOpen.length}
+            </span>
+          )}
+        </p>
+        <div className="flex items-center gap-2">
+          {/* Filter button */}
+          <button
+            onClick={() => setFilterOpen(o => !o)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all relative"
+            style={(filterOpen || hasActiveFilters)
+              ? { background: 'rgba(108,143,255,0.08)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.4)' }
+              : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            onMouseEnter={e => { if (!filterOpen && !hasActiveFilters) { e.currentTarget.style.background = 'var(--hover-bg)'; e.currentTarget.style.color = 'var(--text-primary)' } }}
+            onMouseLeave={e => { if (!filterOpen && !hasActiveFilters) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' } }}>
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            Filter
+            {hasActiveFilters && !filterOpen && (
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#6c8fff' }} />
+            )}
+          </button>
+          {/* New Request button */}
+          <button onClick={openNewRequest}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+            style={{ background: 'linear-gradient(135deg, #6c8fff, #5a7aff)', color: '#fff', boxShadow: '0 2px 8px rgba(108,143,255,0.25)' }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(108,143,255,0.45)' }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(108,143,255,0.25)' }}>
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            New Request
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsible filter bar */}
+      {filterOpen && (
+        <div className="flex flex-col gap-0 rounded-xl overflow-hidden" style={{ background: 'var(--subtle-bg)', border: '1px solid var(--border)' }}>
+          {/* ── REQUESTS filter row ── */}
+          <div className="flex items-center gap-3 flex-wrap px-3 py-2.5 border-b" style={{ borderColor: 'var(--border)' }}>
+            <span className="text-[10px] uppercase font-bold flex-shrink-0" style={{ color: '#6c8fff', letterSpacing: '0.7px' }}>Requests</span>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Position</span>
+              <input type="text" value={filterPosition} onChange={e => setFilterPosition(e.target.value)}
+                placeholder="any…"
+                className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+                style={{ background: 'var(--input-bg)', border: filterPosition ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 80 }} />
+            </div>
+
+            <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Transfer</span>
+              {(['buy', 'loan', 'free'] as const).map(val => (
+                <button key={val} onClick={() => setFilterTransferType(filterTransferType === val ? '' : val)}
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize transition-all"
+                  style={filterTransferType === val
+                    ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
+                    : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                  {val}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Nationality</span>
+              <input type="text" value={filterNationality} onChange={e => setFilterNationality(e.target.value)}
+                placeholder="any…"
+                className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+                style={{ background: 'var(--input-bg)', border: filterNationality ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 80 }} />
+            </div>
+
+            <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Age</span>
+              <input type="number" value={filterAgeMin} onChange={e => setFilterAgeMin(e.target.value)}
+                placeholder="min"
+                className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+                style={{ background: 'var(--input-bg)', border: filterAgeMin ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 50 }} />
+              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>–</span>
+              <input type="number" value={filterAgeMax} onChange={e => setFilterAgeMax(e.target.value)}
+                placeholder="max"
+                className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+                style={{ background: 'var(--input-bg)', border: filterAgeMax ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 50 }} />
+            </div>
+
+            <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Budget ≤</span>
+              <input type="number" value={filterBudgetMax} onChange={e => setFilterBudgetMax(e.target.value)}
+                placeholder="K€/yr"
+                className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+                style={{ background: 'var(--input-bg)', border: filterBudgetMax ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 70 }} />
+            </div>
+
+            <div style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-faint)' }}>Date</span>
+              <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+                className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+                style={{ background: 'var(--input-bg)', border: filterDateFrom ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 120 }} />
+              <span className="text-[10px]" style={{ color: 'var(--text-faint)' }}>–</span>
+              <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+                className="text-[11px] rounded-lg px-2 py-0.5 focus:outline-none"
+                style={{ background: 'var(--input-bg)', border: filterDateTo ? '1px solid #6c8fff' : '1px solid var(--input-border)', color: 'var(--text-primary)', width: 120 }} />
+            </div>
+
+            {hasActiveFilters && (
+              <button
+                onClick={() => { setFilterPosition(''); setFilterTransferType(''); setFilterNationality(''); setFilterAgeMin(''); setFilterAgeMax(''); setFilterBudgetMax(''); setFilterDateFrom(''); setFilterDateTo(''); setProposalStatusFilter(null) }}
+                className="ml-auto text-[11px] px-2 py-0.5 rounded-lg transition-all"
+                style={{ color: 'var(--text-faint)', background: 'transparent', border: '1px solid var(--border)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--hover-bg)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; e.currentTarget.style.background = 'transparent' }}>
+                Reset
+              </button>
+            )}
+          </div>
+
+          {/* ── PROPOSALS filter row ── */}
+          <div className="flex items-center gap-2 flex-wrap px-3 py-2.5">
+            <span className="text-[10px] uppercase font-bold flex-shrink-0" style={{ color: '#00c896', letterSpacing: '0.7px' }}>Proposals</span>
+            <button onClick={() => setProposalStatusFilter(null)}
+              className="px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all"
+              style={!proposalStatusFilter
+                ? { background: '#6c8fff', color: '#fff', border: '1px solid #6c8fff' }
+                : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+              All
+            </button>
+            {PROPOSAL_STATUSES.map(({ value, label, color, bg, border }) => {
+              const count = openRequests.filter(r => r.proposals.some(p => p.status === value)).length
+              const active = proposalStatusFilter === value
+              return (
+                <button key={value} onClick={() => setProposalStatusFilter(active ? null : value)}
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-all"
+                  style={active
+                    ? { background: bg, color, border: `1px solid ${border}` }
+                    : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                  {label}{count > 0 && <span className="ml-1 text-[10px] opacity-60">{count}</span>}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Open requests content — free-floating */}
+      {loading ? (
+        <div className="flex items-center gap-2 py-4">
+          <div className="w-4 h-4 rounded-full border-2 animate-spin" style={{ borderColor: '#6c8fff', borderTopColor: 'transparent' }} />
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading…</p>
+        </div>
+      ) : filteredOpen.length === 0 ? (
+        <div className="rounded-xl flex flex-col items-center justify-center text-center py-8 px-4"
+          style={{ background: 'var(--subtle-bg)', border: '1px dashed rgba(108,143,255,0.25)' }}>
+          <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>No open requests</p>
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
+            {selectedLevel ? `No ${selectedLevel} requests yet.` : 'Add a request to start matching players.'}
+          </p>
+        </div>
+      ) : selectedLevel ? (
+        filteredOpen.map(req => (
+          <ClubRequestCard key={req.id} request={req} clubId={initialClub.id} clubName={displayClub.name}
+            teamLevels={teamLevels}
+            onUpdated={handleRequestUpdated} onDeleted={handleRequestDeleted} />
+        ))
+      ) : (
+        groupedOpen!.map(({ level, requests }) => (
+          <div key={level ?? '__unassigned__'}>
+            {level ? (
+              <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2"
+                style={{ letterSpacing: '0.8px', color: 'var(--text-muted)', borderColor: 'rgba(108,143,255,0.4)' }}>
+                {level}
+              </p>
+            ) : teamLevels.length > 0 ? (
+              <p className="text-[10px] uppercase font-bold mb-2 pl-2 border-l-2"
+                style={{ letterSpacing: '0.8px', color: 'var(--text-faint)', borderColor: 'var(--border-strong)' }}>
+                Unassigned
+              </p>
+            ) : null}
+            <div className="flex flex-col gap-2">
+              {requests.map(req => (
+                <ClubRequestCard key={req.id} request={req} clubId={initialClub.id} clubName={displayClub.name}
+                  teamLevels={teamLevels}
+                  onUpdated={handleRequestUpdated} onDeleted={handleRequestDeleted} />
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+
+      {/* Closed requests — collapsible toggle */}
+      {filteredClosed.length > 0 && (
+        <div>
+          <button
+            onClick={() => setClosedOpen(o => !o)}
+            className="flex items-center gap-1.5 text-[10px] uppercase font-bold mb-2 transition-all"
+            style={{ color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+            <svg className="w-3 h-3 transition-transform" style={{ transform: closedOpen ? 'rotate(180deg)' : 'rotate(0deg)', color: 'var(--text-faint)' }} viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+            Closed ({filteredClosed.length})
+          </button>
+          {closedOpen && (
+            <div className="flex flex-col gap-2" style={{ opacity: 0.7 }}>
+              {filteredClosed.map(req => (
+                <ClubRequestCard key={req.id} request={req} clubId={initialClub.id} clubName={displayClub.name}
+                  teamLevels={teamLevels}
+                  onUpdated={handleRequestUpdated} onDeleted={handleRequestDeleted} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Modals ── */}
 

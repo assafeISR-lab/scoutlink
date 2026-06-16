@@ -939,6 +939,142 @@ const EVENT_TYPES = [
 </div>
 ```
 
+---
+
+## 29. Two-Zone Request Card (ClubRequestCard)
+
+Request cards in the Clubs section use a two-zone layout. Both zones are always visible — no accordion needed for core actions.
+
+**Clubs accent color:** `#6c8fff` (blue). Transfer type pills: buy=green (`#00c896`), loan=orange (`#ff9f43`), free=blue (`#6c8fff`).
+
+### Top zone — click to expand/collapse:
+```tsx
+<div className="px-4 pt-4 pb-3 cursor-pointer"
+  onClick={() => setExpanded(e => !e)}
+  style={{ background: expanded ? 'var(--subtle-bg)' : 'transparent' }}>
+
+  {/* Row 1: Team badge + position (bold) + transfer pill + age + icon buttons (right-aligned) */}
+  <div className="flex items-center gap-2 flex-wrap">
+    {teamLevel && (
+      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md"
+        style={{ background: 'rgba(108,143,255,0.12)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.3)' }}>
+        {teamLevel}
+      </span>
+    )}
+    <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{position || 'Any position'}</span>
+    {transferType && (
+      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md capitalize"
+        style={
+          transferType === 'buy'  ? { background: 'rgba(0,200,150,0.1)',   color: '#00c896', border: '1px solid rgba(0,200,150,0.25)' } :
+          transferType === 'loan' ? { background: 'rgba(255,159,67,0.1)',  color: '#ff9f43', border: '1px solid rgba(255,159,67,0.25)' } :
+                                    { background: 'rgba(108,143,255,0.1)', color: '#6c8fff', border: '1px solid rgba(108,143,255,0.25)' }
+        }>{transferType}</span>
+    )}
+    {(ageMin || ageMax) && (
+      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+        {ageMin && ageMax ? `${ageMin}–${ageMax} yrs` : ageMax ? `≤${ageMax} yrs` : `≥${ageMin} yrs`}
+      </span>
+    )}
+    {/* Edit + Delete icon buttons — right-aligned, always visible */}
+    <div className="flex items-center gap-1.5 ml-auto" onClick={e => e.stopPropagation()}>
+      {/* 28×28 ghost edit icon button */}
+      {/* 28×28 ghost delete icon button — shows inline Cancel/Delete confirm when deleteConfirm===true */}
+      {/* Chevron — rotates 180deg when expanded */}
+    </div>
+  </div>
+
+  {/* Row 2: Budget + Nationality + notes (only when present) */}
+  {(budget || nationality || notes) && (
+    <div className="flex items-center gap-4 mt-1.5 flex-wrap">
+      {budget && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+        Budget: <strong style={{ color: 'var(--text-secondary)' }}>€{(budget/1000).toFixed(0)}k/yr</strong>
+      </span>}
+      {nationality && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+        Nationality: <strong style={{ color: 'var(--text-secondary)' }}>{nationality}</strong>
+      </span>}
+    </div>
+  )}
+</div>
+```
+
+### Bottom strip — always visible:
+```tsx
+<div className="flex items-center gap-2 px-4 py-2.5 flex-wrap"
+  style={{ borderTop: '1px solid var(--border)', background: 'var(--subtle-bg)' }}>
+
+  <span className="text-[10px] uppercase font-bold flex-shrink-0"
+    style={{ color: 'var(--text-faint)', letterSpacing: '0.6px' }}>Proposals</span>
+
+  {/* Proposal chips grouped by status — only show statuses with count > 0 */}
+  {proposals.length === 0 ? (
+    <span className="text-[11px] px-2 py-0.5 rounded-full font-medium"
+      style={{ background: 'transparent', color: 'var(--text-faint)', border: '1px solid var(--border)' }}>
+      None yet
+    </span>
+  ) : (
+    Object.entries(statusCounts).map(([status, count]) => {
+      const sc = STATUS_COLORS[status]
+      return (
+        <span key={status} className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+          style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.color }} />
+          {count} {sc.label}
+        </span>
+      )
+    })
+  )}
+
+  {/* Action buttons — right-aligned */}
+  <div className="ml-auto flex items-center gap-2">
+    {/* "Close" ghost button (open requests only) + green "Find Players" gradient button */}
+    {/* OR "Reopen" ghost button (closed requests) */}
+    <button onClick={handleFindPlayers} disabled={matching}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+      style={{ background: 'linear-gradient(135deg, #00c896, #00a878)', color: '#fff',
+        boxShadow: '0 2px 8px rgba(0,200,150,0.25)' }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,200,150,0.45)' }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,200,150,0.25)' }}>
+      Find Players
+    </button>
+  </div>
+</div>
+```
+
+`STATUS_COLORS` maps proposal status → `{ bg, color, border, label }`. Find it in `ClubRequestCard.tsx`.
+
+---
+
+## 30. Stage Filter Tabs (AllRequestsView)
+
+Used in "All Clubs Requests" to filter by proposal pipeline stage. Color-coded, shows live counts.
+
+```tsx
+const STAGE_TABS = [
+  { value: 'all_open',      label: 'All Open',      bg: 'rgba(108,143,255,0.15)', color: '#6c8fff', border: 'rgba(108,143,255,0.4)' },
+  { value: 'no_proposals',  label: 'No Proposals',  bg: 'var(--hover-bg)',         color: 'var(--text-muted)',   border: 'var(--border-strong)' },
+  { value: 'proposed',      label: 'Proposed',      bg: 'rgba(108,143,255,0.15)', color: '#6c8fff', border: 'rgba(108,143,255,0.4)' },
+  { value: 'in_discussion', label: 'In Discussion', bg: 'rgba(255,159,67,0.15)',  color: '#ff9f43', border: 'rgba(255,159,67,0.4)' },
+  { value: 'offer',         label: 'Offer',         bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
+  { value: 'signed',        label: '✓ Signed',      bg: 'rgba(0,200,150,0.15)',   color: '#00c896', border: 'rgba(0,200,150,0.4)' },
+  { value: 'all',           label: 'All',           bg: 'var(--hover-bg)',         color: 'var(--text-muted)',   border: 'var(--border-strong)' },
+]
+
+// Render:
+<div className="flex items-center gap-1 flex-wrap">
+  {STAGE_TABS.map(tab => (
+    <button key={tab.value} onClick={() => setStageTab(tab.value)}
+      className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all"
+      style={stageTab === tab.value
+        ? { background: tab.bg, color: tab.color, border: `1px solid ${tab.border}` }
+        : { background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+      {tab.label}
+    </button>
+  ))}
+</div>
+```
+
+The tabs replace a visible status filter row. A "Filter" ghost button sits alongside the tabs to toggle a collapsible filter panel for position/transfer/age/budget/etc.
+
 Use `#00c896` focus color for non-reports contexts.
 
 ---
